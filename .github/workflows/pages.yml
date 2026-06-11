@@ -1,0 +1,39 @@
+# Deploys the landing page (site/) to GitHub Pages on every push to main.
+# The site assets are copies of .github/assets — the workflow re-syncs them
+# at deploy time so the two never drift apart.
+
+name: Deploy landing page
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", ".github/assets/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync brand assets into the site
+        run: cp .github/assets/*.svg site/assets/
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

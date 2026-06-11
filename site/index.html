@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>RigPilot — Program your rig. Not your patience.</title>
+<meta name="description" content="RigPilot is a free desktop app for bands: sequence your MIDI rig control against your songs and export standard MIDI files for your show DAW. Windows, macOS, Linux."/>
+<meta property="og:title" content="RigPilot — MIDI rig-control sequencing for live shows"/>
+<meta property="og:description" content="Drop commands on a timeline, line them up with your song by ear, export .mid files that just work."/>
+<meta property="og:image" content="https://flmbus.github.io/rigpilot/assets/banner.svg"/>
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;800;900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  /* ---------- design tokens (mirrors the app's theme.css) ---------- */
+  :root{
+    --bg:#0b0b0d; --bg-raise:#121215; --bg-card:#1a1a1f;
+    --line:#2a2a31; --line-strong:#3f3f4a;
+    --fg:#f2f2f5; --fg-dim:#9a9aa6; --fg-faint:#5d5d68;
+    --accent:#ff2e88; --accent-down:#d11668;
+    --warn:#ffb02e; --green:#2ee08a;
+    --font-display:'Outfit',ui-sans-serif,system-ui,sans-serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  @media(prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  }
+  body{
+    background:var(--bg); color:var(--fg);
+    font-family:var(--font-display); font-weight:400; line-height:1.6;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--accent);color:#fff}
+
+  a{color:var(--accent)}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+
+  /* ---------- atmosphere: grid + grain + glow ---------- */
+  .stage{position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background:
+      radial-gradient(1100px 480px at 70% -10%, rgba(255,46,136,.14), transparent 65%),
+      radial-gradient(800px 400px at 10% 110%, rgba(46,224,138,.05), transparent 60%),
+      var(--bg);
+  }
+  .stage::before{content:"";position:absolute;inset:0;
+    background-image:
+      linear-gradient(to right, rgba(42,42,49,.5) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(42,42,49,.35) 1px, transparent 1px);
+    background-size:96px 96px;
+    mask-image:radial-gradient(1200px 800px at 50% 0%, #000 30%, transparent 80%);
+    -webkit-mask-image:radial-gradient(1200px 800px at 50% 0%, #000 30%, transparent 80%);
+  }
+  .stage::after{content:"";position:absolute;inset:0;opacity:.5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  /* sweeping playhead across the hero */
+  .playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);opacity:.55;
+    box-shadow:0 0 18px 2px rgba(255,46,136,.55);
+    animation:sweep 14s linear infinite;}
+  .playhead::before{content:"";position:absolute;top:0;left:-7px;
+    border:8px solid transparent;border-top:12px solid var(--accent)}
+  @keyframes sweep{from{left:-2%}to{left:102%}}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+
+  /* ---------- header ---------- */
+  header.top{position:sticky;top:0;z-index:10;
+    background:rgba(11,11,13,.72);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line)}
+  .top nav{display:flex;align-items:center;gap:8px;min-height:64px}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:800;font-size:1.25rem;
+    letter-spacing:-.02em;color:var(--fg);text-decoration:none;padding:10px 8px}
+  .brand img{width:34px;height:34px}
+  .brand b{color:var(--accent);font-weight:800}
+  .top .links{margin-left:auto;display:flex;gap:4px}
+  .top .links a{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;
+    color:var(--fg-dim);text-decoration:none;font-weight:500;font-size:.95rem;border-radius:8px}
+  .top .links a:hover{color:var(--fg);background:var(--bg-card)}
+
+  /* ---------- hero ---------- */
+  .hero{position:relative;padding:clamp(72px,12vw,150px) 0 64px;overflow:hidden}
+  .hero h1{font-size:clamp(3rem,9vw,6.5rem);font-weight:900;letter-spacing:-.04em;line-height:.95}
+  .hero h1 b{color:var(--accent);font-weight:900}
+  .hero .tag{margin-top:22px;font-size:clamp(1.15rem,2.6vw,1.6rem);font-weight:300;color:var(--fg-dim);max-width:34ch}
+  .hero .tag strong{color:var(--fg);font-weight:600}
+  .hero .sub{margin-top:14px;font-family:var(--font-mono);font-size:.85rem;color:var(--fg-faint)}
+  .hero .sub .dot{color:var(--accent)}
+  .reveal{opacity:0;transform:translateY(18px);animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards}
+  .d1{animation-delay:.05s}.d2{animation-delay:.18s}.d3{animation-delay:.3s}.d4{animation-delay:.45s}
+  @keyframes rise{to{opacity:1;transform:none}}
+
+  /* download CTA */
+  .cta{margin-top:44px;display:flex;flex-direction:column;gap:14px;align-items:flex-start}
+  .btn-dl{display:inline-flex;align-items:center;gap:14px;min-height:64px;padding:10px 30px;
+    background:linear-gradient(180deg,var(--accent),var(--accent-down));
+    color:#fff;text-decoration:none;font-weight:600;font-size:1.15rem;border-radius:14px;
+    border:1px solid rgba(255,255,255,.18);
+    box-shadow:0 8px 32px rgba(255,46,136,.35), inset 0 1px 0 rgba(255,255,255,.25);
+    transition:transform .15s ease, box-shadow .15s ease}
+  .btn-dl:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(255,46,136,.45), inset 0 1px 0 rgba(255,255,255,.25)}
+  .btn-dl:active{transform:translateY(0)}
+  .btn-dl small{display:block;font-weight:400;font-size:.78rem;opacity:.85;letter-spacing:.02em}
+  .btn-dl svg{flex:none}
+  .cta .alt{font-size:.92rem;color:var(--fg-faint)}
+  .cta .alt a{color:var(--fg-dim)}
+  .cta .alt a:hover{color:var(--fg)}
+
+  /* ---------- shared section bits ---------- */
+  section{padding:84px 0;position:relative}
+  .kicker{font-family:var(--font-mono);font-size:.8rem;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
+  h2{font-size:clamp(1.7rem,4.5vw,2.6rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;max-width:24ch}
+  .lead{margin-top:16px;color:var(--fg-dim);max-width:62ch}
+  .fade{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1)}
+  .fade.in{opacity:1;transform:none}
+
+  .shot{margin-top:40px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);
+    box-shadow:0 30px 80px rgba(0,0,0,.55)}
+  .shot img{display:block;width:100%;height:auto}
+
+  /* ---------- event-type cards ---------- */
+  .cards{margin-top:44px;display:grid;gap:18px;grid-template-columns:1fr}
+  @media(min-width:720px){.cards{grid-template-columns:repeat(3,1fr)}}
+  .card{position:relative;background:var(--bg-raise);border:1px solid var(--line);border-radius:var(--radius);
+    padding:28px 24px;overflow:hidden;transition:transform .2s ease,border-color .2s ease}
+  .card:hover{transform:translateY(-4px)}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c)}
+  .card:hover{border-color:var(--c)}
+  .card .glyph{height:46px;display:flex;align-items:center;margin-bottom:16px}
+  .card h3{font-size:1.2rem;font-weight:600;margin-bottom:8px}
+  .card h3 span{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--c);display:block;margin-bottom:6px}
+  .card p{font-size:.95rem;color:var(--fg-dim)}
+  .c-shot{--c:var(--warn)} .c-hold{--c:var(--accent)} .c-auto{--c:var(--green)}
+
+  /* ---------- steps ---------- */
+  .steps{margin-top:44px;display:grid;gap:0;counter-reset:step}
+  .step{display:grid;grid-template-columns:64px 1fr;gap:18px;padding:26px 0;border-top:1px solid var(--line)}
+  .step:last-child{border-bottom:1px solid var(--line)}
+  .step::before{counter-increment:step;content:"0" counter(step);
+    font-family:var(--font-mono);font-size:1.6rem;color:var(--accent);line-height:1.2}
+  .step h3{font-size:1.15rem;font-weight:600;margin-bottom:6px}
+  .step p{color:var(--fg-dim);font-size:.97rem;max-width:60ch}
+
+  /* ---------- devices ---------- */
+  .devices{margin-top:44px;display:flex;flex-wrap:wrap;gap:12px}
+  .device{display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:0 20px;
+    background:var(--bg-card);border:1px solid var(--line);border-radius:999px;
+    font-size:.95rem;font-weight:500;color:var(--fg)}
+  .device::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--green);
+    box-shadow:0 0 8px var(--green)}
+  .device.more{color:var(--fg-faint);border-style:dashed}
+  .device.more::before{background:var(--fg-faint);box-shadow:none}
+
+  /* ---------- all downloads ---------- */
+  .dl-grid{margin-top:44px;display:grid;gap:18px;grid-template-columns:1fr}
+  @media(min-width:720px){.dl-grid{grid-template-columns:repeat(3,1fr)}}
+  .dl-card{background:var(--bg-raise);border:1px solid var(--line);border-radius:var(--radius);padding:28px 24px}
+  .dl-card h3{font-size:1.15rem;font-weight:600;display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .dl-card .arch{font-family:var(--font-mono);font-size:.75rem;color:var(--fg-faint);margin-bottom:18px}
+  .dl-card ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .dl-card a.pkg{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    min-height:46px;padding:0 16px;border:1px solid var(--line);border-radius:9px;
+    color:var(--fg);text-decoration:none;font-size:.93rem;font-weight:500;
+    transition:border-color .15s ease,background .15s ease}
+  .dl-card a.pkg:hover{border-color:var(--accent);background:var(--bg-card)}
+  .dl-card a.pkg .ext{font-family:var(--font-mono);font-size:.75rem;color:var(--fg-faint)}
+  .note{margin-top:26px;padding:18px 20px;background:var(--bg-raise);border:1px solid var(--line);
+    border-left:3px solid var(--warn);border-radius:8px;font-size:.92rem;color:var(--fg-dim);max-width:70ch}
+  .note code{font-family:var(--font-mono);font-size:.83em;background:var(--bg-card);padding:2px 6px;border-radius:4px}
+
+  /* ---------- footer ---------- */
+  footer{border-top:1px solid var(--line);padding:56px 0 72px;text-align:center;color:var(--fg-faint);font-size:.92rem}
+  footer img{width:52px;height:52px;margin-bottom:18px}
+  footer .tagline{font-family:var(--font-mono);font-size:.8rem;margin-top:10px}
+  footer .tagline .y{color:var(--warn)} footer .tagline .p{color:var(--accent)} footer .tagline .g{color:var(--green)}
+  footer nav{margin-top:22px;display:flex;justify-content:center;gap:6px;flex-wrap:wrap}
+  footer nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;color:var(--fg-dim);text-decoration:none;border-radius:8px}
+  footer nav a:hover{color:var(--fg);background:var(--bg-card)}
+</style>
+</head>
+<body>
+
+<div class="stage" aria-hidden="true"></div>
+
+<header class="top">
+  <div class="wrap">
+    <nav aria-label="Main">
+      <a class="brand" href="#"><img src="assets/logo.svg" alt="" width="34" height="34"/>Rig<b>Pilot</b></a>
+      <div class="links">
+        <a href="#how">How it works</a>
+        <a href="#downloads">Downloads</a>
+        <a href="https://github.com/FlmBus/rigpilot">GitHub</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- ============================== hero ============================== -->
+  <section class="hero" aria-labelledby="hero-h">
+    <div class="playhead" aria-hidden="true"></div>
+    <div class="wrap">
+      <h1 id="hero-h" class="reveal d1">Program your rig.<br/>Not <b>your patience.</b></h1>
+      <p class="tag reveal d2">RigPilot sequences your <strong>MIDI rig control</strong> against your songs —
+        and exports standard MIDI files that just work in your show DAW.</p>
+      <p class="sub reveal d3"><span class="dot">●</span> free &amp; open source&ensp;·&ensp;Windows / macOS / Linux&ensp;·&ensp;no account, no cloud, no nonsense</p>
+      <div class="cta reveal d4">
+        <a class="btn-dl" id="dl-main" href="https://github.com/FlmBus/rigpilot/releases/latest">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span>Download RigPilot<small id="dl-detect">choose your platform below</small></span>
+        </a>
+        <p class="alt">or see <a href="#downloads">all platforms &amp; formats</a> · <a href="https://github.com/FlmBus/rigpilot/releases">previous versions</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ screenshot ========================== -->
+  <section aria-labelledby="look-h">
+    <div class="wrap">
+      <div class="fade">
+        <p class="kicker">The arrangement</p>
+        <h2 id="look-h">Your whole show, on one timeline.</h2>
+        <p class="lead">Reference audio on top, one MIDI track per device below. Place events by ear
+          on a BPM grid — preset changes, stomps, volume fades — exactly where the song needs them.</p>
+      </div>
+      <figure class="shot fade">
+        <img src="assets/timeline.svg" alt="The RigPilot arrangement view: an audio reference track with waveform, MIDI tracks for three different devices with color-coded events, and a drag-and-drop command palette" loading="lazy"/>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============================ event types ========================= -->
+  <section aria-labelledby="types-h">
+    <div class="wrap">
+      <div class="fade">
+        <p class="kicker">Three event types</p>
+        <h2 id="types-h">Everything your rig does fits in three shapes.</h2>
+      </div>
+      <div class="cards">
+        <article class="card c-shot fade">
+          <div class="glyph" aria-hidden="true">
+            <svg width="40" height="40" viewBox="0 0 40 40"><rect x="13" y="13" width="14" height="14" fill="#ffb02e" transform="rotate(45 20 20)"/></svg>
+          </div>
+          <h3><span>One-Shot</span>Fire and forget</h3>
+          <p>Preset changes, scene switches, tap tempo. Fires once, exactly on its tick — rendered as a diamond marker.</p>
+        </article>
+        <article class="card c-hold fade">
+          <div class="glyph" aria-hidden="true">
+            <svg width="64" height="40" viewBox="0 0 64 40"><rect x="2" y="12" width="60" height="16" rx="5" fill="#ff2e88"/></svg>
+          </div>
+          <h3><span>Hold</span>On for the block</h3>
+          <p>Stomps, sustains, anything with an on and an off. Engages at block start, disengages at block end. Drag the edges to resize.</p>
+        </article>
+        <article class="card c-auto fade">
+          <div class="glyph" aria-hidden="true">
+            <svg width="72" height="40" viewBox="0 0 72 40"><path d="M4 30 C 22 30 26 12 40 12 S 60 26 68 22" fill="none" stroke="#2ee08a" stroke-width="3" stroke-linecap="round"/><circle cx="4" cy="30" r="4" fill="#0b0b0d" stroke="#2ee08a" stroke-width="2.5"/><circle cx="40" cy="12" r="4" fill="#0b0b0d" stroke="#2ee08a" stroke-width="2.5"/><circle cx="68" cy="22" r="4" fill="#0b0b0d" stroke="#2ee08a" stroke-width="2.5"/></svg>
+          </div>
+          <h3><span>Automation</span>Curves over time</h3>
+          <p>Volume fades, wah sweeps, whammy dives. A breakpoint curve targeting a MIDI CC, rendered to a smooth CC stream on export.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ how it works ======================== -->
+  <section id="how" aria-labelledby="how-h">
+    <div class="wrap">
+      <div class="fade">
+        <p class="kicker">How it works</p>
+        <h2 id="how-h">From manual to <em>.mid</em> in four steps.</h2>
+        <p class="lead">No more digging through MIDI implementation charts. Device definitions describe
+          what your gear can do in plain language — you just say <em>when</em>.</p>
+      </div>
+      <figure class="shot fade" style="margin-top:36px">
+        <img src="assets/flow.svg" alt="Workflow diagram: device definitions go into RigPilot, you place events against reference audio, standard MIDI files come out and your show DAW plays them to the rigs" loading="lazy"/>
+      </figure>
+      <ol class="steps">
+        <li class="step fade"><div><h3>Import your song</h3><p>Drop in the mix or stems as reference audio, set the BPM, done.</p></div></li>
+        <li class="step fade"><div><h3>Add a track per device</h3><p>Pick a device definition, set the MIDI channel. One track, one device, one exported file.</p></div></li>
+        <li class="step fade"><div><h3>Drag commands onto the timeline</h3><p>"Stomp A", "Select Rig", "Master Volume" — from the palette, by name. Snap grid, multi-select, copy/paste, undo.</p></div></li>
+        <li class="step fade"><div><h3>Export &amp; play</h3><p>Standard MIDI files with latency compensation baked in — slow preset loads land <em>on</em> the beat, not after it. Works in Studio One, Reaper, anything.</p></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============================ devices ============================= -->
+  <section aria-labelledby="dev-h">
+    <div class="wrap">
+      <div class="fade">
+        <p class="kicker">Device library</p>
+        <h2 id="dev-h">Speaks your gear's language already.</h2>
+        <p class="lead">Definitions are simple XML files — like fixture definitions in lighting software.
+          Missing yours? It's an afternoon of work with the MIDI chart, and contributions are welcome.</p>
+      </div>
+      <ul class="devices fade" style="list-style:none">
+        <li class="device">Kemper Profiler Stage</li>
+        <li class="device">Neural DSP Quad Cortex</li>
+        <li class="device">Fractal Axe-Fx III</li>
+        <li class="device">HeadRush Prime</li>
+        <li class="device">Harley Benton DNAfx GiT Pro</li>
+        <li class="device more"><a href="https://github.com/FlmBus/rigpilot/tree/main/definitions" style="color:inherit;text-decoration:none">+ add your own</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============================ downloads =========================== -->
+  <section id="downloads" aria-labelledby="dl-h">
+    <div class="wrap">
+      <div class="fade">
+        <p class="kicker">Downloads</p>
+        <h2 id="dl-h">Free. All platforms. <span id="dl-version" style="color:var(--fg-faint);font-weight:300"></span></h2>
+      </div>
+      <div class="dl-grid fade" id="dl-grid">
+        <div class="dl-card" data-os="windows">
+          <h3>🪟 Windows</h3>
+          <p class="arch">x64 · Windows 10+</p>
+          <ul>
+            <li><a class="pkg" data-match="setup.exe" href="https://github.com/FlmBus/rigpilot/releases/latest">Installer <span class="ext">.exe</span></a></li>
+            <li><a class="pkg" data-match=".msi" href="https://github.com/FlmBus/rigpilot/releases/latest">MSI package <span class="ext">.msi</span></a></li>
+          </ul>
+        </div>
+        <div class="dl-card" data-os="mac">
+          <h3>🍎 macOS</h3>
+          <p class="arch">Apple Silicon &amp; Intel · macOS 11+</p>
+          <ul>
+            <li><a class="pkg" data-match="aarch64.dmg,arm64.dmg" href="https://github.com/FlmBus/rigpilot/releases/latest">Apple Silicon <span class="ext">.dmg</span></a></li>
+            <li><a class="pkg" data-match="x64.dmg,x86_64.dmg" href="https://github.com/FlmBus/rigpilot/releases/latest">Intel <span class="ext">.dmg</span></a></li>
+          </ul>
+        </div>
+        <div class="dl-card" data-os="linux">
+          <h3>🐧 Linux</h3>
+          <p class="arch">x86_64</p>
+          <ul>
+            <li><a class="pkg" data-match=".AppImage" href="https://github.com/FlmBus/rigpilot/releases/latest">AppImage <span class="ext">.AppImage</span></a></li>
+            <li><a class="pkg" data-match=".deb" href="https://github.com/FlmBus/rigpilot/releases/latest">Debian / Ubuntu <span class="ext">.deb</span></a></li>
+            <li><a class="pkg" data-match=".rpm" href="https://github.com/FlmBus/rigpilot/releases/latest">Fedora / openSUSE <span class="ext">.rpm</span></a></li>
+          </ul>
+        </div>
+      </div>
+      <p class="note fade"><strong>First launch:</strong> builds are currently unsigned.
+        On macOS, right-click the app and choose <em>Open</em> the first time
+        (or run <code>xattr -d com.apple.quarantine RigPilot.app</code>).
+        On Windows, SmartScreen will ask once whether you're sure. You are.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <img src="assets/logo.svg" alt=""/>
+    <p>Built with 🤘 by a band that got tired of typing CC numbers.</p>
+    <p class="tagline"><span class="y">◆ one-shots fire.</span> <span class="p">▬ holds sustain.</span> <span class="g">∿ automation sweeps.</span> the show goes on.</p>
+    <nav aria-label="Footer">
+      <a href="https://github.com/FlmBus/rigpilot">Source code</a>
+      <a href="https://github.com/FlmBus/rigpilot/releases">All releases</a>
+      <a href="https://github.com/FlmBus/rigpilot/issues">Report a bug</a>
+      <a href="https://github.com/FlmBus/rigpilot/blob/main/LICENSE">MIT License</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+  // ---- scroll-in reveals -------------------------------------------------
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+  }), { rootMargin: '0px 0px -60px 0px' });
+  document.querySelectorAll('.fade').forEach(el => io.observe(el));
+
+  // ---- latest-release download wiring ------------------------------------
+  // Fills the hero button (OS-detected) and the per-package links with direct
+  // asset URLs from the latest GitHub release. Falls back to the releases
+  // page if the API is unreachable or no release exists yet.
+  (async () => {
+    const detect = () => {
+      const ua = navigator.userAgent;
+      if (/Windows/i.test(ua)) return { os: 'windows', label: 'for Windows', match: ['setup.exe', '.msi'] };
+      if (/Macintosh|Mac OS X/i.test(ua)) return { os: 'mac', label: 'for macOS', match: ['aarch64.dmg', 'arm64.dmg', 'x64.dmg', 'x86_64.dmg'] };
+      if (/Linux/i.test(ua)) return { os: 'linux', label: 'for Linux', match: ['.AppImage', '.deb', '.rpm'] };
+      return null;
+    };
+    const plat = detect();
+    const hint = document.getElementById('dl-detect');
+    if (plat) hint.textContent = plat.label;
+
+    let rel;
+    try {
+      const r = await fetch('https://api.github.com/repos/FlmBus/rigpilot/releases/latest', { headers: { Accept: 'application/vnd.github+json' } });
+      if (!r.ok) throw new Error(r.status);
+      rel = await r.json();
+    } catch { return; } // keep releases-page fallback links
+
+    const assets = rel.assets || [];
+    const find = pats => {
+      for (const p of pats) {
+        const a = assets.find(a => a.name.toLowerCase().endsWith(p.toLowerCase()) || a.name.toLowerCase().includes(p.toLowerCase()));
+        if (a) return a;
+      }
+      return null;
+    };
+
+    document.getElementById('dl-version').textContent = rel.tag_name || '';
+
+    if (plat) {
+      const a = find(plat.match);
+      if (a) {
+        const btn = document.getElementById('dl-main');
+        btn.href = a.browser_download_url;
+        hint.textContent = `${plat.label} · ${rel.tag_name} · ${(a.size / 1048576).toFixed(1)} MB`;
+      }
+    }
+    document.querySelectorAll('a.pkg[data-match]').forEach(link => {
+      const a = find(link.dataset.match.split(','));
+      if (a) link.href = a.browser_download_url;
+    });
+  })();
+</script>
+</body>
+</html>

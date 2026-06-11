@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="RigPilot logo">
+  <defs>
+    <linearGradient id="lg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff2e88"/>
+      <stop offset="1" stop-color="#d11668"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="#0b0b0d"/>
+  <rect x="1" y="1" width="126" height="126" rx="27" fill="none" stroke="#2a2a31" stroke-width="2"/>
+  <!-- three timeline lanes -->
+  <g stroke="#2a2a31" stroke-width="2">
+    <line x1="20" y1="40" x2="108" y2="40"/>
+    <line x1="20" y1="64" x2="108" y2="64"/>
+    <line x1="20" y1="88" x2="108" y2="88"/>
+  </g>
+  <!-- hold block -->
+  <rect x="34" y="31" width="42" height="18" rx="5" fill="url(#lg)"/>
+  <!-- one-shot diamond -->
+  <rect x="56" y="56" width="16" height="16" fill="#ffb02e" transform="rotate(45 64 64)"/>
+  <!-- automation curve -->
+  <path d="M 28 92 C 44 92 48 80 64 80 S 88 90 100 86" fill="none" stroke="#2ee08a" stroke-width="4" stroke-linecap="round"/>
+  <!-- playhead -->
+  <line x1="88" y1="22" x2="88" y2="106" stroke="#ff2e88" stroke-width="3"/>
+  <path d="M 81 18 L 95 18 L 88 28 Z" fill="#ff2e88"/>
+</svg>

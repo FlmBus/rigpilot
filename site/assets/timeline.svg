@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-label="The RigPilot arrangement: audio reference track, MIDI tracks with one-shot, hold and automation events, and the command palette">
+  <defs>
+    <linearGradient id="holdG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff2e88" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#d11668" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="autoFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2ee08a" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#2ee08a" stop-opacity="0.04"/>
+    </linearGradient>
+  </defs>
+
+  <!-- window chrome -->
+  <rect width="1200" height="560" rx="14" fill="#0b0b0d"/>
+  <rect x="0.5" y="0.5" width="1199" height="559" rx="13.5" fill="none" stroke="#2a2a31"/>
+  <g>
+    <circle cx="26" cy="24" r="6" fill="#ff5f57"/>
+    <circle cx="48" cy="24" r="6" fill="#febc2e"/>
+    <circle cx="70" cy="24" r="6" fill="#28c840"/>
+    <text x="600" y="29" text-anchor="middle" font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#9a9aa6">cable-test.rigpilot — RigPilot</text>
+    <text x="1100" y="29" font-family="'IBM Plex Mono',ui-monospace,monospace" font-size="12" fill="#5d5d68">120 BPM · 4/4</text>
+  </g>
+  <line x1="0" y1="46" x2="1200" y2="46" stroke="#2a2a31"/>
+
+  <!-- ruler -->
+  <g font-family="'IBM Plex Mono',ui-monospace,monospace" font-size="11" fill="#5d5d68">
+    <rect x="220" y="46" width="980" height="26" fill="#121215"/>
+    <text x="228" y="63">1</text><text x="350" y="63">3</text><text x="472" y="63">5</text>
+    <text x="594" y="63">7</text><text x="716" y="63">9</text><text x="838" y="63">11</text>
+    <text x="960" y="63">13</text><text x="1082" y="63">15</text>
+  </g>
+  <line x1="0" y1="72" x2="1200" y2="72" stroke="#2a2a31"/>
+
+  <!-- grid -->
+  <g stroke="#1a1a1f" stroke-width="1">
+    <line x1="281" y1="72" x2="281" y2="430"/><line x1="342" y1="72" x2="342" y2="430"/>
+    <line x1="403" y1="72" x2="403" y2="430"/><line x1="464" y1="72" x2="464" y2="430"/>
+    <line x1="525" y1="72" x2="525" y2="430"/><line x1="586" y1="72" x2="586" y2="430"/>
+    <line x1="647" y1="72" x2="647" y2="430"/><line x1="708" y1="72" x2="708" y2="430"/>
+    <line x1="769" y1="72" x2="769" y2="430"/><line x1="830" y1="72" x2="830" y2="430"/>
+    <line x1="891" y1="72" x2="891" y2="430"/><line x1="952" y1="72" x2="952" y2="430"/>
+    <line x1="1013" y1="72" x2="1013" y2="430"/><line x1="1074" y1="72" x2="1074" y2="430"/>
+    <line x1="1135" y1="72" x2="1135" y2="430"/>
+  </g>
+  <g stroke="#2a2a31" stroke-width="1">
+    <line x1="220" y1="72" x2="220" y2="430"/><line x1="464" y1="72" x2="464" y2="430" opacity="0.8"/>
+    <line x1="708" y1="72" x2="708" y2="430" opacity="0.8"/><line x1="952" y1="72" x2="952" y2="430" opacity="0.8"/>
+  </g>
+
+  <!-- ===== audio track ===== -->
+  <g>
+    <rect x="0" y="72" width="220" height="92" fill="#121215"/>
+    <text x="16" y="100" font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="15" font-weight="600" fill="#f2f2f5">Song Mix</text>
+    <text x="16" y="120" font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#5d5d68">Audio · reference</text>
+    <g font-family="'IBM Plex Mono',ui-monospace,monospace" font-size="11">
+      <rect x="16" y="132" width="22" height="18" rx="4" fill="#1a1a1f" stroke="#2a2a31"/><text x="22" y="145" fill="#9a9aa6">M</text>
+      <rect x="44" y="132" width="22" height="18" rx="4" fill="#1a1a1f" stroke="#2a2a31"/><text x="51" y="145" fill="#9a9aa6">S</text>
+      <rect x="76" y="139" width="100" height="4" rx="2" fill="#2a2a31"/>
+      <rect x="76" y="139" width="72" height="4" rx="2" fill="#9a9aa6"/>
+    </g>
+    <!-- waveform -->
+    <g transform="translate(220,118)" opacity="0.9">
+      <path fill="#3a3a44" d="M8 0 q 8 -12 16 0 q 8 -22 16 0 q 8 -8 16 0 q 8 -28 16 0 q 8 -15 16 0 q 8 -6 16 0 q 8 -20 16 0 q 8 -30 16 0 q 8 -10 16 0 q 8 -18 16 0 q 8 -26 16 0 q 8 -8 16 0 q 8 -22 16 0 q 8 -13 16 0 q 8 -29 16 0 q 8 -9 16 0 q 8 -17 16 0 q 8 -24 16 0 q 8 -14 16 0 q 8 -32 16 0 q 8 -8 16 0 q 8 -21 16 0 q 8 -12 16 0 q 8 -26 16 0 q 8 -16 16 0 q 8 -7 16 0 q 8 -23 16 0 q 8 -30 16 0 q 8 -11 16 0 q 8 -18 16 0 q 8 -25 16 0 q 8 -9 16 0 q 8 -22 16 0 q 8 -15 16 0 q 8 -28 16 0 q 8 -10 16 0 q 8 -19 16 0 q 8 -31 16 0 q 8 -12 16 0 q 8 -23 16 0 q 8 -16 16 0 q 8 -8 16 0 q 8 -24 16 0 q 8 -14 16 0 q 8 -27 16 0 q 8 -10 16 0 q 8 -20 16 0 q 8 -32 16 0 q 8 -11 16 0 q 8 -17 16 0 q 8 -26 16 0 q 8 -9 16 0 q 8 -21 16 0 q 8 -13 16 0 q 8 -29 16 0 q 8 -10 16 0 q 8 -19 16 0 q 8 -23 16 0 q 8 -14 16 0 q 8 -25 16 0 z"/>
+      <path fill="#2a2a31" d="M8 0 q 8 12 16 0 q 8 22 16 0 q 8 8 16 0 q 8 28 16 0 q 8 15 16 0 q 8 6 16 0 q 8 20 16 0 q 8 30 16 0 q 8 10 16 0 q 8 18 16 0 q 8 26 16 0 q 8 8 16 0 q 8 22 16 0 q 8 13 16 0 q 8 29 16 0 q 8 9 16 0 q 8 17 16 0 q 8 24 16 0 q 8 14 16 0 q 8 32 16 0 q 8 8 16 0 q 8 21 16 0 q 8 12 16 0 q 8 26 16 0 q 8 16 16 0 q 8 7 16 0 q 8 23 16 0 q 8 30 16 0 q 8 11 16 0 q 8 18 16 0 q 8 25 16 0 q 8 9 16 0 q 8 22 16 0 q 8 15 16 0 q 8 28 16 0 q 8 10 16 0 q 8 19 16 0 q 8 31 16 0 q 8 12 16 0 q 8 23 16 0 q 8 16 16 0 q 8 8 16 0 q 8 24 16 0 q 8 14 16 0 q 8 27 16 0 q 8 10 16 0 q 8 20 16 0 q 8 32 16 0 q 8 11 16 0 q 8 17 16 0 q 8 26 16 0 q 8 9 16 0 q 8 21 16 0 q 8 13 16 0 q 8 29 16 0 q 8 10 16 0 q 8 19 16 0 q 8 23 16 0 q 8 14 16 0 q 8 25 16 0 z"/>
+    </g>
+  </g>
+  <line x1="0" y1="164" x2="1200" y2="164" stroke="#2a2a31"/>
+
+  <!-- ===== MIDI track 1: Kemper ===== -->
+  <g>
+    <rect x="0" y="164" width="220" height="128" fill="#121215"/>
+    <text x="16" y="192" font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="15" font-weight="600" fill="#f2f2f5">Lead Rig</text>
+    <text x="16" y="212" font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#5d5d68">Kemper Profiler Stage</text>
+    <g font-family="'IBM Plex Mono',ui-monospace,monospace" font-size="11">
+      <rect x="16" y="224" width="22" height="18" rx="4" fill="#1a1a1f" stroke="#2a2a31"/><text x="22" y="237" fill="#9a9aa6">M</text>
+      <rect x="44" y="224" width="22" height="18" rx="4" fill="#1a1a1f" stroke="#2a2a31"/><text x="51" y="237" fill="#9a9aa6">S</text>
+      <circle cx="180" cy="233" r="10" fill="#1a1a1f" stroke="#2a2a31"/>
+      <text x="175" y="238" fill="#9a9aa6">⚙</text>
+    </g>
+    <!-- events: lane 1 -->
+    <rect x="232" y="178" width="14" height="14" fill="#ffb02e" transform="rotate(45 239 185)"/>
+    <rect x="306" y="184" width="160" height="26" rx="6" fill="url(#holdG)"/>
+    <text x="318" y="202" font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="12" font-weight="500" fill="#fff">Stomp A</text>
+    <rect x="586" y="178" width="14" height="14" fill="#ffb02e" transform="rotate(45 593 185)"/>
+    <!-- selected hold with white outline -->
+    <rect x="708" y="184" width="244" height="26" rx="6" fill="url(#holdG)" stroke="#f2f2f5" stroke-width="2"/>
+    <text x="720" y="202" font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="12" font-weight="500" fill="#fff">Morph</text>
+    <!-- events: lane 2 -->
+    <rect x="403" y="226" width="14" height="14" fill="#ffb02e" transform="rotate(45 410 233)"/>
+    <text x="424" y="238" font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#9a9aa6">Select Rig · #14</text>
+    <rect x="830" y="226" width="14" height="14" fill="#ffb02e" transform="rotate(45 837 233)"/>
+    <!-- automation lane 3 -->
+    <path d="M 232 280 L 232 268 C 300 268 320 252 380 252 S 480 276 540 276 L 540 280 Z" fill="url(#autoFill)"/>
+    <path d="M 232 268 C 300 268 320 252 380 252 S 480 276 540 276" fill="none" stroke="#2ee08a" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="232" cy="268" r="4.5" fill="#0b0b0d" stroke="#2ee08a" stroke-width="2"/>
+    <circle cx="380" cy="252" r="4.5" fill="#0b0b0d" stroke="#2ee08a" stroke-width="2"/>
+    <circle cx="540" cy="276" r="4.5" fill="#0b0b0d" stroke="#2ee08a" stroke-width="2"/>
+  </g>
+  <line x1="0" y1="292" x2="1200" y2="292" stroke="#2a2a31"/>
+
+  <!-- ===== MIDI track 2: Quad Cortex ===== -->
+  <g>
+    <rect x="0" y="292" width="220" height="92" fill="#121215"/>
+    <text x="16" y="320" font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="15" font-weight="600" fill="#f2f2f5">Rhythm Rig</text>
+    <text x="16" y="340" font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#5d5d68">Neural DSP Quad Cortex</text>
+    <g font-family="'IBM Plex Mono',ui-monospace,monospace" font-size="11">
+      <rect x="16" y="352" width="22" height="18" rx="4" fill="#1a1a1f" stroke="#2a2a31"/><text x="22" y="365" fill="#9a9aa6">M</text>
+      <rect x="44" y="352" width="22" height="18" rx="4" fill="#1a1a1f" stroke="#2a2a31"/><text x="51" y="365" fill="#9a9aa6">S</text>
+      <circle cx="180" cy="361" r="10" fill="#1a1a1f" stroke="#2a2a31"/>
+      <text x="175" y="366" fill="#9a9aa6">⚙</text>
+    </g>
+    <rect x="232" y="306" width="14" height="14" fill="#ffb02e" transform="rotate(45 239 313)"/>
+    <text x="253" y="318" font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#9a9aa6">Scene B</text>
+    <rect x="464" y="312" width="120" height="26" rx="6" fill="url(#holdG)"/>
+    <text x="476" y="330" font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="12" font-weight="500" fill="#fff">Stomp C</text>
+    <path d="M 647 366 L 647 356 C 720 356 740 344 800 344 S 900 364 980 364 S 1080 348 1135 348 L 1135 366 Z" fill="url(#autoFill)"/>
+    <path d="M 647 356 C 720 356 740 344 800 344 S 900 364 980 364 S 1080 348 1135 348" fill="none" stroke="#2ee08a" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="647" cy="356" r="4.5" fill="#0b0b0d" stroke="#2ee08a" stroke-width="2"/>
+    <circle cx="800" cy="344" r="4.5" fill="#0b0b0d" stroke="#2ee08a" stroke-width="2"/>
+    <circle cx="980" cy="364" r="4.5" fill="#0b0b0d" stroke="#2ee08a" stroke-width="2"/>
+    <circle cx="1135" cy="348" r="4.5" fill="#0b0b0d" stroke="#2ee08a" stroke-width="2"/>
+    <rect x="891" y="306" width="14" height="14" fill="#ffb02e" transform="rotate(45 898 313)"/>
+  </g>
+  <line x1="0" y1="384" x2="1200" y2="384" stroke="#2a2a31"/>
+
+  <!-- ===== MIDI track 3 (collapsed) ===== -->
+  <g>
+    <rect x="0" y="384" width="220" height="46" fill="#121215"/>
+    <text x="16" y="412" font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="15" font-weight="600" fill="#f2f2f5">Bass Rig</text>
+    <text x="115" y="412" font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#5d5d68">DNAfx GiT Pro</text>
+    <rect x="342" y="400" width="14" height="14" fill="#ffb02e" transform="rotate(45 349 407)"/>
+    <rect x="769" y="400" width="14" height="14" fill="#ffb02e" transform="rotate(45 776 407)"/>
+    <rect x="525" y="394" width="100" height="26" rx="6" fill="url(#holdG)" opacity="0.9"/>
+  </g>
+  <line x1="0" y1="430" x2="1200" y2="430" stroke="#2a2a31"/>
+
+  <!-- playhead -->
+  <g>
+    <line x1="660" y1="46" x2="660" y2="430" stroke="#ff2e88" stroke-width="2"/>
+    <path d="M 652 46 L 668 46 L 660 58 Z" fill="#ff2e88"/>
+  </g>
+
+  <!-- ===== command palette ===== -->
+  <g>
+    <rect x="0" y="430" width="1200" height="130" rx="14" fill="#121215"/>
+    <rect x="0" y="430" width="1200" height="14" fill="#121215"/>
+    <line x1="0" y1="430" x2="1200" y2="430" stroke="#2a2a31"/>
+    <text x="16" y="456" font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="12" font-weight="600" letter-spacing="1.2" fill="#5d5d68">COMMAND PALETTE — KEMPER PROFILER STAGE</text>
+    <g font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="13" font-weight="500">
+      <rect x="16" y="470" width="128" height="34" rx="8" fill="#1a1a1f" stroke="#2a2a31"/>
+      <rect x="30" y="481" width="11" height="11" fill="#ffb02e" transform="rotate(45 35.5 486.5)"/>
+      <text x="50" y="492" fill="#f2f2f5">Select Rig</text>
+      <rect x="156" y="470" width="128" height="34" rx="8" fill="#1a1a1f" stroke="#2a2a31"/>
+      <rect x="170" y="481" width="11" height="11" fill="#ffb02e" transform="rotate(45 175.5 486.5)"/>
+      <text x="190" y="492" fill="#f2f2f5">Tap Tempo</text>
+      <rect x="296" y="470" width="128" height="34" rx="8" fill="#1a1a1f" stroke="#2a2a31"/>
+      <rect x="310" y="481" width="13" height="13" rx="3" fill="url(#holdG)"/>
+      <text x="332" y="492" fill="#f2f2f5">Stomp A</text>
+      <rect x="436" y="470" width="128" height="34" rx="8" fill="#1a1a1f" stroke="#2a2a31"/>
+      <rect x="450" y="481" width="13" height="13" rx="3" fill="url(#holdG)"/>
+      <text x="472" y="492" fill="#f2f2f5">Morph</text>
+      <rect x="576" y="470" width="148" height="34" rx="8" fill="#1a1a1f" stroke="#2a2a31"/>
+      <path d="M 590 492 q 6 -8 12 0 t 12 0" fill="none" stroke="#2ee08a" stroke-width="2.5" stroke-linecap="round"/>
+      <text x="622" y="492" fill="#f2f2f5">Master Volume</text>
+      <rect x="736" y="470" width="118" height="34" rx="8" fill="#1a1a1f" stroke="#2a2a31"/>
+      <path d="M 750 492 q 6 -8 12 0 t 12 0" fill="none" stroke="#2ee08a" stroke-width="2.5" stroke-linecap="round"/>
+      <text x="782" y="492" fill="#f2f2f5">Wah CC</text>
+    </g>
+    <g font-family="'Outfit',ui-sans-serif,system-ui,sans-serif" font-size="11" fill="#5d5d68">
+      <text x="16" y="540">drag a command onto a MIDI track to place an event</text>
+      <text x="1184" y="540" text-anchor="end" fill="#ff2e88">● rec-ready · ch 2 · latency comp 40 ms</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  RigPilot Device Definition Schema, version 1
+  See docs/plan.md §1.4 and docs/terminology.md for the concepts.
+
+  A definition contains no MIDI channel information: the MIDI Channel is a
+  universal Device Setting configured in the app (docs/research/midi-implementations.md).
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="https://rigpilot.app/schemas/device-definition/1"
+           xmlns:rp="https://rigpilot.app/schemas/device-definition/1"
+           elementFormDefault="qualified">
+
+  <!-- ======================= simple types ======================= -->
+
+  <!-- 0..127 -->
+  <xs:simpleType name="midiByte">
+    <xs:restriction base="xs:integer">
+      <xs:minInclusive value="0"/>
+      <xs:maxInclusive value="127"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- 0..127, or a "$param" placeholder substituted verbatim per Event -->
+  <xs:simpleType name="midiByteOrParam">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="(12[0-7]|1[01][0-9]|[1-9]?[0-9])|\$[A-Za-z][A-Za-z0-9_\-]*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- kebab-case identifier -->
+  <xs:simpleType name="idType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[a-z0-9][a-z0-9\-]*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- ======================= messages ======================= -->
+
+  <xs:complexType name="noteMessage">
+    <xs:attribute name="note" type="rp:midiByteOrParam" use="required"/>
+    <xs:attribute name="velocity" type="rp:midiByteOrParam" default="127"/>
+  </xs:complexType>
+
+  <xs:complexType name="ccMessage">
+    <xs:attribute name="controller" type="rp:midiByte" use="required"/>
+    <xs:attribute name="value" type="rp:midiByteOrParam" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="pcMessage">
+    <xs:attribute name="program" type="rp:midiByteOrParam" use="required"/>
+  </xs:complexType>
+
+  <xs:group name="message">
+    <xs:choice>
+      <xs:element name="NoteOn" type="rp:noteMessage"/>
+      <xs:element name="NoteOff" type="rp:noteMessage"/>
+      <xs:element name="ControlChange" type="rp:ccMessage"/>
+      <xs:element name="ProgramChange" type="rp:pcMessage"/>
+    </xs:choice>
+  </xs:group>
+
+  <xs:complexType name="messageList">
+    <xs:group ref="rp:message" minOccurs="1" maxOccurs="unbounded"/>
+  </xs:complexType>
+
+  <!-- ======================= params ======================= -->
+
+  <!--
+    A per-Event value the user supplies when placing the event.
+    Optional Labels give friendly names for raw values ("3B" instead of 9).
+  -->
+  <xs:complexType name="paramType">
+    <xs:sequence>
+      <xs:element name="Label" minOccurs="0" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:string">
+              <xs:attribute name="value" type="rp:midiByte" use="required"/>
+              <!-- compact form used on timeline events; falls back to the text -->
+              <xs:attribute name="short" type="xs:string"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+    <xs:attribute name="id" type="rp:idType" use="required"/>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="min" type="rp:midiByte" use="required"/>
+    <xs:attribute name="max" type="rp:midiByte" use="required"/>
+    <xs:attribute name="default" type="rp:midiByte"/>
+  </xs:complexType>
+
+  <!-- ======================= commands ======================= -->
+
+  <xs:attributeGroup name="commandAttrs">
+    <xs:attribute name="id" type="rp:idType" use="required"/>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <!-- compact label for timeline events; falls back to name -->
+    <xs:attribute name="short" type="xs:string"/>
+    <!-- typical execution latency of THIS command in ms, added to the track's
+         latency compensation (e.g. preset loads are slow, stomp toggles are not) -->
+    <xs:attribute name="latency" type="xs:nonNegativeInteger"/>
+    <!-- free-form; the palette derives its groups from the distinct values found -->
+    <xs:attribute name="group" type="xs:string"/>
+    <!-- human-readable explanation, shown as tooltip/help in the palette -->
+    <xs:attribute name="description" type="xs:string"/>
+  </xs:attributeGroup>
+
+  <xs:complexType name="oneShotCommand">
+    <xs:sequence>
+      <xs:element name="Param" type="rp:paramType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:group ref="rp:message" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attributeGroup ref="rp:commandAttrs"/>
+    <!--
+      false = the device toggles/reacts relative to its current state, so the
+      resulting state is not predictable from the event alone. The editor warns
+      when such commands are used in a show.
+    -->
+    <xs:attribute name="deterministic" type="xs:boolean" default="true"/>
+  </xs:complexType>
+
+  <xs:complexType name="holdCommand">
+    <xs:sequence>
+      <xs:element name="Param" type="rp:paramType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="Engage" type="rp:messageList"/>
+      <xs:element name="Disengage" type="rp:messageList"/>
+    </xs:sequence>
+    <xs:attributeGroup ref="rp:commandAttrs"/>
+  </xs:complexType>
+
+  <xs:complexType name="automationCommand">
+    <xs:sequence>
+      <xs:element name="Target">
+        <xs:complexType>
+          <xs:attribute name="controller" type="rp:midiByte" use="required"/>
+          <xs:attribute name="min" type="rp:midiByte" default="0"/>
+          <xs:attribute name="max" type="rp:midiByte" default="127"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+    <xs:attributeGroup ref="rp:commandAttrs"/>
+  </xs:complexType>
+
+  <!-- ======================= root ======================= -->
+
+  <xs:element name="DeviceDefinition">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Meta">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Manufacturer" type="xs:string"/>
+              <xs:element name="Model" type="xs:string"/>
+              <xs:element name="Author" type="xs:string" minOccurs="0"/>
+              <xs:element name="Source" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+              <!-- Shown in the app when the definition is selected: device setup
+                   notes (e.g. which channel menu to configure) and open
+                   verification items. -->
+              <xs:element name="Description" type="xs:string" minOccurs="0"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <!-- optional: default Device Settings applied when a track selects this definition -->
+        <xs:element name="Defaults" minOccurs="0">
+          <xs:complexType>
+            <!-- default latency compensation in milliseconds: messages are sent
+                 this much earlier at export so the audible change lands on time -->
+            <xs:attribute name="latency" type="xs:nonNegativeInteger" default="0"/>
+          </xs:complexType>
+        </xs:element>
+        <!-- optional: puts the device in a known clean state (used by the Reset Block) -->
+        <xs:element name="Init" type="rp:messageList" minOccurs="0"/>
+        <xs:element name="Commands">
+          <xs:complexType>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+              <xs:element name="OneShot" type="rp:oneShotCommand"/>
+              <xs:element name="Hold" type="rp:holdCommand"/>
+              <xs:element name="Automation" type="rp:automationCommand"/>
+            </xs:choice>
+          </xs:complexType>
+          <xs:unique name="uniqueCommandId">
+            <xs:selector xpath="rp:OneShot|rp:Hold|rp:Automation"/>
+            <xs:field xpath="@id"/>
+          </xs:unique>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute name="id" type="rp:idType" use="required"/>
+      <xs:attribute name="version" type="xs:string" use="required"/>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fractal Audio Axe-Fx III - RigPilot Device Definition -->
+<DeviceDefinition id="fractal-axe-fx-iii" version="1.0"
+                  xmlns="https://rigpilot.app/schemas/device-definition/1">
+  <Meta>
+    <Manufacturer>Fractal Audio</Manufacturer>
+    <Model>Axe-Fx III</Model>
+    <Author>Flemming Busman</Author>
+    <Source>Axe-Fx III Owner's Manual (MIDI/Remote chapter)</Source>
+    <Description>IMPORTANT: the Axe-Fx III has NO fixed CC assignments - every function is assigned a CC number by the user in SETUP &gt; MIDI/Remote. This definition uses a documented convention; configure the device to match (or edit this file): Scene Select = CC34, Tempo Tap = CC14, Tuner = CC15, External Controller 1-4 = CC16-19. Set the device's MIDI channel (SETUP &gt; MIDI/Remote &gt; General) to the channel configured in RigPilot's Device Settings. "Select Preset" assumes PC Mapping = OFF (presets load 1:1, Bank Select CC0 = preset bank of 128).</Description>
+  </Meta>
+
+  <Commands>
+
+    <!-- ============ Presets &amp; Scenes ============ -->
+
+    <OneShot id="select-preset" name="Select Preset" short="Preset" group="Presets &amp; Scenes"
+             description="Loads a preset: bank (CC0) x 128 + program number. Requires PC Mapping = OFF.">
+      <Param id="bank" name="Bank (x128)" min="0" max="7" default="0"/>
+      <Param id="program" name="Program #" min="0" max="127" default="0"/>
+      <ControlChange controller="0" value="$bank"/>
+      <ProgramChange program="$program"/>
+    </OneShot>
+
+    <OneShot id="select-scene" name="Select Scene" short="Scene" group="Presets &amp; Scenes"
+             description="Selects a scene of the current preset. Requires 'Scene Select' = CC34 in SETUP &gt; MIDI/Remote &gt; Other.">
+      <Param id="scene" name="Scene" min="0" max="7" default="0">
+        <Label value="0" short="1">Scene 1</Label>
+        <Label value="1" short="2">Scene 2</Label>
+        <Label value="2" short="3">Scene 3</Label>
+        <Label value="3" short="4">Scene 4</Label>
+        <Label value="4" short="5">Scene 5</Label>
+        <Label value="5" short="6">Scene 6</Label>
+        <Label value="6" short="7">Scene 7</Label>
+        <Label value="7" short="8">Scene 8</Label>
+      </Param>
+      <ControlChange controller="34" value="$scene"/>
+    </OneShot>
+
+    <!-- ============ Pedals ============
+         Conventions: assign External Controller 1-4 to CC16-19 in SETUP > MIDI/Remote > External. -->
+
+    <Automation id="external-1" name="External Controller 1" group="Pedals"
+             description="Continuous control mapped to External 1 (convention: CC16).">
+      <Target controller="16"/>
+    </Automation>
+    <Automation id="external-2" name="External Controller 2" group="Pedals"
+             description="Continuous control mapped to External 2 (convention: CC17).">
+      <Target controller="17"/>
+    </Automation>
+    <Automation id="external-3" name="External Controller 3" group="Pedals"
+             description="Continuous control mapped to External 3 (convention: CC18).">
+      <Target controller="18"/>
+    </Automation>
+    <Automation id="external-4" name="External Controller 4" group="Pedals"
+             description="Continuous control mapped to External 4 (convention: CC19).">
+      <Target controller="19"/>
+    </Automation>
+
+    <!-- ============ Misc ============ -->
+
+    <OneShot id="tap-tempo" name="Tap Tempo" group="Misc"
+             description="A single tempo tap (convention: 'Tempo Tap' = CC14 in SETUP &gt; MIDI/Remote &gt; Other).">
+      <ControlChange controller="14" value="127"/>
+    </OneShot>
+
+    <Hold id="tuner" name="Tuner" group="Misc"
+             description="Shows the tuner for the duration of the block (convention: 'Tuner' = CC15, 64-127 = on, 0-63 = off).">
+      <Engage><ControlChange controller="15" value="127"/></Engage>
+      <Disengage><ControlChange controller="15" value="0"/></Disengage>
+    </Hold>
+
+  </Commands>
+</DeviceDefinition>

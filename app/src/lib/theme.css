@@ -1,0 +1,237 @@
+/* RigPilot theme — industrial high-contrast console.
+   Band colors: pink-magenta + white on near-black. Desktop density, no web cards. */
+
+:root {
+  --bg0: #0b0b0d;
+  --bg1: #121215;
+  --bg2: #1a1a1f;
+  --bg3: #232329;
+  --line: #2a2a31;
+  --line-strong: #3f3f4a;
+  --fg: #f2f2f5;
+  --fg-dim: #9a9aa6;
+  --fg-faint: #5d5d68;
+  --accent: #ff2e88;
+  --accent-down: #d11668;
+  --accent-soft: rgba(255, 46, 136, 0.14);
+  --warn: #ffb02e;
+  --green: #2ee08a;
+  --radius: 3px;
+  --ctl-h: 26px;
+  --font-ui: "Outfit Variable", "Outfit", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  user-select: none;
+  overflow: hidden;
+}
+
+/* ---------- micro-labels ---------- */
+.microlabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- controls ---------- */
+button,
+input,
+select {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--fg);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  height: var(--ctl-h);
+  padding: 0 8px;
+}
+
+button {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+button:hover {
+  border-color: var(--line-strong);
+  background: var(--bg3);
+}
+button:active {
+  background: var(--bg1);
+}
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+button.primary:hover {
+  background: var(--accent-down);
+  border-color: var(--accent-down);
+}
+button.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--fg-dim);
+}
+button.ghost:hover {
+  color: var(--fg);
+  border-color: var(--line);
+  background: var(--bg2);
+}
+button.toggle.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+button.danger:hover {
+  border-color: #c2304a;
+  color: #ff6e85;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+:is(button, input, select):focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+input[type="text"],
+input:not([type]) {
+  width: 100%;
+}
+input[type="number"] {
+  font-family: var(--font-mono);
+  width: 64px;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* selects: kill the browser look */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 22px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='5'><path d='M0 0l4 5 4-5z' fill='%239a9aa6'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+}
+
+/* checkboxes */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  margin: 0;
+  background: var(--bg2);
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* range sliders */
+input[type="range"] {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 14px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  background: var(--line-strong);
+  border-radius: 2px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 14px;
+  margin-top: -5.5px;
+  background: var(--fg);
+  border-radius: 2px;
+}
+input[type="range"]:hover::-webkit-slider-thumb {
+  background: var(--accent);
+}
+
+label {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ---------- panels ---------- */
+.panel {
+  background: var(--bg1);
+  border: 1px solid var(--line);
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 8px 0;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg0);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg3);
+  border: 2px solid var(--bg0);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--line-strong);
+}

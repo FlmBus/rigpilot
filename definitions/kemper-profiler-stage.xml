@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Kemper Profiler Stage - RigPilot Device Definition -->
+<DeviceDefinition id="kemper-profiler-stage" version="1.0"
+                  xmlns="https://rigpilot.app/schemas/device-definition/1">
+  <Meta>
+    <Manufacturer>Kemper</Manufacturer>
+    <Model>Profiler Stage</Model>
+    <Author>Flemming Busman</Author>
+    <Source>Profiler MIDI Parameter Documentation rev. 145 (fw 4.2.1+)</Source>
+    <Source>Kemper Main Manual (pedal controllers CC1/4/7/11)</Source>
+    <Description>Set the Profiler's "MIDI Global Channel" (System Menu, default OMNI) to the MIDI channel configured in RigPilot's Device Settings. Stomp commands switch deterministically via NRPN; the plain toggle CCs are also included, but their result depends on the device's current state.</Description>
+  </Meta>
+
+  <Commands>
+
+    <!-- ============ Performances ============ -->
+
+    <!-- Preselects a performance; it is loaded when a "Load Slot" follows.
+         Value is 0-based: 0 = Performance 1, 124 = Performance 125. -->
+    <OneShot id="preselect-performance" name="Preselect Performance" short="Perf" group="Performances"
+             description="Preselects a performance. It is loaded the moment a 'Load Slot' command follows.">
+      <Param id="performance" name="Performance" min="0" max="124" default="0">
+        <Label value="0" short="1">Performance 1</Label>
+        <Label value="1" short="2">Performance 2</Label>
+        <Label value="2" short="3">Performance 3</Label>
+        <Label value="3" short="4">Performance 4</Label>
+        <Label value="4" short="5">Performance 5</Label>
+        <Label value="5" short="6">Performance 6</Label>
+        <Label value="6" short="7">Performance 7</Label>
+        <Label value="7" short="8">Performance 8</Label>
+        <Label value="8" short="9">Performance 9</Label>
+        <Label value="9" short="10">Performance 10</Label>
+        <Label value="10" short="11">Performance 11</Label>
+        <Label value="11" short="12">Performance 12</Label>
+        <Label value="12" short="13">Performance 13</Label>
+        <Label value="13" short="14">Performance 14</Label>
+        <Label value="14" short="15">Performance 15</Label>
+        <Label value="15" short="16">Performance 16</Label>
+        <Label value="16" short="17">Performance 17</Label>
+        <Label value="17" short="18">Performance 18</Label>
+        <Label value="18" short="19">Performance 19</Label>
+        <Label value="19" short="20">Performance 20</Label>
+        <Label value="20" short="21">Performance 21</Label>
+        <Label value="21" short="22">Performance 22</Label>
+        <Label value="22" short="23">Performance 23</Label>
+        <Label value="23" short="24">Performance 24</Label>
+        <Label value="24" short="25">Performance 25</Label>
+        <Label value="25" short="26">Performance 26</Label>
+        <Label value="26" short="27">Performance 27</Label>
+        <Label value="27" short="28">Performance 28</Label>
+        <Label value="28" short="29">Performance 29</Label>
+        <Label value="29" short="30">Performance 30</Label>
+        <Label value="30" short="31">Performance 31</Label>
+        <Label value="31" short="32">Performance 32</Label>
+        <Label value="32" short="33">Performance 33</Label>
+        <Label value="33" short="34">Performance 34</Label>
+        <Label value="34" short="35">Performance 35</Label>
+        <Label value="35" short="36">Performance 36</Label>
+        <Label value="36" short="37">Performance 37</Label>
+        <Label value="37" short="38">Performance 38</Label>
+        <Label value="38" short="39">Performance 39</Label>
+        <Label value="39" short="40">Performance 40</Label>
+        <Label value="40" short="41">Performance 41</Label>
+        <Label value="41" short="42">Performance 42</Label>
+        <Label value="42" short="43">Performance 43</Label>
+        <Label value="43" short="44">Performance 44</Label>
+        <Label value="44" short="45">Performance 45</Label>
+        <Label value="45" short="46">Performance 46</Label>
+        <Label value="46" short="47">Performance 47</Label>
+        <Label value="47" short="48">Performance 48</Label>
+        <Label value="48" short="49">Performance 49</Label>
+        <Label value="49" short="50">Performance 50</Label>
+        <Label value="50" short="51">Performance 51</Label>
+        <Label value="51" short="52">Performance 52</Label>
+        <Label value="52" short="53">Performance 53</Label>
+        <Label value="53" short="54">Performance 54</Label>
+        <Label value="54" short="55">Performance 55</Label>
+        <Label value="55" short="56">Performance 56</Label>
+        <Label value="56" short="57">Performance 57</Label>
+        <Label value="57" short="58">Performance 58</Label>
+        <Label value="58" short="59">Performance 59</Label>
+        <Label value="59" short="60">Performance 60</Label>
+        <Label value="60" short="61">Performance 61</Label>
+        <Label value="61" short="62">Performance 62</Label>
+        <Label value="62" short="63">Performance 63</Label>
+        <Label value="63" short="64">Performance 64</Label>
+        <Label value="64" short="65">Performance 65</Label>
+        <Label value="65" short="66">Performance 66</Label>
+        <Label value="66" short="67">Performance 67</Label>
+        <Label value="67" short="68">Performance 68</Label>
+        <Label value="68" short="69">Performance 69</Label>
+        <Label value="69" short="70">Performance 70</Label>
+        <Label value="70" short="71">Performance 71</Label>
+        <Label value="71" short="72">Performance 72</Label>
+        <Label value="72" short="73">Performance 73</Label>
+        <Label value="73" short="74">Performance 74</Label>
+        <Label value="74" short="75">Performance 75</Label>
+        <Label value="75" short="76">Performance 76</Label>
+        <Label value="76" short="77">Performance 77</Label>
+        <Label value="77" short="78">Performance 78</Label>
+        <Label value="78" short="79">Performance 79</Label>
+        <Label value="79" short="80">Performance 80</Label>
+        <Label value="80" short="81">Performance 81</Label>
+        <Label value="81" short="82">Performance 82</Label>
+        <Label value="82" short="83">Performance 83</Label>
+        <Label value="83" short="84">Performance 84</Label>
+        <Label value="84" short="85">Performance 85</Label>
+        <Label value="85" short="86">Performance 86</Label>
+        <Label value="86" short="87">Performance 87</Label>
+        <Label value="87" short="88">Performance 88</Label>
+        <Label value="88" short="89">Performance 89</Label>
+        <Label value="89" short="90">Performance 90</Label>
+        <Label value="90" short="91">Performance 91</Label>
+        <Label value="91" short="92">Performance 92</Label>
+        <Label value="92" short="93">Performance 93</Label>
+        <Label value="93" short="94">Performance 94</Label>
+        <Label value="94" short="95">Performance 95</Label>
+        <Label value="95" short="96">Performance 96</Label>
+        <Label value="96" short="97">Performance 97</Label>
+        <Label value="97" short="98">Performance 98</Label>
+        <Label value="98" short="99">Performance 99</Label>
+        <Label value="99" short="100">Performance 100</Label>
+        <Label value="100" short="101">Performance 101</Label>
+        <Label value="101" short="102">Performance 102</Label>
+        <Label value="102" short="103">Performance 103</Label>
+        <Label value="103" short="104">Performance 104</Label>
+        <Label value="104" short="105">Performance 105</Label>
+        <Label value="105" short="106">Performance 106</Label>
+        <Label value="106" short="107">Performance 107</Label>
+        <Label value="107" short="108">Performance 108</Label>
+        <Label value="108" short="109">Performance 109</Label>
+        <Label value="109" short="110">Performance 110</Label>
+        <Label value="110" short="111">Performance 111</Label>
+        <Label value="111" short="112">Performance 112</Label>
+        <Label value="112" short="113">Performance 113</Label>
+        <Label value="113" short="114">Performance 114</Label>
+        <Label value="114" short="115">Performance 115</Label>
+        <Label value="115" short="116">Performance 116</Label>
+        <Label value="116" short="117">Performance 117</Label>
+        <Label value="117" short="118">Performance 118</Label>
+        <Label value="118" short="119">Performance 119</Label>
+        <Label value="119" short="120">Performance 120</Label>
+        <Label value="120" short="121">Performance 121</Label>
+        <Label value="121" short="122">Performance 122</Label>
+        <Label value="122" short="123">Performance 123</Label>
+        <Label value="123" short="124">Performance 124</Label>
+        <Label value="124" short="125">Performance 125</Label>
+      </Param>
+      <ControlChange controller="47" value="$performance"/>
+    </OneShot>
+
+    <OneShot id="load-slot-1" name="Load Slot 1" short="Slot 1" group="Performances"
+             description="Loads slot 1 of the preselected (or current) performance.">
+      <ControlChange controller="50" value="1"/>
+    </OneShot>
+    <OneShot id="load-slot-2" name="Load Slot 2" short="Slot 2" group="Performances"
+             description="Loads slot 2 of the preselected (or current) performance.">
+      <ControlChange controller="51" value="1"/>
+    </OneShot>
+    <OneShot id="load-slot-3" name="Load Slot 3" short="Slot 3" group="Performances"
+             description="Loads slot 3 of the preselected (or current) performance.">
+      <ControlChange controller="52" value="1"/>
+    </OneShot>
+    <OneShot id="load-slot-4" name="Load Slot 4" short="Slot 4" group="Performances"
+             description="Loads slot 4 of the preselected (or current) performance.">
+      <ControlChange controller="53" value="1"/>
+    </OneShot>
+    <OneShot id="load-slot-5" name="Load Slot 5" short="Slot 5" group="Performances"
+             description="Loads slot 5 of the preselected (or current) performance.">
+      <ControlChange controller="54" value="1"/>
+    </OneShot>
+
+    <!-- Relative navigation: result depends on the current performance. -->
+    <OneShot id="performance-up" name="Performance Up" group="Performances" deterministic="false"
+             description="Steps to the next performance - relative, depends on where the device currently is.">
+      <ControlChange controller="48" value="0"/>
+    </OneShot>
+    <OneShot id="performance-down" name="Performance Down" group="Performances" deterministic="false"
+             description="Steps to the previous performance - relative, depends on where the device currently is.">
+      <ControlChange controller="49" value="0"/>
+    </OneShot>
+
+    <!-- ============ Stomps (deterministic, via NRPN) ============
+         Plain CCs 16-29 only TOGGLE the stomps (state-dependent!).
+         Absolute on/off goes through NRPN: CC99 = address page,
+         CC98 = parameter number (3 = On/Off), CC6/CC38 = 14-bit value.   -->
+
+    <Hold id="stomp-a" name="Stomp A" group="Stomps"
+             description="Stomp A is ON for the duration of the block, OFF afterwards (absolute switching via NRPN).">
+      <Engage>
+        <ControlChange controller="99" value="50"/>
+        <ControlChange controller="98" value="3"/>
+        <ControlChange controller="6"  value="0"/>
+        <ControlChange controller="38" value="1"/>
+      </Engage>
+      <Disengage>
+        <ControlChange controller="99" value="50"/>
+        <ControlChange controller="98" value="3"/>
+        <ControlChange controller="6"  value="0"/>
+        <ControlChange controller="38" value="0"/>
+      </Disengage>
+    </Hold>
+
+    <Hold id="stomp-b" name="Stomp B" group="Stomps"
+             description="Stomp B is ON for the duration of the block, OFF afterwards (absolute switching via NRPN).">
+      <Engage>
+        <ControlChange controller="99" value="51"/>
+        <ControlChange controller="98" value="3"/>
+        <ControlChange controller="6"  value="0"/>
+        <ControlChange controller="38" value="1"/>
+      </Engage>
+      <Disengage>
+        <ControlChange controller="99" value="51"/>
+        <ControlChange controller="98" value="3"/>
+        <ControlChange controller="6"  value="0"/>
+        <ControlChange controller="38" value="0"/>
+      </Disengage>
+    </Hold>
+
+    <Hold id="stomp-c" name="Stomp C" group="Stomps"
+             description="Stomp C is ON for the duration of the block, OFF afterwards (absolute switching via NRPN).">
+      <Engage>
+        <ControlChange controller="99" value="52"/>
+        <ControlChange controller="98" value="3"/>
+        <ControlChange controller="6"  value="0"/>
+        <ControlChange controller="38" value="1"/>
+      </Engage>
+      <Disengage>
+        <ControlChange controller="99" value="52"/>
+        <ControlChange controller="98" value="3"/>
+        <ControlChange controller="6"  value="0"/>
+        <ControlChange controller="38" value="0"/>
+      </Disengage>
+    </Hold>
+
+    <Hold id="stomp-d" name="Stomp D" group="Stomps"
+             description="Stomp D is ON for the duration of the block, OFF afterwards (absolute switching via NRPN).">
+      <Engage>
+        <ControlChange controller="99" value="53"/>
+        <ControlChange controller="98" value="3"/>
+        <ControlChange controller="6"  value="0"/>
+        <ControlChange controller="38" value="1"/>
+      </Engage>
+      <Disengage>
+        <ControlChange controller="99" value="53"/>
+        <ControlChange controller="98" value="3"/>
+        <ControlChange controller="6"  value="0"/>
+        <ControlChange controller="38" value="0"/>
+      </Disengage>
+    </Hold>
+
+    <Hold id="stomp-x" name="Stomp X" group="Stomps"
+             description="Stomp X is ON for the duration of the block, OFF afterwards (absolute switching via NRPN).">
+      <Engage>
+        <ControlChange controller="99" value="56"/>
+        <ControlChange controller="98" value="3"/>
+        <ControlChange controller="6"  value="0"/>
+        <ControlChange controller="38" value="1"/>
+      </Engage>
+      <Disengage>
+        <ControlChange controller="99" value="56"/>
+        <ControlChange controller="98" value="3"/>
+        <ControlChange controller="6"  value="0"/>
+        <ControlChange controller="38" value="0"/>
+      </Disengage>
+    </Hold>
+
+    <Hold id="stomp-mod" name="Stomp MOD" group="Stomps"
+             description="Stomp MOD is ON for the duration of the block, OFF afterwards (absolute switching via NRPN).">
+      <Engage>
+        <ControlChange controller="99" value="58"/>
+        <ControlChange controller="98" value="3"/>
+        <ControlChange controller="6"  value="0"/>
+        <ControlChange controller="38" value="1"/>
+      </Engage>
+      <Disengage>
+        <ControlChange controller="99" value="58"/>
+        <ControlChange controller="98" value="3"/>
+        <ControlChange controller="6"  value="0"/>
+        <ControlChange controller="38" value="0"/>
+      </Disengage>
+    </Hold>
+
+    <Hold id="stomp-delay" name="Stomp DELAY" group="Stomps"
+             description="Stomp DELAY is ON for the duration of the block, OFF afterwards (absolute switching via NRPN).">
+      <Engage>
+        <ControlChange controller="99" value="60"/>
+        <ControlChange controller="98" value="3"/>
+        <ControlChange controller="6"  value="0"/>
+        <ControlChange controller="38" value="1"/>
+      </Engage>
+      <Disengage>
+        <ControlChange controller="99" value="60"/>
+        <ControlChange controller="98" value="3"/>
+        <ControlChange controller="6"  value="0"/>
+        <ControlChange controller="38" value="0"/>
+      </Disengage>
+    </Hold>
+
+    <!-- Toggle variants (state-dependent — prefer the Holds above for shows) -->
+    <OneShot id="toggle-all-stomps" name="Toggle All Stomps" group="Stomps" deterministic="false"
+             description="Flips ALL stomps on/off relative to their current state. Prefer the Stomp blocks for predictable shows.">
+      <ControlChange controller="16" value="1"/>
+    </OneShot>
+    <OneShot id="toggle-delay-tail" name="Toggle DELAY (with tail)" group="Stomps" deterministic="false"
+             description="Flips the DELAY stomp, letting the delay tail ring out. State-dependent.">
+      <ControlChange controller="27" value="1"/>
+    </OneShot>
+    <OneShot id="toggle-reverb" name="Toggle Reverb" group="Stomps" deterministic="false"
+             description="Flips the reverb on/off relative to its current state.">
+      <ControlChange controller="28" value="1"/>
+    </OneShot>
+    <OneShot id="toggle-reverb-tail" name="Toggle Reverb (with tail)" group="Stomps" deterministic="false"
+             description="Flips the reverb, letting the reverb tail ring out. State-dependent.">
+      <ControlChange controller="29" value="1"/>
+    </OneShot>
+
+    <!-- ============ Effects ============ -->
+
+    <Hold id="rotary-fast" name="Rotary Speaker Fast" group="Effects"
+             description="Rotary speaker runs FAST for the duration of the block, slow afterwards.">
+      <Engage><ControlChange controller="33" value="1"/></Engage>
+      <Disengage><ControlChange controller="33" value="0"/></Disengage>
+    </Hold>
+
+    <Hold id="delay-infinity" name="Delay Feedback Infinity" group="Effects"
+             description="Delay feedback is set to infinity for the duration of the block.">
+      <Engage><ControlChange controller="34" value="1"/></Engage>
+      <Disengage><ControlChange controller="34" value="0"/></Disengage>
+    </Hold>
+
+    <Hold id="delay-hold" name="Delay Hold" group="Effects"
+             description="Delay hold (freeze) is active for the duration of the block.">
+      <Engage><ControlChange controller="35" value="1"/></Engage>
+      <Disengage><ControlChange controller="35" value="0"/></Disengage>
+    </Hold>
+
+    <Automation id="delay-mix" name="Delay Mix" group="Effects"
+             description="Continuous control over the delay mix.">
+      <Target controller="68"/>
+    </Automation>
+    <Automation id="delay-feedback" name="Delay Feedback" group="Effects"
+             description="Continuous control over the delay feedback.">
+      <Target controller="69"/>
+    </Automation>
+    <Automation id="reverb-mix" name="Reverb Mix" group="Effects"
+             description="Continuous control over the reverb mix.">
+      <Target controller="70"/>
+    </Automation>
+    <Automation id="reverb-time" name="Reverb Time" group="Effects"
+             description="Continuous control over the reverb time.">
+      <Target controller="71"/>
+    </Automation>
+    <Automation id="amp-gain" name="Amp Gain" group="Effects"
+             description="Continuous control over the amplifier gain.">
+      <Target controller="72"/>
+    </Automation>
+
+    <!-- ============ Pedals ============ -->
+
+    <Automation id="wah-pedal" name="Wah Pedal" group="Pedals"
+             description="Wah pedal position (like rocking a connected wah pedal).">
+      <Target controller="1"/>
+    </Automation>
+    <Automation id="pitch-pedal" name="Pitch Pedal" group="Pedals"
+             description="Pitch pedal position.">
+      <Target controller="4"/>
+    </Automation>
+    <Automation id="volume-pedal" name="Volume Pedal" group="Pedals"
+             description="Volume pedal position.">
+      <Target controller="7"/>
+    </Automation>
+    <Automation id="morph-pedal" name="Morph Pedal" group="Pedals"
+             description="Morph pedal position (blends between the rig's two morph states).">
+      <Target controller="11"/>
+    </Automation>
+
+    <!-- ============ Misc ============ -->
+
+    <!-- Single tap event. (For the Beat Scanner, send 1 and hold off the 0.) -->
+    <OneShot id="tap-tempo" name="Tap Tempo" group="Misc"
+             description="A single tempo tap. Place several in a row to set the tempo.">
+      <ControlChange controller="30" value="0"/>
+    </OneShot>
+
+    <Hold id="show-tuner" name="Show Tuner" group="Misc"
+             description="Shows the tuner for the duration of the block.">
+      <Engage><ControlChange controller="31" value="1"/></Engage>
+      <Disengage><ControlChange controller="31" value="0"/></Disengage>
+    </Hold>
+
+    <Automation id="monitor-volume" name="Monitor Output Volume" group="Misc"
+             description="Continuous control over the global monitor output volume.">
+      <Target controller="73"/>
+    </Automation>
+
+  </Commands>
+</DeviceDefinition>

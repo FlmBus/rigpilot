@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- HeadRush Prime - RigPilot Device Definition -->
+<DeviceDefinition id="headrush-prime" version="1.0"
+                  xmlns="https://rigpilot.app/schemas/device-definition/1">
+  <Meta>
+    <Manufacturer>HeadRush</Manufacturer>
+    <Model>Prime</Model>
+    <Author>Flemming Busman</Author>
+    <Source>HeadRush Prime User Guide v4.0.0, section 4.22 "External MIDI Control"</Source>
+    <Description>Set the global MIDI channel (Global Settings &gt; MIDI; Omni available) to the channel configured in RigPilot's Device Settings, and enable Prog Change &gt; Receive there for preset switching. "Select Rig" sends the program number set in each rig's "MIDI Prog" field (0-127). VERIFY ON HARDWARE: the user guide does not document the CC value semantics; block/looper toggles are modeled as state-dependent One-Shots.</Description>
+  </Meta>
+
+  <!-- Rig loading is known to be slow on HeadRush units; values are rough
+       estimates - MEASURE at the cable test and adjust. -->
+  <Defaults latency="20"/>
+
+  <Commands>
+
+    <!-- ============ Rigs ============ -->
+
+    <OneShot id="select-rig" name="Select Rig" short="Rig" group="Rigs" latency="300"
+             description="Loads the rig whose 'MIDI Prog' field matches this program number.">
+      <Param id="program" name="MIDI Prog #" min="0" max="127" default="0"/>
+      <ProgramChange program="$program"/>
+    </OneShot>
+
+    <!-- ============ Pedals ============ -->
+
+    <Automation id="expression" name="Expression Pedal" group="Pedals"
+             description="Expression pedal position (CC1).">
+      <Target controller="1"/>
+    </Automation>
+
+    <!-- ============ Footswitches (CC49-60) ============ -->
+
+    <OneShot id="footswitch-1" name="Footswitch 1" short="FS 1" group="Footswitches" deterministic="false"
+             description="Emulates pressing footswitch 1 - effect depends on the current footswitch assignment.">
+      <ControlChange controller="49" value="127"/>
+    </OneShot>
+    <OneShot id="footswitch-2" name="Footswitch 2" short="FS 2" group="Footswitches" deterministic="false"
+             description="Emulates pressing footswitch 2 - effect depends on the current footswitch assignment.">
+      <ControlChange controller="50" value="127"/>
+    </OneShot>
+    <OneShot id="footswitch-3" name="Footswitch 3" short="FS 3" group="Footswitches" deterministic="false"
+             description="Emulates pressing footswitch 3 - effect depends on the current footswitch assignment.">
+      <ControlChange controller="51" value="127"/>
+    </OneShot>
+    <OneShot id="footswitch-4" name="Footswitch 4" short="FS 4" group="Footswitches" deterministic="false"
+             description="Emulates pressing footswitch 4 - effect depends on the current footswitch assignment.">
+      <ControlChange controller="52" value="127"/>
+    </OneShot>
+    <OneShot id="footswitch-5" name="Footswitch 5" short="FS 5" group="Footswitches" deterministic="false"
+             description="Emulates pressing footswitch 5 - effect depends on the current footswitch assignment.">
+      <ControlChange controller="53" value="127"/>
+    </OneShot>
+    <OneShot id="footswitch-6" name="Footswitch 6" short="FS 6" group="Footswitches" deterministic="false"
+             description="Emulates pressing footswitch 6 - effect depends on the current footswitch assignment.">
+      <ControlChange controller="54" value="127"/>
+    </OneShot>
+    <OneShot id="footswitch-7" name="Footswitch 7" short="FS 7" group="Footswitches" deterministic="false"
+             description="Emulates pressing footswitch 7 - effect depends on the current footswitch assignment.">
+      <ControlChange controller="55" value="127"/>
+    </OneShot>
+    <OneShot id="footswitch-8" name="Footswitch 8" short="FS 8" group="Footswitches" deterministic="false"
+             description="Emulates pressing footswitch 8 - effect depends on the current footswitch assignment.">
+      <ControlChange controller="56" value="127"/>
+    </OneShot>
+    <OneShot id="footswitch-9" name="Footswitch 9" short="FS 9" group="Footswitches" deterministic="false"
+             description="Emulates pressing footswitch 9 - effect depends on the current footswitch assignment.">
+      <ControlChange controller="57" value="127"/>
+    </OneShot>
+    <OneShot id="footswitch-10" name="Footswitch 10" short="FS 10" group="Footswitches" deterministic="false"
+             description="Emulates pressing footswitch 10 - effect depends on the current footswitch assignment.">
+      <ControlChange controller="58" value="127"/>
+    </OneShot>
+    <OneShot id="footswitch-11" name="Footswitch 11" short="FS 11" group="Footswitches" deterministic="false"
+             description="Emulates pressing footswitch 11 - effect depends on the current footswitch assignment.">
+      <ControlChange controller="59" value="127"/>
+    </OneShot>
+    <OneShot id="footswitch-12" name="Footswitch 12" short="FS 12" group="Footswitches" deterministic="false"
+             description="Emulates pressing footswitch 12 - effect depends on the current footswitch assignment.">
+      <ControlChange controller="60" value="127"/>
+    </OneShot>
+
+    <!-- ============ Blocks (CC75-88) ============ -->
+
+    <OneShot id="block-1-toggle" name="Block 1 Toggle" short="Blk 1" group="Blocks" deterministic="false"
+             description="Toggles block 1 of the current rig on/off - result depends on its current state.">
+      <ControlChange controller="75" value="127"/>
+    </OneShot>
+    <OneShot id="block-2-toggle" name="Block 2 Toggle" short="Blk 2" group="Blocks" deterministic="false"
+             description="Toggles block 2 of the current rig on/off - result depends on its current state.">
+      <ControlChange controller="76" value="127"/>
+    </OneShot>
+    <OneShot id="block-3-toggle" name="Block 3 Toggle" short="Blk 3" group="Blocks" deterministic="false"
+             description="Toggles block 3 of the current rig on/off - result depends on its current state.">
+      <ControlChange controller="77" value="127"/>
+    </OneShot>
+    <OneShot id="block-4-toggle" name="Block 4 Toggle" short="Blk 4" group="Blocks" deterministic="false"
+             description="Toggles block 4 of the current rig on/off - result depends on its current state.">
+      <ControlChange controller="78" value="127"/>
+    </OneShot>
+    <OneShot id="block-5-toggle" name="Block 5 Toggle" short="Blk 5" group="Blocks" deterministic="false"
+             description="Toggles block 5 of the current rig on/off - result depends on its current state.">
+      <ControlChange controller="79" value="127"/>
+    </OneShot>
+    <OneShot id="block-6-toggle" name="Block 6 Toggle" short="Blk 6" group="Blocks" deterministic="false"
+             description="Toggles block 6 of the current rig on/off - result depends on its current state.">
+      <ControlChange controller="80" value="127"/>
+    </OneShot>
+    <OneShot id="block-7-toggle" name="Block 7 Toggle" short="Blk 7" group="Blocks" deterministic="false"
+             description="Toggles block 7 of the current rig on/off - result depends on its current state.">
+      <ControlChange controller="81" value="127"/>
+    </OneShot>
+    <OneShot id="block-8-toggle" name="Block 8 Toggle" short="Blk 8" group="Blocks" deterministic="false"
+             description="Toggles block 8 of the current rig on/off - result depends on its current state.">
+      <ControlChange controller="82" value="127"/>
+    </OneShot>
+    <OneShot id="block-9-toggle" name="Block 9 Toggle" short="Blk 9" group="Blocks" deterministic="false"
+             description="Toggles block 9 of the current rig on/off - result depends on its current state.">
+      <ControlChange controller="83" value="127"/>
+    </OneShot>
+    <OneShot id="block-10-toggle" name="Block 10 Toggle" short="Blk 10" group="Blocks" deterministic="false"
+             description="Toggles block 10 of the current rig on/off - result depends on its current state.">
+      <ControlChange controller="84" value="127"/>
+    </OneShot>
+    <OneShot id="block-11-toggle" name="Block 11 Toggle" short="Blk 11" group="Blocks" deterministic="false"
+             description="Toggles block 11 of the current rig on/off - result depends on its current state.">
+      <ControlChange controller="85" value="127"/>
+    </OneShot>
+    <OneShot id="block-12-toggle" name="Block 12 Toggle" short="Blk 12" group="Blocks" deterministic="false"
+             description="Toggles block 12 of the current rig on/off - result depends on its current state.">
+      <ControlChange controller="86" value="127"/>
+    </OneShot>
+    <OneShot id="block-13-toggle" name="Block 13 Toggle" short="Blk 13" group="Blocks" deterministic="false"
+             description="Toggles block 13 of the current rig on/off - result depends on its current state.">
+      <ControlChange controller="87" value="127"/>
+    </OneShot>
+    <OneShot id="block-14-toggle" name="Block 14 Toggle" short="Blk 14" group="Blocks" deterministic="false"
+             description="Toggles block 14 of the current rig on/off - result depends on its current state.">
+      <ControlChange controller="88" value="127"/>
+    </OneShot>
+
+    <OneShot id="mic-dry-toggle" name="Mic Dry Out Toggle" short="MicDry" group="Blocks" deterministic="false"
+             description="Toggles the MIC Dry Out on/off - result depends on its current state.">
+      <ControlChange controller="89" value="127"/>
+    </OneShot>
+
+    <!-- ============ Misc ============ -->
+
+    <OneShot id="tap-tempo" name="Tap Tempo" group="Misc"
+             description="A single tempo tap (CC64). Place several in a row to set the tempo.">
+      <ControlChange controller="64" value="127"/>
+    </OneShot>
+    <OneShot id="metronome-on" name="Metronome On" group="Misc"
+             description="Turns the metronome on (CC115).">
+      <ControlChange controller="115" value="127"/>
+    </OneShot>
+
+    <!-- ============ Looper (CC65-74) ============ -->
+
+    <OneShot id="looper-half-speed" name="Looper 1/2 Speed" short="Loop ½spd" group="Looper" deterministic="false">
+      <ControlChange controller="65" value="127"/>
+    </OneShot>
+    <OneShot id="looper-double-speed" name="Looper 2X Speed" short="Loop 2xspd" group="Looper" deterministic="false">
+      <ControlChange controller="66" value="127"/>
+    </OneShot>
+    <OneShot id="looper-half-loop" name="Looper 1/2 Loop" short="Loop ½" group="Looper" deterministic="false">
+      <ControlChange controller="67" value="127"/>
+    </OneShot>
+    <OneShot id="looper-double-loop" name="Looper 2X Loop" short="Loop 2x" group="Looper" deterministic="false">
+      <ControlChange controller="68" value="127"/>
+    </OneShot>
+    <OneShot id="looper-start-stop" name="Looper Start/Stop" short="Loop ▶■" group="Looper" deterministic="false">
+      <ControlChange controller="69" value="127"/>
+    </OneShot>
+    <OneShot id="looper-record" name="Looper Record" short="Loop ●" group="Looper" deterministic="false">
+      <ControlChange controller="70" value="127"/>
+    </OneShot>
+    <OneShot id="looper-insert" name="Looper Insert" group="Looper" deterministic="false">
+      <ControlChange controller="71" value="127"/>
+    </OneShot>
+    <OneShot id="looper-peel" name="Looper Peel" group="Looper" deterministic="false">
+      <ControlChange controller="72" value="127"/>
+    </OneShot>
+    <OneShot id="looper-mute" name="Looper Mute" group="Looper" deterministic="false">
+      <ControlChange controller="73" value="127"/>
+    </OneShot>
+    <OneShot id="looper-reverse" name="Looper Reverse" group="Looper" deterministic="false">
+      <ControlChange controller="74" value="127"/>
+    </OneShot>
+
+  </Commands>
+</DeviceDefinition>

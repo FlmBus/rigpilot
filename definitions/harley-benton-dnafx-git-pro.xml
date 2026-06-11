@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Harley Benton DNAfx GiT Pro - RigPilot Device Definition -->
+<DeviceDefinition id="harley-benton-dnafx-git-pro" version="1.0"
+                  xmlns="https://rigpilot.app/schemas/device-definition/1">
+  <Meta>
+    <Manufacturer>Harley Benton</Manufacturer>
+    <Model>DNAfx GiT Pro</Model>
+    <Author>Flemming Busman</Author>
+    <Source>Thomann user manual ID 517099 (11.01.2022), sections MIDI SETTING / PC Mapping / CC Reference</Source>
+    <Description>In MENU > MIDI SETTING: direction must be 'MIDI IN' (default), and the channel (default 1) must match the channel configured in RigPilot's Device Settings. VERIFY ON HARDWARE: the manual lists the ON/OFF CCs (10-20, 49, 51) and footswitch CCs (21-24) with value range 0-127 without defining the semantics. The Hold commands assume value-switched behavior (0 = off, 127 = on); if they turn out to be edge-triggered toggles, remodel them as non-deterministic One-Shots.</Description>
+  </Meta>
+
+  <Commands>
+
+    <!-- ============ Presets ============
+         2 MIDI banks via CC0, 128 presets each: bank 0 = 1A-32D, bank 1 = 33A-64D. -->
+
+    <OneShot id="select-preset-bank-0" name="Select Preset (1A-32D)" short="Preset" group="Presets"
+             description="Loads one of the presets 1A-32D.">
+      <Param id="preset" name="Preset" min="0" max="127" default="0">
+        <Label value="0">1A</Label>
+        <Label value="1">1B</Label>
+        <Label value="2">1C</Label>
+        <Label value="3">1D</Label>
+        <Label value="4">2A</Label>
+        <Label value="5">2B</Label>
+        <Label value="6">2C</Label>
+        <Label value="7">2D</Label>
+        <Label value="8">3A</Label>
+        <Label value="9">3B</Label>
+        <Label value="10">3C</Label>
+        <Label value="11">3D</Label>
+        <Label value="12">4A</Label>
+        <Label value="13">4B</Label>
+        <Label value="14">4C</Label>
+        <Label value="15">4D</Label>
+        <Label value="16">5A</Label>
+        <Label value="17">5B</Label>
+        <Label value="18">5C</Label>
+        <Label value="19">5D</Label>
+        <Label value="20">6A</Label>
+        <Label value="21">6B</Label>
+        <Label value="22">6C</Label>
+        <Label value="23">6D</Label>
+        <Label value="24">7A</Label>
+        <Label value="25">7B</Label>
+        <Label value="26">7C</Label>
+        <Label value="27">7D</Label>
+        <Label value="28">8A</Label>
+        <Label value="29">8B</Label>
+        <Label value="30">8C</Label>
+        <Label value="31">8D</Label>
+        <Label value="32">9A</Label>
+        <Label value="33">9B</Label>
+        <Label value="34">9C</Label>
+        <Label value="35">9D</Label>
+        <Label value="36">10A</Label>
+        <Label value="37">10B</Label>
+        <Label value="38">10C</Label>
+        <Label value="39">10D</Label>
+        <Label value="40">11A</Label>
+        <Label value="41">11B</Label>
+        <Label value="42">11C</Label>
+        <Label value="43">11D</Label>
+        <Label value="44">12A</Label>
+        <Label value="45">12B</Label>
+        <Label value="46">12C</Label>
+        <Label value="47">12D</Label>
+        <Label value="48">13A</Label>
+        <Label value="49">13B</Label>
+        <Label value="50">13C</Label>
+        <Label value="51">13D</Label>
+        <Label value="52">14A</Label>
+        <Label value="53">14B</Label>
+        <Label value="54">14C</Label>
+        <Label value="55">14D</Label>
+        <Label value="56">15A</Label>
+        <Label value="57">15B</Label>
+        <Label value="58">15C</Label>
+        <Label value="59">15D</Label>
+        <Label value="60">16A</Label>
+        <Label value="61">16B</Label>
+        <Label value="62">16C</Label>
+        <Label value="63">16D</Label>
+        <Label value="64">17A</Label>
+        <Label value="65">17B</Label>
+        <Label value="66">17C</Label>
+        <Label value="67">17D</Label>
+        <Label value="68">18A</Label>
+        <Label value="69">18B</Label>
+        <Label value="70">18C</Label>
+        <Label value="71">18D</Label>
+        <Label value="72">19A</Label>
+        <Label value="73">19B</Label>
+        <Label value="74">19C</Label>
+        <Label value="75">19D</Label>
+        <Label value="76">20A</Label>
+        <Label value="77">20B</Label>
+        <Label value="78">20C</Label>
+        <Label value="79">20D</Label>
+        <Label value="80">21A</Label>
+        <Label value="81">21B</Label>
+        <Label value="82">21C</Label>
+        <Label value="83">21D</Label>
+        <Label value="84">22A</Label>
+        <Label value="85">22B</Label>
+        <Label value="86">22C</Label>
+        <Label value="87">22D</Label>
+        <Label value="88">23A</Label>
+        <Label value="89">23B</Label>
+        <Label value="90">23C</Label>
+        <Label value="91">23D</Label>
+        <Label value="92">24A</Label>
+        <Label value="93">24B</Label>
+        <Label value="94">24C</Label>
+        <Label value="95">24D</Label>
+        <Label value="96">25A</Label>
+        <Label value="97">25B</Label>
+        <Label value="98">25C</Label>
+        <Label value="99">25D</Label>
+        <Label value="100">26A</Label>
+        <Label value="101">26B</Label>
+        <Label value="102">26C</Label>
+        <Label value="103">26D</Label>
+        <Label value="104">27A</Label>
+        <Label value="105">27B</Label>
+        <Label value="106">27C</Label>
+        <Label value="107">27D</Label>
+        <Label value="108">28A</Label>
+        <Label value="109">28B</Label>
+        <Label value="110">28C</Label>
+        <Label value="111">28D</Label>
+        <Label value="112">29A</Label>
+        <Label value="113">29B</Label>
+        <Label value="114">29C</Label>
+        <Label value="115">29D</Label>
+        <Label value="116">30A</Label>
+        <Label value="117">30B</Label>
+        <Label value="118">30C</Label>
+        <Label value="119">30D</Label>
+        <Label value="120">31A</Label>
+        <Label value="121">31B</Label>
+        <Label value="122">31C</Label>
+        <Label value="123">31D</Label>
+        <Label value="124">32A</Label>
+        <Label value="125">32B</Label>
+        <Label value="126">32C</Label>
+        <Label value="127">32D</Label>
+      </Param>
+      <ControlChange controller="0" value="0"/>
+      <ProgramChange program="$preset"/>
+    </OneShot>
+
+    <OneShot id="select-preset-bank-1" name="Select Preset (33A-64D)" short="Preset" group="Presets"
+             description="Loads one of the presets 33A-64D.">
+      <Param id="preset" name="Preset" min="0" max="127" default="0">
+        <Label value="0">33A</Label>
+        <Label value="1">33B</Label>
+        <Label value="2">33C</Label>
+        <Label value="3">33D</Label>
+        <Label value="4">34A</Label>
+        <Label value="5">34B</Label>
+        <Label value="6">34C</Label>
+        <Label value="7">34D</Label>
+        <Label value="8">35A</Label>
+        <Label value="9">35B</Label>
+        <Label value="10">35C</Label>
+        <Label value="11">35D</Label>
+        <Label value="12">36A</Label>
+        <Label value="13">36B</Label>
+        <Label value="14">36C</Label>
+        <Label value="15">36D</Label>
+        <Label value="16">37A</Label>
+        <Label value="17">37B</Label>
+        <Label value="18">37C</Label>
+        <Label value="19">37D</Label>
+        <Label value="20">38A</Label>
+        <Label value="21">38B</Label>
+        <Label value="22">38C</Label>
+        <Label value="23">38D</Label>
+        <Label value="24">39A</Label>
+        <Label value="25">39B</Label>
+        <Label value="26">39C</Label>
+        <Label value="27">39D</Label>
+        <Label value="28">40A</Label>
+        <Label value="29">40B</Label>
+        <Label value="30">40C</Label>
+        <Label value="31">40D</Label>
+        <Label value="32">41A</Label>
+        <Label value="33">41B</Label>
+        <Label value="34">41C</Label>
+        <Label value="35">41D</Label>
+        <Label value="36">42A</Label>
+        <Label value="37">42B</Label>
+        <Label value="38">42C</Label>
+        <Label value="39">42D</Label>
+        <Label value="40">43A</Label>
+        <Label value="41">43B</Label>
+        <Label value="42">43C</Label>
+        <Label value="43">43D</Label>
+        <Label value="44">44A</Label>
+        <Label value="45">44B</Label>
+        <Label value="46">44C</Label>
+        <Label value="47">44D</Label>
+        <Label value="48">45A</Label>
+        <Label value="49">45B</Label>
+        <Label value="50">45C</Label>
+        <Label value="51">45D</Label>
+        <Label value="52">46A</Label>
+        <Label value="53">46B</Label>
+        <Label value="54">46C</Label>
+        <Label value="55">46D</Label>
+        <Label value="56">47A</Label>
+        <Label value="57">47B</Label>
+        <Label value="58">47C</Label>
+        <Label value="59">47D</Label>
+        <Label value="60">48A</Label>
+        <Label value="61">48B</Label>
+        <Label value="62">48C</Label>
+        <Label value="63">48D</Label>
+        <Label value="64">49A</Label>
+        <Label value="65">49B</Label>
+        <Label value="66">49C</Label>
+        <Label value="67">49D</Label>
+        <Label value="68">50A</Label>
+        <Label value="69">50B</Label>
+        <Label value="70">50C</Label>
+        <Label value="71">50D</Label>
+        <Label value="72">51A</Label>
+        <Label value="73">51B</Label>
+        <Label value="74">51C</Label>
+        <Label value="75">51D</Label>
+        <Label value="76">52A</Label>
+        <Label value="77">52B</Label>
+        <Label value="78">52C</Label>
+        <Label value="79">52D</Label>
+        <Label value="80">53A</Label>
+        <Label value="81">53B</Label>
+        <Label value="82">53C</Label>
+        <Label value="83">53D</Label>
+        <Label value="84">54A</Label>
+        <Label value="85">54B</Label>
+        <Label value="86">54C</Label>
+        <Label value="87">54D</Label>
+        <Label value="88">55A</Label>
+        <Label value="89">55B</Label>
+        <Label value="90">55C</Label>
+        <Label value="91">55D</Label>
+        <Label value="92">56A</Label>
+        <Label value="93">56B</Label>
+        <Label value="94">56C</Label>
+        <Label value="95">56D</Label>
+        <Label value="96">57A</Label>
+        <Label value="97">57B</Label>
+        <Label value="98">57C</Label>
+        <Label value="99">57D</Label>
+        <Label value="100">58A</Label>
+        <Label value="101">58B</Label>
+        <Label value="102">58C</Label>
+        <Label value="103">58D</Label>
+        <Label value="104">59A</Label>
+        <Label value="105">59B</Label>
+        <Label value="106">59C</Label>
+        <Label value="107">59D</Label>
+        <Label value="108">60A</Label>
+        <Label value="109">60B</Label>
+        <Label value="110">60C</Label>
+        <Label value="111">60D</Label>
+        <Label value="112">61A</Label>
+        <Label value="113">61B</Label>
+        <Label value="114">61C</Label>
+        <Label value="115">61D</Label>
+        <Label value="116">62A</Label>
+        <Label value="117">62B</Label>
+        <Label value="118">62C</Label>
+        <Label value="119">62D</Label>
+        <Label value="120">63A</Label>
+        <Label value="121">63B</Label>
+        <Label value="122">63C</Label>
+        <Label value="123">63D</Label>
+        <Label value="124">64A</Label>
+        <Label value="125">64B</Label>
+        <Label value="126">64C</Label>
+        <Label value="127">64D</Label>
+      </Param>
+      <ControlChange controller="0" value="1"/>
+      <ProgramChange program="$preset"/>
+    </OneShot>
+
+    <!-- ============ Modules ============
+         VERIFY value semantics (see header). -->
+
+    <Hold id="module-dynamic" name="Dynamic Module" group="Modules"
+             description="Dynamic module is ON for the duration of the block, OFF afterwards.">
+      <Engage><ControlChange controller="10" value="127"/></Engage>
+      <Disengage><ControlChange controller="10" value="0"/></Disengage>
+    </Hold>
+    <Hold id="module-wah" name="Wah Module" group="Modules"
+             description="Wah module is ON for the duration of the block, OFF afterwards.">
+      <Engage><ControlChange controller="11" value="127"/></Engage>
+      <Disengage><ControlChange controller="11" value="0"/></Disengage>
+    </Hold>
+    <Hold id="module-ds" name="Distortion (DS) Module" group="Modules"
+             description="Distortion module is ON for the duration of the block, OFF afterwards.">
+      <Engage><ControlChange controller="12" value="127"/></Engage>
+      <Disengage><ControlChange controller="12" value="0"/></Disengage>
+    </Hold>
+    <Hold id="module-amp" name="Amp Module" group="Modules"
+             description="Amp module is ON for the duration of the block, OFF afterwards.">
+      <Engage><ControlChange controller="13" value="127"/></Engage>
+      <Disengage><ControlChange controller="13" value="0"/></Disengage>
+    </Hold>
+    <Hold id="module-cab" name="Cab Module" group="Modules"
+             description="Cab module is ON for the duration of the block, OFF afterwards.">
+      <Engage><ControlChange controller="14" value="127"/></Engage>
+      <Disengage><ControlChange controller="14" value="0"/></Disengage>
+    </Hold>
+    <Hold id="module-fx-loop" name="FX Loop Module" group="Modules"
+             description="FX Loop module is ON for the duration of the block, OFF afterwards.">
+      <Engage><ControlChange controller="15" value="127"/></Engage>
+      <Disengage><ControlChange controller="15" value="0"/></Disengage>
+    </Hold>
+    <Hold id="module-ns" name="Noise Suppressor (NS) Module" group="Modules"
+             description="Noise suppressor is ON for the duration of the block, OFF afterwards.">
+      <Engage><ControlChange controller="16" value="127"/></Engage>
+      <Disengage><ControlChange controller="16" value="0"/></Disengage>
+    </Hold>
+    <Hold id="module-eq" name="EQ Module" group="Modules"
+             description="EQ module is ON for the duration of the block, OFF afterwards.">
+      <Engage><ControlChange controller="17" value="127"/></Engage>
+      <Disengage><ControlChange controller="17" value="0"/></Disengage>
+    </Hold>
+    <Hold id="module-modulation" name="Modulation Module" group="Modules"
+             description="Modulation module is ON for the duration of the block, OFF afterwards.">
+      <Engage><ControlChange controller="18" value="127"/></Engage>
+      <Disengage><ControlChange controller="18" value="0"/></Disengage>
+    </Hold>
+    <Hold id="module-delay" name="Delay Module" group="Modules"
+             description="Delay module is ON for the duration of the block, OFF afterwards.">
+      <Engage><ControlChange controller="19" value="127"/></Engage>
+      <Disengage><ControlChange controller="19" value="0"/></Disengage>
+    </Hold>
+    <Hold id="module-reverb" name="Reverb Module" group="Modules"
+             description="Reverb module is ON for the duration of the block, OFF afterwards.">
+      <Engage><ControlChange controller="20" value="127"/></Engage>
+      <Disengage><ControlChange controller="20" value="0"/></Disengage>
+    </Hold>
+
+    <!-- ============ Footswitches ============
+         VERIFY: footswitch CCs likely emulate a physical press (toggle). -->
+
+    <OneShot id="footswitch-a" name="Footswitch A" group="Footswitches" deterministic="false"
+             description="Emulates pressing footswitch A - effect depends on the current footswitch mode.">
+      <ControlChange controller="21" value="127"/>
+    </OneShot>
+    <OneShot id="footswitch-b" name="Footswitch B" group="Footswitches" deterministic="false"
+             description="Emulates pressing footswitch B - effect depends on the current footswitch mode.">
+      <ControlChange controller="22" value="127"/>
+    </OneShot>
+    <OneShot id="footswitch-c" name="Footswitch C" group="Footswitches" deterministic="false"
+             description="Emulates pressing footswitch C - effect depends on the current footswitch mode.">
+      <ControlChange controller="23" value="127"/>
+    </OneShot>
+    <OneShot id="footswitch-d" name="Footswitch D" group="Footswitches" deterministic="false"
+             description="Emulates pressing footswitch D - effect depends on the current footswitch mode.">
+      <ControlChange controller="24" value="127"/>
+    </OneShot>
+
+    <!-- ============ Pedals ============ -->
+
+    <Hold id="pedal-1-active" name="Pedal 1 Active" group="Pedals"
+             description="Expression pedal 1 is active for the duration of the block.">
+      <Engage><ControlChange controller="51" value="127"/></Engage>
+      <Disengage><ControlChange controller="51" value="0"/></Disengage>
+    </Hold>
+    <Automation id="pedal-1" name="Pedal 1 Position" group="Pedals"
+             description="Expression pedal 1 position.">
+      <Target controller="52"/>
+    </Automation>
+    <Automation id="pedal-2" name="Pedal 2 Position" group="Pedals"
+             description="Expression pedal 2 position.">
+      <Target controller="53"/>
+    </Automation>
+
+    <!-- ============ Misc ============ -->
+
+    <OneShot id="tap-tempo" name="Tap Tempo" group="Misc"
+             description="A single tempo tap. Place several in a row to set the tempo.">
+      <ControlChange controller="25" value="127"/>
+    </OneShot>
+    <Hold id="tuner" name="Tuner" group="Misc"
+             description="Tuner is shown for the duration of the block.">
+      <Engage><ControlChange controller="27" value="127"/></Engage>
+      <Disengage><ControlChange controller="27" value="0"/></Disengage>
+    </Hold>
+
+    <!-- ============ Looper &amp; Rhythm ============ -->
+
+    <Hold id="looper" name="Looper" group="Looper &amp; Rhythm"
+             description="Looper view is open for the duration of the block.">
+      <Engage><ControlChange controller="26" value="127"/></Engage>
+      <Disengage><ControlChange controller="26" value="0"/></Disengage>
+    </Hold>
+    <OneShot id="looper-rec-dub" name="Looper Rec/Dub" group="Looper &amp; Rhythm" deterministic="false"
+             description="Starts recording or overdubbing - depends on the looper's current state.">
+      <ControlChange controller="28" value="127"/>
+    </OneShot>
+    <OneShot id="looper-play" name="Looper Play" group="Looper &amp; Rhythm"
+             description="Starts looper playback.">
+      <ControlChange controller="46" value="127"/>
+    </OneShot>
+    <OneShot id="looper-stop" name="Looper Stop" group="Looper &amp; Rhythm"
+             description="Stops looper playback.">
+      <ControlChange controller="47" value="127"/>
+    </OneShot>
+    <OneShot id="looper-clear" name="Looper Clear" group="Looper &amp; Rhythm"
+             description="Clears the recorded loop.">
+      <ControlChange controller="48" value="127"/>
+    </OneShot>
+    <Hold id="rhythm" name="Rhythm" group="Looper &amp; Rhythm"
+             description="Rhythm (drum machine) runs for the duration of the block.">
+      <Engage><ControlChange controller="49" value="127"/></Engage>
+      <Disengage><ControlChange controller="49" value="0"/></Disengage>
+    </Hold>
+    <OneShot id="rhythm-tap" name="Rhythm Tap" group="Looper &amp; Rhythm"
+             description="A single rhythm tempo tap.">
+      <ControlChange controller="50" value="127"/>
+    </OneShot>
+
+  </Commands>
+</DeviceDefinition>

@@ -1,19 +1,21 @@
 # RigPilot — multi-platform Tauri build pipeline
 #
-# Targets: Linux x86_64 (deb/rpm/AppImage), Windows x86_64 (NSIS/MSI),
-#          macOS x86_64 + aarch64 (app/dmg).
+# Targets: Linux x86_64 (deb/rpm/AppImage), Windows x86_64 (NSIS/MSI) — built
+#          here. macOS x86_64 + aarch64 (dmg) — built on a GitHub Actions
+#          mirror (see .github/workflows/macos-build.yml), uploaded back into
+#          this project's package registry. Releases are created here.
 #
 # Runner notes:
-# - The tags below are for gitlab.com SaaS runners (macOS and Windows SaaS
-#   runners require a paid tier). For self-hosted runners, replace the `tags:`
-#   with your own and make sure the machines have the listed toolchains.
+# - The Windows tag below is for gitlab.com SaaS runners. For self-hosted
+#   runners, replace the `tags:` and make sure the machine has the listed
+#   toolchains.
 # - Tauri cannot cross-compile between OSes; each OS builds natively.
-#   Both macOS architectures are built on the Apple-Silicon runner
-#   (x86_64 via `rustup target add`).
 
 stages:
   - test
   - build
+  - upload
+  - release
 
 variables:
   APP_DIR: app
@@ -114,51 +116,63 @@ build:windows:
       - .cargo/registry
       - .npm
 
-# ------------------------------------------------- macOS aarch64 (Apple Silicon)
+# ----------------------------------------------------------------------- macOS
+# macOS is NOT built here: GitLab SaaS macOS runners require a paid tier.
+# Instead, a GitHub push mirror builds both macOS targets via GitHub Actions
+# (.github/workflows/macos-build.yml) and, on tag pipelines, uploads the .dmg
+# files into this project's generic package registry
+# (package: rigpilot-macos/$CI_COMMIT_TAG). Releases are still created here.
 
-.macos_base: &macos_base
-  stage: build
-  image: macos-15-xcode-16
-  tags:
-    - saas-macos-medium-m1
-  before_script:
-    - curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-    - export PATH="$HOME/.cargo/bin:$PATH"
-    # Node via the runner's Homebrew
-    - brew install node@22 || true
-    - export PATH="/opt/homebrew/opt/node@22/bin:$PATH"
-  cache:
-    key: macos-$CI_COMMIT_REF_SLUG
-    paths:
-      - .cargo/registry
-      - .npm
+# -------------------------------------------------- upload artifacts (on tags)
+# Mirror the Linux/Windows artifacts into the generic package registry so the
+# release links point at permanent package URLs instead of expiring job
+# artifacts.
 
-build:macos:arm64:
-  <<: *macos_base
+upload:packages:
+  stage: upload
+  image: curlimages/curl:latest
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v/
+  needs: ["build:linux", "build:windows"]
+  variables:
+    PKG_URL: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic
   script:
-    - cd $APP_DIR
-    - npm ci
-    - npm run tauri build -- --target aarch64-apple-darwin
-  artifacts:
-    name: rigpilot-macos-arm64
-    paths:
-      - $APP_DIR/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
-      - $APP_DIR/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app
-    expire_in: 2 weeks
+    - |
+      upload() { # upload <package-name> <file>
+        echo "Uploading $2 to $1/$CI_COMMIT_TAG"
+        curl --fail-with-body --header "JOB-TOKEN: $CI_JOB_TOKEN" \
+          --upload-file "$2" "$PKG_URL/$1/$CI_COMMIT_TAG/$(basename "$2")"
+      }
+    - for f in $APP_DIR/src-tauri/target/release/bundle/deb/*.deb; do upload rigpilot-linux "$f"; done
+    - for f in $APP_DIR/src-tauri/target/release/bundle/rpm/*.rpm; do upload rigpilot-linux "$f"; done
+    - for f in $APP_DIR/src-tauri/target/release/bundle/appimage/*.AppImage; do upload rigpilot-linux "$f"; done
+    - for f in $APP_DIR/src-tauri/target/release/bundle/nsis/*.exe; do upload rigpilot-windows "$f"; done
+    - for f in $APP_DIR/src-tauri/target/release/bundle/msi/*.msi; do upload rigpilot-windows "$f"; done
 
-# --------------------------------------------------------------- macOS x86_64
-# Cross-compiled on the Apple-Silicon runner (supported within macOS).
+# ------------------------------------------------------------ release (on tags)
+# Manual: trigger it once the GitHub Actions macOS build for the same tag has
+# finished uploading its .dmg files to the package registry.
 
-build:macos:amd64:
-  <<: *macos_base
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v/
+      when: manual
+  needs: ["upload:packages"]
+  variables:
+    PKG_URL: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic
   script:
-    - rustup target add x86_64-apple-darwin
-    - cd $APP_DIR
-    - npm ci
-    - npm run tauri build -- --target x86_64-apple-darwin
-  artifacts:
-    name: rigpilot-macos-x86_64
-    paths:
-      - $APP_DIR/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
-      - $APP_DIR/src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app
-    expire_in: 2 weeks
+    - echo "Creating release $CI_COMMIT_TAG"
+  release:
+    tag_name: $CI_COMMIT_TAG
+    name: "RigPilot $CI_COMMIT_TAG"
+    description: "RigPilot $CI_COMMIT_TAG — Linux, Windows and macOS builds."
+    assets:
+      links:
+        - name: "macOS (Apple Silicon) .dmg"
+          url: "$PKG_URL/rigpilot-macos/$CI_COMMIT_TAG/RigPilot_${CI_COMMIT_TAG}_arm64.dmg"
+        - name: "macOS (Intel) .dmg"
+          url: "$PKG_URL/rigpilot-macos/$CI_COMMIT_TAG/RigPilot_${CI_COMMIT_TAG}_x86_64.dmg"
+        - name: "Linux / Windows packages"
+          url: "$CI_PROJECT_URL/-/packages"

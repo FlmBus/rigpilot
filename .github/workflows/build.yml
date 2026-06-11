@@ -1,0 +1,139 @@
+# RigPilot — multi-platform Tauri build pipeline (GitHub Actions)
+#
+# Targets: Linux x86_64 (deb/rpm/AppImage), Windows x86_64 (NSIS/MSI),
+#          macOS x86_64 + aarch64 (dmg). Tauri cannot cross-compile between
+#          OSes, so each OS builds natively; both macOS architectures build
+#          on the Apple-Silicon runner (x86_64 via rustup target).
+#
+# On every push/PR: test + build all platforms, bundles kept as workflow
+# artifacts (14 days).
+# On tag pushes (v*): additionally create a GitHub release with all bundles
+# attached.
+
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  LINUX_DEPS: >-
+    libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+    libxdo-dev build-essential pkg-config libssl-dev curl wget file
+
+jobs:
+  test:
+    name: Test (Linux)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y $LINUX_DEPS
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+      - run: npm ci
+      - run: npx svelte-kit sync
+      - run: npx svelte-check --tsconfig ./tsconfig.json
+      - run: cargo test --locked
+        working-directory: app/src-tauri
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x86_64
+            os: ubuntu-latest
+            artifact: rigpilot-linux-x86_64
+            bundle-glob: |
+              app/src-tauri/target/release/bundle/deb/*.deb
+              app/src-tauri/target/release/bundle/rpm/*.rpm
+              app/src-tauri/target/release/bundle/appimage/*.AppImage
+          - name: Windows x86_64
+            os: windows-latest
+            artifact: rigpilot-windows-x86_64
+            bundle-glob: |
+              app/src-tauri/target/release/bundle/nsis/*.exe
+              app/src-tauri/target/release/bundle/msi/*.msi
+          - name: macOS arm64
+            os: macos-latest
+            target: aarch64-apple-darwin
+            artifact: rigpilot-macos-arm64
+            bundle-glob: |
+              app/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+          - name: macOS x86_64
+            os: macos-latest
+            target: x86_64-apple-darwin
+            artifact: rigpilot-macos-x86_64
+            bundle-glob: |
+              app/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y $LINUX_DEPS
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+          key: ${{ matrix.artifact }}
+      - run: npm ci
+      - name: Build Tauri app
+        run: npm run tauri build -- ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.bundle-glob }}
+          retention-days: 14
+
+  release:
+    name: GitHub release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: RigPilot ${{ github.ref_name }}
+          body: >-
+            RigPilot ${{ github.ref_name }} — Linux (deb/rpm/AppImage),
+            Windows (NSIS/MSI) and macOS (dmg, Apple Silicon + Intel) builds.
+          files: |
+            artifacts/**/*.deb
+            artifacts/**/*.rpm
+            artifacts/**/*.AppImage
+            artifacts/**/*.exe
+            artifacts/**/*.msi
+            artifacts/**/*.dmg

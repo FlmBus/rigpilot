@@ -7,14 +7,15 @@
 # On every push/PR: build both macOS targets and keep the bundles as
 # workflow artifacts (14 days).
 # On tag pushes (v*): additionally upload the .dmg files to the GitLab
-# project's generic package registry, where the GitLab `release` job picks
-# them up.
+# project's generic package registry and create the GitLab release (or, if
+# the GitLab pipeline created it first, just add the macOS asset links —
+# both sides are idempotent, see the `release` job in .gitlab-ci.yml).
 #
 # Required repository secrets (Settings → Secrets and variables → Actions):
 #   GITLAB_URL         e.g. https://gitlab.example.com (no trailing slash)
 #   GITLAB_PROJECT_ID  numeric project id (GitLab project → Settings → General)
 #   GITLAB_TOKEN       project access token, role Developer+, scope: api
-#                      (or at least write_package_registry)
+#                      (needed for both package upload and release creation)
 
 name: macOS build
 
@@ -89,3 +90,43 @@ jobs:
               --upload-file "$dmg" \
               "${GITLAB_URL}/api/v4/projects/${GITLAB_PROJECT_ID}/packages/generic/rigpilot-macos/${VERSION}/${file}"
           done
+
+  gitlab-release:
+    name: Create/update GitLab release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitLab release or add macOS asset links
+        env:
+          GITLAB_URL: ${{ secrets.GITLAB_URL }}
+          GITLAB_PROJECT_ID: ${{ secrets.GITLAB_PROJECT_ID }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          api="${GITLAB_URL}/api/v4/projects/${GITLAB_PROJECT_ID}"
+          pkg="${api}/packages/generic/rigpilot-macos/${VERSION}"
+
+          links='[
+            {"name":"macOS (Apple Silicon) .dmg","url":"'"${pkg}/RigPilot_${VERSION}_arm64.dmg"'"},
+            {"name":"macOS (Intel) .dmg","url":"'"${pkg}/RigPilot_${VERSION}_x86_64.dmg"'"}
+          ]'
+          payload='{"tag_name":"'"${VERSION}"'","name":"RigPilot '"${VERSION}"'","description":"RigPilot '"${VERSION}"' — Linux, Windows and macOS builds.","assets":{"links":'"${links}"'}}'
+
+          code=$(curl -s -o resp.json -w '%{http_code}' -X POST \
+            -H "PRIVATE-TOKEN: ${GITLAB_TOKEN}" -H 'Content-Type: application/json' \
+            -d "${payload}" "${api}/releases")
+
+          if [ "$code" = "201" ]; then
+            echo "Release ${VERSION} created with macOS links."
+          elif [ "$code" = "409" ]; then
+            echo "Release exists (created by the GitLab pipeline) — adding macOS links."
+            echo "${links}" | jq -c '.[]' | while read -r link; do
+              curl --fail-with-body -X POST \
+                -H "PRIVATE-TOKEN: ${GITLAB_TOKEN}" -H 'Content-Type: application/json' \
+                -d "${link}" "${api}/releases/${VERSION}/assets/links"
+            done
+          else
+            echo "Release creation failed with HTTP ${code}:" && cat resp.json && exit 1
+          fi

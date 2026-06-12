@@ -69,6 +69,9 @@ jobs:
     name: Compute next version
     needs: test
     runs-on: ubuntu-latest
+    # semantic-release verifies the token has push rights even in dry-run mode
+    permissions:
+      contents: write
     outputs:
       next: ${{ steps.semrel.outputs.next }}
     steps:
@@ -81,6 +84,9 @@ jobs:
       - name: semantic-release dry run
         id: semrel
         if: github.event_name != 'pull_request'
+        # explicit bash => -o pipefail, so a crashed dry run fails the job
+        # instead of silently producing an empty version
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NO_COLOR: 1

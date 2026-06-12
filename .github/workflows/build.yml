@@ -86,7 +86,7 @@ jobs:
           NO_COLOR: 1
         run: |
           npx --yes $SEMREL_PACKAGES semantic-release --dry-run | tee semrel.log
-          next=$(sed -n 's/.*The next release version is \([0-9A-Za-z.-]*\).*/\1/p' semrel.log | tail -n1)
+          next=$(sed -n 's/.*[Tt]he next release version is \([0-9A-Za-z.-]*\).*/\1/p' semrel.log | tail -n1)
           echo "next=$next" >> "$GITHUB_OUTPUT"
           echo "next version: ${next:-<no release>}"
 

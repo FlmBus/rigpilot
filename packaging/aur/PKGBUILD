@@ -1,0 +1,23 @@
+# Maintainer: Flemming Busman <flemming.busman@gmail.com>
+#
+# Template — @VERSION@, @SHA256@ and @REPO@ are filled in by the release job
+# (.github/workflows/build.yml), which attaches the rendered PKGBUILD to every
+# GitHub release. Repackages the released .deb, so no Rust toolchain is needed.
+
+pkgname=rigpilot-bin
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc="MIDI rig-control track editor — program your rig against reference audio, export standard MIDI files"
+arch=('x86_64')
+url="https://github.com/@REPO@"
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3' 'gst-plugins-base' 'gst-plugins-good')
+provides=('rigpilot')
+conflicts=('rigpilot')
+options=('!strip')
+source=("https://github.com/@REPO@/releases/download/v${pkgver}/RigPilot_${pkgver}_amd64.deb")
+sha256sums=('@SHA256@')
+
+package() {
+  bsdtar -xf "${srcdir}"/data.tar.* -C "${pkgdir}"
+}

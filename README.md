@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/assets/banner.svg" alt="RigPilot — program your rig, not your patience" width="100%"/>
+<img src="site/assets/banner.svg" alt="RigPilot — program your rig, not your patience" width="100%"/>
 
 <br/>
 
@@ -34,11 +34,11 @@ nobody remembers what `PC 14 on channel 2` meant three rehearsals later.
 describe *what your gear can do* in plain language ("Stomp A", "Select Rig", "Master
 Volume") — you just place named commands on a timeline.
 
-<img src=".github/assets/flow.svg" alt="Device definitions go in, RigPilot sequences events against reference audio, standard MIDI files come out and play through your show DAW" width="100%"/>
+<img src="site/assets/flow.svg" alt="Device definitions go in, RigPilot sequences events against reference audio, standard MIDI files come out and play through your show DAW" width="100%"/>
 
 ## ✨ What it looks like
 
-<img src=".github/assets/timeline.svg" alt="The RigPilot arrangement view: an audio reference track with waveform, MIDI tracks with color-coded events, and the command palette at the bottom" width="100%"/>
+<img src="site/assets/timeline.svg" alt="The RigPilot arrangement view: an audio reference track with waveform, MIDI tracks with color-coded events, and the command palette at the bottom" width="100%"/>
 
 > One project = one song. Audio tracks are your reference — the mix or stems, so you can
 > place events *by ear*. Each MIDI track controls one device and exports to one `.mid` file.
@@ -165,7 +165,7 @@ still misses his cue.
 
 <div align="center">
 
-<img src=".github/assets/logo.svg" alt="" width="64"/>
+<img src="site/assets/logo.svg" alt="" width="64"/>
 
 **Built with 🤘 by a band that got tired of typing CC numbers.**
 

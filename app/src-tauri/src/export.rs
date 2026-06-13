@@ -19,10 +19,6 @@ impl Default for ExportOptions {
     }
 }
 
-/// Minimum tick distance between rendered automation CC steps
-/// (PPQN/96 = a 384th note; at 120 BPM that is ~5 ms).
-const AUTOMATION_MIN_STEP: u64 = (PPQN / 96) as u64;
-
 /// A resolved MIDI message at an absolute tick. `order` keeps emission stable
 /// and deterministic for simultaneous events (reset block first, then lane order).
 struct Emitted {
@@ -76,6 +72,7 @@ fn render_automation(
     controller: u8,
     start: u64,
     breakpoints: &[(u64, u8)],
+    min_step: u64,
     order: &mut u64,
     out: &mut Vec<Emitted>,
 ) {
@@ -105,7 +102,7 @@ fn render_automation(
         // Step through the segment, emitting on value change with a minimum spacing.
         let mut t = t0;
         while t < t1 {
-            t = (t + AUTOMATION_MIN_STEP).min(t1);
+            t = (t + min_step).min(t1);
             let value = (v0 as f64
                 + (v1 as f64 - v0 as f64) * ((t - t0) as f64 / (t1 - t0) as f64))
                 .round() as u8;
@@ -211,14 +208,15 @@ fn resolve_track(
                     order += 1;
                 }
             }
-            Event::Automation { command_id, tick, breakpoints, .. } => {
+            Event::Automation { command_id, tick, breakpoints, resolution_ms, .. } => {
                 let command = find_command(def, command_id)?;
                 let Command::Automation(cmd) = command else {
                     return Err(format!("'{command_id}' is not an Automation command"));
                 };
                 let mut bps = breakpoints.clone();
                 bps.sort_by_key(|(t, _)| *t);
-                render_automation(cmd.target.controller, shift(*tick, command), &bps, &mut order, &mut out);
+                let min_step = ms_to_ticks(*resolution_ms, bpm).max(1);
+                render_automation(cmd.target.controller, shift(*tick, command), &bps, min_step, &mut order, &mut out);
             }
         }
     }
@@ -339,6 +337,7 @@ mod tests {
                     tick: 7680, // bar 3
                     length: 1920,
                     breakpoints: vec![(0, 0), (1920, 127)],
+                    resolution_ms: 5, // → 10 ticks/step @120 BPM (full 7-bit detail)
                     lane: 2,
                 },
             ],
@@ -463,6 +462,49 @@ mod tests {
         let at_zero: Vec<_> = events.iter().filter(|(t, _, _)| *t == 0).collect();
         // only the preselect CC47 remains at tick 0
         assert_eq!(at_zero.len(), 1);
+    }
+
+    #[test]
+    fn automation_resolution_controls_step_density() {
+        // Same 0->127 ramp, exported at a fine vs. coarse resolution: the
+        // coarse one must emit noticeably fewer CC steps.
+        fn ramp_count(resolution_ms: u32) -> usize {
+            let track = MidiTrack {
+                name: "K".into(),
+                definition_id: "kemper-profiler-stage".into(),
+                midi_channel: 1,
+                latency_ms: 0,
+                mute: false,
+                solo: false,
+                events: vec![Event::Automation {
+                    command_id: "volume-pedal".into(),
+                    tick: 0,
+                    length: 1920,
+                    breakpoints: vec![(0, 0), (1920, 127)],
+                    resolution_ms,
+                    lane: 0,
+                }],
+            };
+            let project = Project {
+                name: "R".into(),
+                bpm: 120.0,
+                time_signature: (4, 4),
+                tracks: vec![Track::Midi(track.clone())],
+            };
+            let bytes =
+                track_to_smf(&project, &track, &ExportOptions { reset_block: false }).unwrap();
+            let smf = Smf::parse(&bytes).unwrap();
+            abs_events(&smf)
+                .iter()
+                .filter(|(_, _, m)| {
+                    matches!(m, MidiMessage::Controller { controller, .. } if controller.as_int() == 7)
+                })
+                .count()
+        }
+        let fine = ramp_count(5); // ~10 ticks/step @120 BPM, full 7-bit detail
+        let coarse = ramp_count(50); // ~96 ticks/step, aggressively thinned
+        assert!(coarse < fine, "coarse {coarse} should be sparser than fine {fine}");
+        assert!(coarse < 30, "coarse resolution should thin hard, got {coarse}");
     }
 
     #[test]

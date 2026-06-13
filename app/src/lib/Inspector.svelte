@@ -2,6 +2,7 @@
   import Num from "./Num.svelte";
   import {
     PPQN,
+    DEFAULT_AUTOMATION_RESOLUTION_MS,
     barTicks,
     type DefinitionInfo,
     type EventRef,
@@ -103,6 +104,13 @@
           {/each}
         </div>
         <p class="desc">Double-click the curve to add a breakpoint, double-click a point to delete it.</p>
+        <hr />
+        <div class="grid">
+          <span class="microlabel" title="Minimum spacing between exported CC steps for this automation curve">Resolution ms</span>
+          <Num min={1} max={1000} value={event.resolutionMs ?? DEFAULT_AUTOMATION_RESOLUTION_MS}
+            onchange={(v) => { oncommit(); event!.resolutionMs = v; }} />
+        </div>
+        <p class="desc">≈ {Math.round(1000 / (event.resolutionMs ?? DEFAULT_AUTOMATION_RESOLUTION_MS))} CC updates/s · higher ms = fewer messages on a busy MIDI bus.</p>
       {:else if command.params.length > 0 && event.params}
         <hr />
         <div class="grid">

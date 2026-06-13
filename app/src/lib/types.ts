@@ -2,6 +2,9 @@
 
 export const PPQN = 960;
 
+/** Default automation export resolution (ms between CC steps); mirrors the Rust serde default. */
+export const DEFAULT_AUTOMATION_RESOLUTION_MS = 10;
+
 export type LabelInfo = { value: number; text: string; short: string | null };
 
 export type ParamInfo = {
@@ -41,6 +44,8 @@ export type RpEvent = {
   length?: number;
   params?: Record<string, number>;
   breakpoints?: [number, number][];
+  /** Automation only: min ms between exported CC steps (defaults to DEFAULT_AUTOMATION_RESOLUTION_MS). */
+  resolutionMs?: number;
   lane: number;
 };
 

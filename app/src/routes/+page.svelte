@@ -35,7 +35,7 @@
   let playheadSec = $state(0);
   let isPlaying = $state(false);
   let snapOn = $state(true);
-  let snapDivision = $state(16); // grid = bar/N
+  let snapDivision = $state(4); // grid = bar/N (default 1/4 note)
   let snapSeconds = $state(1); // raw-time grid step
   let gridMode = $state<"musical" | "time">("musical");
   let pxPerSecond = $state(40);

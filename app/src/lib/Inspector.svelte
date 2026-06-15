@@ -150,9 +150,11 @@
         <input type="text" bind:value={track.name} />
         {#if track.type === "audio"}
           <span class="microlabel">Volume</span>
-          <input type="range" min="0" max="1.5" step="0.01" bind:value={track.volume} />
+          <input type="range" min="0" max="1.5" step="0.01" bind:value={track.volume}
+            style="--fill:{(track.volume / 1.5) * 100}%" />
           <span class="microlabel">Pan</span>
-          <input type="range" min="-1" max="1" step="0.01" bind:value={track.pan} />
+          <input type="range" min="-1" max="1" step="0.01" bind:value={track.pan}
+            style="--fill:{((track.pan + 1) / 2) * 100}%" />
           <span class="microlabel">Wave zoom</span>
           <Num min={0.25} max={16} step={0.25} value={track.waveformGain || 1}
             onchange={(v) => ((track as any).waveformGain = v)} />
@@ -185,29 +187,41 @@
 
 <style>
   .inspector {
-    width: 240px;
+    width: 250px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    background: linear-gradient(180deg, #141419, #0e0e12);
+    border-left: 1px solid #000;
+    box-shadow: var(--rim);
   }
   .head {
-    padding: 6px 10px;
-    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 12px;
+    border-bottom: 1px solid #000;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    background: #141419;
+    z-index: 1;
   }
   .body {
-    padding: 10px;
+    padding: 12px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
   }
   .title {
-    font-weight: 600;
-    font-size: 14px;
+    font-weight: 700;
+    font-size: 15px;
   }
   .kind {
     color: var(--accent);
-    margin-top: 2px;
+    margin-top: 3px;
   }
   .desc {
     color: var(--fg-dim);

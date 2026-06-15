@@ -67,7 +67,10 @@
                   title={(cmd.description ?? "") +
                     (cmd.deterministic ? "" : "\n⚠ Result depends on the device's current state.")}
                 >
-                  <span class="stripe" style:background={COMMAND_TYPE_COLORS[cmd.commandType]}></span>
+                  <span
+                    class="tdot {cmd.commandType === 'hold' ? 'square' : cmd.commandType === 'automation' ? 'circle' : 'diamond'}"
+                    style:background={COMMAND_TYPE_COLORS[cmd.commandType]}
+                  ></span>
                   <span class="name">{cmd.name}</span>
                   {#if !cmd.deterministic}<span class="warn">⚠</span>{/if}
                 </div>
@@ -87,24 +90,31 @@
     width: 230px;
     flex-shrink: 0;
     overflow: hidden;
+    background: linear-gradient(180deg, #141419, #0e0e12);
+    border-right: 1px solid #000;
+    box-shadow: var(--rim);
   }
   .empty {
-    color: var(--fg-dim);
+    color: var(--fg-faint);
     font-size: 12px;
     margin: 0;
-    padding: 10px;
+    padding: 14px;
+    line-height: 1.5;
   }
   .head {
-    padding: 6px 10px;
-    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 12px;
+    border-bottom: 1px solid #000;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
     flex-shrink: 0;
   }
   .sub-head {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 8px 10px;
-    border-bottom: 1px solid var(--line);
+    padding: 8px 10px 2px;
   }
   .device {
     color: var(--accent);
@@ -116,19 +126,18 @@
   .groups {
     display: flex;
     flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: 10px;
+    gap: 14px;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 8px;
+    padding: 6px 8px 12px;
   }
   .group {
     min-width: 0;
   }
   .group-toggle {
-    height: 20px;
-    padding: 0 2px;
+    height: 18px;
+    padding: 0 4px;
+    gap: 5px;
   }
   .caret {
     font-size: 9px;
@@ -137,32 +146,33 @@
   .items {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 1px;
+    margin-top: 2px;
   }
   .item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    height: 22px;
-    padding: 0 8px 0 0;
-    border: 1px solid var(--line);
-    border-radius: 2px;
-    background: var(--bg2);
+    gap: 8px;
+    width: 100%;
+    height: 27px;
+    padding: 0 8px;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--fg-dim);
     cursor: grab;
-    font-size: 12px;
+    font-size: 12.5px;
     white-space: nowrap;
     overflow: hidden;
+    transition: background 90ms ease, color 90ms ease;
   }
   .item:hover {
-    border-color: var(--accent);
+    background: var(--bg3);
+    color: var(--fg);
   }
   .item:active {
     cursor: grabbing;
-  }
-  .stripe {
-    width: 3px;
-    align-self: stretch;
-    flex-shrink: 0;
+    background: var(--bg2);
   }
   .name {
     overflow: hidden;
@@ -171,5 +181,6 @@
   .warn {
     color: var(--warn);
     font-size: 10px;
+    margin-left: auto;
   }
 </style>

@@ -105,6 +105,15 @@
     return { x, y, w, h: LANE_H - 3 };
   }
 
+  const CLIP_TITLE_H = 18;
+  // Automation curve vertical bounds inside a clip rect; reserves the title-bar strip on tall lanes
+  // so DOM breakpoints and canvas hit-testing stay aligned.
+  function autoBounds(r: { y: number; h: number }) {
+    const bottom = r.y + r.h - 2;
+    const top = r.y + (r.h >= 50 ? CLIP_TITLE_H + 1 : 2);
+    return { bottom, h: Math.max(4, bottom - top) };
+  }
+
   type Hit = { ref: EventRef; zone: "body" | "left" | "right" };
   function hitTest(x: number, y: number): Hit | null {
     for (let ti = project.tracks.length - 1; ti >= 0; ti--) {
@@ -134,10 +143,11 @@
         const ev = tr.events[ei];
         if (ev.kind !== "automation" || !ev.breakpoints || !ev.length) continue;
         const r = eventRect(ti, ev);
+        const ab = autoBounds(r);
         for (let i = 0; i < ev.breakpoints.length; i++) {
           const [bt, bv] = ev.breakpoints[i];
           const bx = r.x + (bt / ev.length) * r.w;
-          const by = r.y + r.h - 2 - (bv / 127) * (r.h - 4);
+          const by = ab.bottom - (bv / 127) * ab.h;
           if (Math.abs(x - bx) <= 5 && Math.abs(y - by) <= 5) return { ref: { ti, ei }, index: i };
         }
       }
@@ -343,8 +353,9 @@
         drag.moved = true;
       }
       const r = eventRect(drag.ref.ti, ev);
+      const ab = autoBounds(r);
       const i = drag.index;
-      const value = Math.max(0, Math.min(127, Math.round(((r.y + r.h - 2 - y) / (r.h - 4)) * 127)));
+      const value = Math.max(0, Math.min(127, Math.round(((ab.bottom - y) / ab.h) * 127)));
       ev.breakpoints[i][1] = value;
       // endpoints keep their time; inner points move between their neighbors
       if (i > 0 && i < ev.breakpoints.length - 1) {
@@ -475,7 +486,8 @@
     drawGrid(ctx);
     project.tracks.forEach((track, i) => {
       if (track.type === "audio") drawWaveform(ctx, i);
-      else drawEvents(ctx, i);
+      // MIDI events are rendered as a DOM overlay (see template) — keeps canvas for
+      // waveform/grid/playhead while clips get the full CSS design + interactions stay on canvas.
     });
 
     // drop ghost
@@ -500,22 +512,7 @@
       ctx.strokeRect(x + 0.5, y + 0.5, w, h);
     }
 
-    // playhead
-    const px = playhead * pxPerSecond;
-    ctx.strokeStyle = "#f2f2f5";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(px, 0);
-    ctx.lineTo(px, heightPx);
-    ctx.stroke();
-    ctx.lineWidth = 1;
-    ctx.fillStyle = "#f2f2f5";
-    ctx.beginPath();
-    ctx.moveTo(px - 5, 0);
-    ctx.lineTo(px + 5, 0);
-    ctx.lineTo(px, 7);
-    ctx.closePath();
-    ctx.fill();
+    // playhead is a DOM element on top of the clip overlay (see template)
   }
 
   function drawGrid(ctx: CanvasRenderingContext2D) {
@@ -746,9 +743,10 @@
     const ev = tr.events[hit.ref.ei];
     if (ev.kind !== "automation" || !ev.breakpoints || !ev.length) return;
     const r = eventRect(hit.ref.ti, ev);
+    const ab = autoBounds(r);
     const rawT = Math.max(0, Math.min(ev.length, tickAt(x) - ev.tick));
     const tOff = snapTicks ? Math.max(0, Math.min(ev.length, snap(ev.tick + rawT) - ev.tick)) : rawT;
-    const value = Math.max(0, Math.min(127, Math.round(((r.y + r.h - 2 - y) / (r.h - 4)) * 127)));
+    const value = Math.max(0, Math.min(127, Math.round(((ab.bottom - y) / ab.h) * 127)));
     oncommit();
     const idx = ev.breakpoints.findIndex(([bt]) => bt > tOff);
     if (idx === -1) ev.breakpoints.push([tOff, value]);
@@ -792,30 +790,322 @@
 </script>
 
 <div class="scroller" bind:this={scroller} onwheel={onwheel}>
-  <canvas
-    bind:this={canvas}
-    style:cursor={hoverCursor}
-    onpointerdown={onpointerdown}
-    onpointermove={onpointermove}
-    onpointerup={onpointerup}
-    ondblclick={ondblclick}
-    oncontextmenu={oncontextmenu}
-    ondragover={ondragover}
-    ondragleave={() => (dropGhost = null)}
-    ondrop={ondrop}
-  ></canvas>
+  <div class="surface" style="width:{widthPx}px;height:{heightPx}px;">
+    <canvas
+      bind:this={canvas}
+      style:cursor={hoverCursor}
+      onpointerdown={onpointerdown}
+      onpointermove={onpointermove}
+      onpointerup={onpointerup}
+      ondblclick={ondblclick}
+      oncontextmenu={oncontextmenu}
+      ondragover={ondragover}
+      ondragleave={() => (dropGhost = null)}
+      ondrop={ondrop}
+    ></canvas>
+    <div class="events" aria-hidden="true">
+      {#each project.tracks as track, ti}
+        {#if track.type === "midi"}
+          {#each track.events as ev, ei (ei)}
+            {@const r = eventRect(ti, ev)}
+            {@const cmd = commandsById.get(`${track.definitionId}/${ev.commandId}`)}
+            {@const label = cmd ? eventLabel(cmd, ev) : ev.commandId}
+            {@const sel = isSelected(ti, ei)}
+            {@const tall = r.h >= 50}
+            {#if ev.kind === "one-shot"}
+              <div class="clip oneshot" class:sel class:tall style="left:{r.x}px;top:{r.y}px;width:{r.w}px;height:{r.h}px">
+                {#if tall}<div class="os-stem"></div>{/if}
+                <span class="dia"></span>
+                {#if tall}
+                  {#if label}<div class="os-flag"><span class="tdot diamond" style="background:var(--warn)"></span><span class="ch-name">{label}</span></div>{/if}
+                {:else if label}
+                  <span class="os-label">{label}</span>
+                {/if}
+              </div>
+            {:else if ev.kind === "hold"}
+              <div class="clip hold" class:sel class:tall style="left:{r.x}px;top:{r.y}px;width:{r.w}px;height:{r.h}px">
+                {#if tall}
+                  <div class="clip-head"><span class="tdot square" style="background:var(--accent)"></span><span class="ch-name">{label}</span></div>
+                {:else}
+                  <span class="clip-label">{label}</span>
+                {/if}
+                {#if sel}<i class="grab l"></i><i class="grab r"></i>{/if}
+              </div>
+            {:else}
+              {@const len = ev.length || 1}
+              {@const cb = r.h - 2}
+              {@const ct = tall ? CLIP_TITLE_H + 1 : 2}
+              {@const ch = Math.max(4, cb - ct)}
+              {@const pts = (ev.breakpoints ?? []).map(([t, v]) => `${(t / len) * r.w},${cb - (v / 127) * ch}`).join(" ")}
+              <div class="clip auto" class:sel class:tall style="left:{r.x}px;top:{r.y}px;width:{r.w}px;height:{r.h}px">
+                <svg viewBox="0 0 {r.w} {r.h}" preserveAspectRatio="none">
+                  {#if pts}<polygon points="{pts} {r.w},{r.h} 0,{r.h}" /><polyline points={pts} />{/if}
+                </svg>
+                {#each ev.breakpoints ?? [] as [t, v]}
+                  <div class="node" style="left:{(t / len) * r.w}px;top:{cb - (v / 127) * ch}px"></div>
+                {/each}
+                {#if tall}
+                  <div class="clip-head"><span class="tdot circle" style="background:var(--green)"></span><span class="ch-name">{label}</span></div>
+                {:else if label}
+                  <span class="clip-label">{label}</span>
+                {/if}
+                {#if sel}<i class="grab l"></i><i class="grab r"></i>{/if}
+              </div>
+            {/if}
+          {/each}
+        {/if}
+      {/each}
+    </div>
+    <div class="playhead" style="left:{playhead * pxPerSecond}px"></div>
+  </div>
 </div>
 
 <style>
   .scroller {
     overflow: auto;
-    border: 1px solid var(--line);
-    border-left: none;
     flex: 1;
     min-width: 0;
     background: var(--bg0);
   }
+  .surface {
+    position: relative;
+  }
   canvas {
     display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .events {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #f2f2f5;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .playhead::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -4px;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 7px solid #f2f2f5;
+  }
+  .events .defs {
+    position: absolute;
+  }
+  .clip {
+    position: absolute;
+    box-sizing: border-box;
+  }
+  .clip-label {
+    font-size: 10px;
+    line-height: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* hold = liquid-glass block */
+  .clip.hold {
+    display: flex;
+    align-items: center;
+    padding: 0 7px;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(255, 46, 136, 0.18), rgba(255, 46, 136, 0.11));
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    box-shadow: var(--rim), inset 0 -9px 11px -8px rgba(0, 0, 0, 0.4);
+  }
+  .clip.hold .clip-label {
+    color: #fff;
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+  .clip.hold.sel {
+    box-shadow: 0 0 0 1px var(--accent), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  }
+  /* one-shot = diamond marker + label beside */
+  .clip.oneshot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+  }
+  .clip.oneshot .dia {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    transform: rotate(45deg);
+    background: var(--warn);
+    border: 1px solid #8a5e00;
+    border-radius: 2px;
+  }
+  .clip.oneshot.sel .dia {
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.9);
+  }
+  .clip.oneshot .os-label {
+    position: absolute;
+    left: 100%;
+    margin-left: 4px;
+    white-space: nowrap;
+    font-size: 10px;
+    color: var(--fg-dim);
+  }
+  /* tall clip title bar (groove between title and body) */
+  .clip-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 18px;
+    flex-shrink: 0;
+    padding: 0 7px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .ch-name {
+    font-size: 10px;
+    font-weight: 600;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .clip.hold.tall {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
+  }
+  .clip.hold.tall .clip-head {
+    background: linear-gradient(180deg, rgba(255, 46, 136, 0.42), rgba(255, 46, 136, 0.28));
+    border-radius: 4px 4px 0 0;
+  }
+  .clip.hold.tall .grab {
+    top: 18px;
+  }
+  .clip.auto .clip-head {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    border-radius: 3px 3px 0 0;
+    background: linear-gradient(180deg, rgba(46, 224, 138, 0.3), rgba(46, 224, 138, 0.18));
+  }
+  .clip.auto.tall .grab {
+    top: 18px;
+  }
+  /* one-shot tall = vertical stem + diamond + flag */
+  .clip.oneshot.tall {
+    overflow: visible;
+  }
+  .os-stem {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, rgba(255, 176, 46, 0.55), rgba(255, 176, 46, 0.18));
+  }
+  .clip.oneshot.tall .dia {
+    position: relative;
+    z-index: 1;
+  }
+  .os-flag {
+    position: absolute;
+    top: 1px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 7px;
+    white-space: nowrap;
+    background: rgba(22, 22, 26, 0.92);
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    box-shadow: var(--rim);
+  }
+  .os-flag .ch-name {
+    color: var(--fg);
+  }
+  /* automation = a hold-style green glass block with a graph; area under the curve = transparent black */
+  .clip.auto {
+    border: 1px solid var(--green);
+    border-radius: 4px;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(46, 224, 138, 0.18), rgba(46, 224, 138, 0.11));
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    box-shadow: var(--rim), inset 0 -9px 11px -8px rgba(0, 0, 0, 0.4);
+  }
+  .clip.auto.sel {
+    box-shadow: 0 0 0 1px var(--green), inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+  }
+  .clip.auto svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .clip.auto polyline {
+    fill: none;
+    stroke: var(--green);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+  }
+  .clip.auto polygon {
+    fill: rgba(0, 0, 0, 0.28);
+    stroke: none;
+  }
+  .clip.auto .clip-label {
+    position: absolute;
+    left: 5px;
+    top: 2px;
+    color: #dfffe9;
+    z-index: 1;
+  }
+  .node {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--bg0);
+    border: 1.5px solid var(--green);
+  }
+  .grab {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .grab.l { left: 0; }
+  .grab.r { right: 0; }
+  .grab::before {
+    content: "";
+    width: 2px;
+    height: 54%;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 1px;
   }
 </style>

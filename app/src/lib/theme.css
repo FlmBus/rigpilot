@@ -1,24 +1,44 @@
-/* RigPilot theme — industrial high-contrast console.
-   Band colors: pink-magenta + white on near-black. Desktop density, no web cards. */
+/* RigPilot — "Embedded Console" design system.
+   Dark instrument surface, hot-pink accent, abstract depth (one top light, no skeuomorphism).
+   Tokens + base elements + shared utility classes (faceplate / well / cell / seg / tdot). */
 
 :root {
-  --bg0: #0b0b0d;
-  --bg1: #121215;
-  --bg2: #1a1a1f;
-  --bg3: #232329;
-  --line: #2a2a31;
-  --line-strong: #3f3f4a;
-  --fg: #f2f2f5;
+  --bg0: #0a0a0c;
+  --bg1: #0f0f12;
+  --bg2: #16161a;
+  --bg3: #1e1e23;
+  --line: #242429;
+  --line-strong: #34343c;
+  --fg: #f4f4f7;
   --fg-dim: #9a9aa6;
   --fg-faint: #5d5d68;
   --accent: #ff2e88;
   --accent-down: #d11668;
-  --accent-soft: rgba(255, 46, 136, 0.14);
+  --accent-soft: rgba(255, 46, 136, 0.12);
   --warn: #ffb02e;
   --green: #2ee08a;
-  --radius: 3px;
+
+  --radius: 8px;
+  --radius-sm: 5px;
+  --radius-lg: 11px;
   --ctl-h: 26px;
-  --font-ui: "Outfit Variable", "Outfit", sans-serif;
+
+  /* depth = layering under one top light, abstract (no material imitation) */
+  --rim: inset 0 1px 0 rgba(255, 255, 255, 0.07); /* specular top edge — carries most depth */
+  --edge-top: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --well-in: inset 0 1px 3px rgba(0, 0, 0, 0.6); /* recessed display */
+  --raise: linear-gradient(180deg, #1a1a1f, #151519); /* subtle tonal, lit from top */
+  --raise-hi: linear-gradient(180deg, #212127, #19191f);
+  --lift: 0 1px 2px rgba(0, 0, 0, 0.5); /* tight contact shadow, downward */
+  --float: 0 14px 36px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4); /* overlay shadow */
+  --bar-bg: linear-gradient(180deg, #24242c, #1b1b22); /* unified bar (lifts off the rest) */
+
+  /* one interaction grammar */
+  --hover-glow: inset 0 -8px 10px -9px rgba(255, 46, 136, 0.4); /* signature pink LED warm-up */
+  --led: inset 0 -3px 0 var(--accent), inset 0 -9px 11px -8px rgba(255, 46, 136, 0.45); /* toggle = lamp on */
+  --clip-depth: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -9px 11px -8px rgba(0, 0, 0, 0.4);
+
+  --font-ui: "Archivo Variable", "Archivo", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
 }
 
@@ -33,25 +53,26 @@ body {
   color: var(--fg);
   font-family: var(--font-ui);
   font-size: 13px;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
   user-select: none;
   overflow: hidden;
 }
 
-/* ---------- micro-labels ---------- */
+/* ---------- text helpers ---------- */
 .microlabel {
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--fg-dim);
 }
-
 .mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- controls ---------- */
+/* ---------- buttons (flat / embedded) ---------- */
 button,
 input,
 select {
@@ -60,21 +81,22 @@ select {
   color: var(--fg);
   background: var(--bg2);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   height: var(--ctl-h);
-  padding: 0 8px;
+  padding: 0 9px;
 }
 
 button {
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   white-space: nowrap;
+  transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
 }
 button:hover {
-  border-color: var(--line-strong);
   background: var(--bg3);
+  border-color: var(--line-strong);
 }
 button:active {
   background: var(--bg1);
@@ -104,12 +126,15 @@ button.toggle.active {
   border-color: var(--accent);
   color: var(--accent);
 }
+button.danger {
+  color: var(--fg);
+}
 button.danger:hover {
   border-color: #c2304a;
   color: #ff6e85;
 }
 button:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: default;
 }
 
@@ -118,15 +143,22 @@ button:disabled {
   border-color: var(--accent);
 }
 
+/* ---------- inputs (recessed wells) ---------- */
 input[type="text"],
 input:not([type]) {
   width: 100%;
+  background: #07070a;
+  border-color: #000;
+  box-shadow: var(--well-in);
 }
 input[type="number"] {
   font-family: var(--font-mono);
   width: 64px;
   appearance: textfield;
   -moz-appearance: textfield;
+  background: #07070a;
+  border-color: #000;
+  box-shadow: var(--well-in);
 }
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
@@ -134,30 +166,32 @@ input[type="number"]::-webkit-outer-spin-button {
   margin: 0;
 }
 
-/* selects: kill the browser look */
 select {
   appearance: none;
   -webkit-appearance: none;
   padding-right: 22px;
+  background-color: #07070a;
+  border-color: #000;
+  box-shadow: var(--well-in);
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='5'><path d='M0 0l4 5 4-5z' fill='%239a9aa6'/></svg>");
   background-repeat: no-repeat;
   background-position: right 7px center;
 }
 
-/* checkboxes */
 input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   padding: 0;
   margin: 0;
-  background: var(--bg2);
+  background: #07070a;
   border: 1px solid var(--line-strong);
-  border-radius: 2px;
+  border-radius: 3px;
   position: relative;
   cursor: pointer;
   flex-shrink: 0;
+  box-shadow: var(--well-in);
 }
 input[type="checkbox"]:checked {
   background: var(--accent);
@@ -166,40 +200,58 @@ input[type="checkbox"]:checked {
 input[type="checkbox"]:checked::after {
   content: "";
   position: absolute;
-  left: 4px;
-  top: 1px;
-  width: 4px;
-  height: 8px;
+  left: 5px;
+  top: 2px;
+  width: 3px;
+  height: 7px;
   border: solid #fff;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
 
-/* range sliders */
+/* range = filled fader; supports --fill (0%..100%) for the value portion */
 input[type="range"] {
   appearance: none;
   -webkit-appearance: none;
-  height: 14px;
+  height: 16px;
   padding: 0;
   background: transparent;
   border: none;
   cursor: pointer;
 }
 input[type="range"]::-webkit-slider-runnable-track {
-  height: 3px;
-  background: var(--line-strong);
-  border-radius: 2px;
+  height: 8px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--fg-dim) 0 var(--fill, 50%), #07070a var(--fill, 50%));
+  box-shadow: var(--well-in);
+}
+input[type="range"]:hover::-webkit-slider-runnable-track {
+  background: linear-gradient(90deg, var(--accent) 0 var(--fill, 50%), #07070a var(--fill, 50%));
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 10px;
-  height: 14px;
-  margin-top: -5.5px;
+  width: 3px;
+  height: 16px;
+  margin-top: -4px;
   background: var(--fg);
   border-radius: 2px;
 }
-input[type="range"]:hover::-webkit-slider-thumb {
-  background: var(--accent);
+input[type="range"]::-moz-range-track {
+  height: 8px;
+  border-radius: 5px;
+  background: #07070a;
+}
+input[type="range"]::-moz-range-progress {
+  height: 8px;
+  border-radius: 5px;
+  background: var(--fg-dim);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 3px;
+  height: 16px;
+  border: none;
+  background: var(--fg);
+  border-radius: 2px;
 }
 
 label {
@@ -208,18 +260,146 @@ label {
   align-items: center;
 }
 
-/* ---------- panels ---------- */
-.panel {
-  background: var(--bg1);
-  border: 1px solid var(--line);
-}
-
 hr {
   border: none;
   border-top: 1px solid var(--line);
   margin: 8px 0;
 }
 
+/* ---------- surfaces ---------- */
+.panel {
+  background: var(--bg1);
+  border: 1px solid #000;
+  box-shadow: var(--rim);
+}
+
+/* raised matte panel (instrument faceplate) */
+.faceplate {
+  position: relative;
+  background: linear-gradient(180deg, #141419, #0e0e12);
+  border: 1px solid #000;
+  border-radius: var(--radius);
+  box-shadow: var(--rim);
+}
+.fp-head {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 12px;
+  border-bottom: 1px solid #000;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* recessed display well */
+.well {
+  background: #07070a;
+  border: 1px solid #000;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--well-in);
+}
+
+/* carved cell group (transport, toolbars) — buttons embedded into one bar */
+.cellgroup {
+  display: inline-flex;
+  align-items: stretch;
+  height: 34px;
+  border: 1px solid #000;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--raise);
+  box-shadow: var(--rim), var(--lift);
+}
+.cellgroup.flat {
+  box-shadow: var(--rim);
+}
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  padding: 0 11px;
+  color: var(--fg-dim);
+  cursor: pointer;
+  border-left: 1px solid var(--line);
+  transition: background 90ms ease, color 90ms ease;
+}
+.cellgroup .cell:first-child {
+  border-left: none;
+}
+.cell:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg);
+  box-shadow: var(--hover-glow);
+}
+.cell:active {
+  background: rgba(0, 0, 0, 0.45);
+  box-shadow: var(--well-in);
+}
+.cell.on {
+  color: var(--accent);
+  box-shadow: var(--led);
+}
+
+/* segmented control */
+.seg {
+  display: inline-flex;
+  background: #07070a;
+  border: 1px solid #000;
+  border-radius: var(--radius);
+  padding: 2px;
+  gap: 2px;
+  box-shadow: var(--well-in);
+}
+.seg button {
+  height: 22px;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  color: var(--fg-dim);
+  border-radius: 3px;
+  font-weight: 500;
+}
+.seg button:hover {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: var(--hover-glow);
+}
+.seg button.active {
+  background: var(--bg3);
+  color: var(--fg);
+  box-shadow: var(--rim);
+}
+
+/* type marker dot (own classes — never collide with .hold/.auto element classes) */
+.tdot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+.tdot.diamond {
+  width: 7px;
+  height: 7px;
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+.tdot.square {
+  border-radius: 2px;
+}
+.tdot.circle {
+  border-radius: 50%;
+}
+
+/* glass overlay (menus, popovers, tooltips) */
+.glass {
+  background: rgba(22, 22, 26, 0.96);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--rim), var(--float);
+}
+
+/* ---------- scrollbars ---------- */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

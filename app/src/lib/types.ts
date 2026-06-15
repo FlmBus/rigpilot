@@ -83,9 +83,9 @@ export type Project = {
 
 // Command Type drives the event color (docs/terminology.md).
 export const COMMAND_TYPE_COLORS: Record<RpEvent["kind"], string> = {
-  "one-shot": "#ffd23e",
+  "one-shot": "#ffb02e",
   hold: "#ff2e88",
-  automation: "#39d3e6",
+  automation: "#2ee08a",
 };
 
 /** Compact timeline label: short name + short param value labels. */
@@ -102,7 +102,7 @@ export function eventLabel(cmd: CommandInfo, ev: RpEvent): string {
 
 // ---- timeline geometry shared by canvas and the header column ----
 export const RULER_H = 28;
-export const LANE_H = 36;
+export const LANE_H = 72;
 export const AUDIO_ROW_H = 72;
 
 /** Visible lanes of a MIDI track: always one empty lane below the deepest event. */

@@ -33,7 +33,8 @@
   .backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(5, 5, 7, 0.7);
+    background: rgba(5, 5, 7, 0.6);
+    backdrop-filter: blur(2px);
     display: grid;
     place-items: center;
     z-index: 50;
@@ -41,18 +42,22 @@
   .dialog {
     min-width: 380px;
     max-width: 520px;
-    border-color: var(--line-strong);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+    background: linear-gradient(180deg, #141419, #0e0e12);
+    border: 1px solid #000;
+    border-radius: var(--radius);
+    box-shadow: var(--rim), var(--float);
   }
   header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 8px 8px 12px;
-    border-bottom: 1px solid var(--line);
+    height: 30px;
+    padding: 0 6px 0 14px;
+    border-bottom: 1px solid #000;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
   }
   .body {
-    padding: 14px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;

@@ -15,9 +15,12 @@
     trackHeight,
     trackTops,
     eventLabel,
+    snapToSteps,
+    stepLabel,
     type CommandInfo,
     type DefinitionInfo,
     type EventRef,
+    type LabelInfo,
     type Project,
     type RpEvent,
   } from "./types";
@@ -90,6 +93,34 @@
       for (const c of d.commands) m.set(`${d.id}/${c.id}`, c);
     return m;
   });
+
+  /** Discrete value set for an automation event's command (empty = continuous). */
+  function stepsFor(ti: number, ev: RpEvent): LabelInfo[] {
+    const tr = project.tracks[ti];
+    if (tr.type !== "midi") return [];
+    return commandsById.get(`${tr.definitionId}/${ev.commandId}`)?.steps ?? [];
+  }
+
+  /** SVG polyline points for an automation curve. When `stepped`, draws a
+   *  sample-and-hold step function (matches the discrete export); else linear. */
+  function autoPoints(
+    ev: RpEvent,
+    w: number,
+    cb: number,
+    ch: number,
+    len: number,
+    stepped: boolean,
+  ): string {
+    const bps = ev.breakpoints ?? [];
+    const px = (t: number) => (t / len) * w;
+    const py = (v: number) => cb - (v / 127) * ch;
+    const out: string[] = [];
+    bps.forEach(([t, v], i) => {
+      if (stepped && i > 0) out.push(`${px(t)},${py(bps[i - 1][1])}`); // hold prev value
+      out.push(`${px(t)},${py(v)}`);
+    });
+    return out.join(" ");
+  }
 
   function eventRect(ti: number, ev: RpEvent) {
     let x = xOf(ev.tick);
@@ -355,14 +386,14 @@
       const r = eventRect(drag.ref.ti, ev);
       const ab = autoBounds(r);
       const i = drag.index;
-      const value = Math.max(0, Math.min(127, Math.round(((ab.bottom - y) / ab.h) * 127)));
-      ev.breakpoints[i][1] = value;
+      const raw = Math.max(0, Math.min(127, Math.round(((ab.bottom - y) / ab.h) * 127)));
+      ev.breakpoints[i][1] = snapToSteps(stepsFor(drag.ref.ti, ev), raw);
       // endpoints keep their time; inner points move between their neighbors
       if (i > 0 && i < ev.breakpoints.length - 1) {
-        const raw = Math.max(0, Math.min(ev.length, tickAt(x) - ev.tick));
+        const rawT = Math.max(0, Math.min(ev.length, tickAt(x) - ev.tick));
         const lo = ev.breakpoints[i - 1][0] + 1;
         const hi = ev.breakpoints[i + 1][0] - 1;
-        ev.breakpoints[i][0] = Math.max(lo, Math.min(hi, snapTicks ? snap(ev.tick + raw) - ev.tick : raw));
+        ev.breakpoints[i][0] = Math.max(lo, Math.min(hi, snapTicks ? snap(ev.tick + rawT) - ev.tick : rawT));
       }
       return;
     }
@@ -749,8 +780,9 @@
     const value = Math.max(0, Math.min(127, Math.round(((ab.bottom - y) / ab.h) * 127)));
     oncommit();
     const idx = ev.breakpoints.findIndex(([bt]) => bt > tOff);
-    if (idx === -1) ev.breakpoints.push([tOff, value]);
-    else ev.breakpoints.splice(idx, 0, [tOff, value]);
+    const snapped = snapToSteps(stepsFor(hit.ref.ti, ev), value);
+    if (idx === -1) ev.breakpoints.push([tOff, snapped]);
+    else ev.breakpoints.splice(idx, 0, [tOff, snapped]);
     onselectionchange([hit.ref]);
   }
 
@@ -836,13 +868,20 @@
               {@const cb = r.h - 2}
               {@const ct = tall ? CLIP_TITLE_H + 1 : 2}
               {@const ch = Math.max(4, cb - ct)}
-              {@const pts = (ev.breakpoints ?? []).map(([t, v]) => `${(t / len) * r.w},${cb - (v / 127) * ch}`).join(" ")}
+              {@const steps = stepsFor(ti, ev)}
+              {@const pts = autoPoints(ev, r.w, cb, ch, len, steps.length > 0)}
               <div class="clip auto" class:sel class:tall style="left:{r.x}px;top:{r.y}px;width:{r.w}px;height:{r.h}px">
                 <svg viewBox="0 0 {r.w} {r.h}" preserveAspectRatio="none">
                   {#if pts}<polygon points="{pts} {r.w},{r.h} 0,{r.h}" /><polyline points={pts} />{/if}
                 </svg>
                 {#each ev.breakpoints ?? [] as [t, v]}
-                  <div class="node" style="left:{(t / len) * r.w}px;top:{cb - (v / 127) * ch}px"></div>
+                  {@const nx = (t / len) * r.w}
+                  {@const ny = cb - (v / 127) * ch}
+                  <div class="node" style="left:{nx}px;top:{ny}px"></div>
+                  {#if steps.length > 0 && tall}
+                    {@const sl = stepLabel(steps, v)}
+                    {#if sl}<span class="node-label" style="left:{nx}px;top:{ny}px">{sl}</span>{/if}
+                  {/if}
                 {/each}
                 {#if tall}
                   <div class="clip-head"><span class="tdot circle" style="background:var(--green)"></span><span class="ch-name">{label}</span></div>
@@ -1089,6 +1128,18 @@
     transform: translate(-50%, -50%);
     background: var(--bg0);
     border: 1.5px solid var(--green);
+  }
+  .node-label {
+    position: absolute;
+    transform: translate(-50%, -150%);
+    padding: 0 3px;
+    font-size: 9px;
+    line-height: 1.3;
+    color: var(--green);
+    background: color-mix(in srgb, var(--bg0) 70%, transparent);
+    border-radius: var(--radius-sm);
+    pointer-events: none;
+    white-space: nowrap;
   }
   .grab {
     position: absolute;

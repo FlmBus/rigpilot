@@ -35,6 +35,18 @@
     </xs:restriction>
   </xs:simpleType>
 
+  <!-- A friendly name for a raw MIDI value ("3B" for 9, "On" for 127). Reused by
+       Param (per-event value picker) and Automation Target (discrete breakpoint values). -->
+  <xs:complexType name="valueLabel">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="value" type="rp:midiByte" use="required"/>
+        <!-- compact form used on timeline events; falls back to the text -->
+        <xs:attribute name="short" type="xs:string"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
   <!-- ======================= messages ======================= -->
 
   <xs:complexType name="noteMessage">
@@ -72,17 +84,7 @@
   -->
   <xs:complexType name="paramType">
     <xs:sequence>
-      <xs:element name="Label" minOccurs="0" maxOccurs="unbounded">
-        <xs:complexType>
-          <xs:simpleContent>
-            <xs:extension base="xs:string">
-              <xs:attribute name="value" type="rp:midiByte" use="required"/>
-              <!-- compact form used on timeline events; falls back to the text -->
-              <xs:attribute name="short" type="xs:string"/>
-            </xs:extension>
-          </xs:simpleContent>
-        </xs:complexType>
-      </xs:element>
+      <xs:element name="Label" type="rp:valueLabel" minOccurs="0" maxOccurs="unbounded"/>
     </xs:sequence>
     <xs:attribute name="id" type="rp:idType" use="required"/>
     <xs:attribute name="name" type="xs:string" use="required"/>
@@ -134,6 +136,15 @@
     <xs:sequence>
       <xs:element name="Target">
         <xs:complexType>
+          <!--
+            Optional discrete value set. When one or more Labels are present the
+            automation is "stepped": breakpoint values snap to these values, each
+            node shows its label, and export emits a sample-and-hold step function
+            (no interpolation). Typical use: a CC that is only meaningful at 0/127.
+          -->
+          <xs:sequence>
+            <xs:element name="Label" type="rp:valueLabel" minOccurs="0" maxOccurs="unbounded"/>
+          </xs:sequence>
           <xs:attribute name="controller" type="rp:midiByte" use="required"/>
           <xs:attribute name="min" type="rp:midiByte" default="0"/>
           <xs:attribute name="max" type="rp:midiByte" default="127"/>

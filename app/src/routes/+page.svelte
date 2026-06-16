@@ -18,6 +18,7 @@
     secondsToTick,
     tickToSeconds,
     trackHeight,
+    snapToSteps,
     type CommandInfo,
     type DefinitionInfo,
     type EventRef,
@@ -218,8 +219,12 @@
     for (const p of cmd.params) params[p.id] = p.default ?? p.min;
     const base = { commandId: cmd.id, tick, params, lane };
     if (cmd.commandType === "hold") return { ...base, kind: "hold", length: PPQN * 4 };
-    if (cmd.commandType === "automation")
-      return { ...base, kind: "automation", length: PPQN * 4, breakpoints: [[0, 0], [PPQN * 4, 127]] };
+    if (cmd.commandType === "automation") {
+      const end = PPQN * 4;
+      const lo = snapToSteps(cmd.steps, 0);
+      const hi = snapToSteps(cmd.steps, 127);
+      return { ...base, kind: "automation", length: end, breakpoints: [[0, lo], [end, hi]] };
+    }
     return { ...base, kind: "one-shot" };
   }
 

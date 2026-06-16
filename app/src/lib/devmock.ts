@@ -12,6 +12,7 @@ const cmd = (
   commandType: CommandInfo["commandType"],
   group: string,
   params: CommandInfo["params"] = [],
+  steps: CommandInfo["steps"] = [],
 ): CommandInfo => ({
   id,
   name,
@@ -22,7 +23,13 @@ const cmd = (
   description: `${name} — demo command (browser dev mode).`,
   deterministic: true,
   params,
+  steps,
 });
+
+const ON_OFF: CommandInfo["steps"] = [
+  { value: 0, text: "Off", short: "Off" },
+  { value: 127, text: "On", short: "On" },
+];
 
 export const mockDefinitions: DefinitionInfo[] = [
   {
@@ -42,6 +49,7 @@ export const mockDefinitions: DefinitionInfo[] = [
       cmd("volume", "Volume", "automation", "Expression"),
       cmd("wah", "Wah", "automation", "Expression"),
       cmd("pitch", "Pitch", "automation", "Expression"),
+      cmd("fx-loop", "FX Loop (stepped)", "automation", "Expression", [], ON_OFF),
     ],
   },
   {
@@ -89,6 +97,7 @@ export const mockProject: Project = {
         { kind: "one-shot", commandId: "snap-1", tick: 2880, lane: 1, params: {} },
         { kind: "hold", commandId: "boost", tick: 1920, length: 960, lane: 2, params: {} },
         { kind: "one-shot", commandId: "snap-2", tick: 3360, lane: 2, params: {} },
+        { kind: "automation", commandId: "fx-loop", tick: 0, length: 3840, lane: 3, breakpoints: [[0, 0], [1920, 127], [3840, 0]], params: {} },
       ],
     },
     {

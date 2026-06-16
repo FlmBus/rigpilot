@@ -581,6 +581,8 @@ mod tests {
         assert_eq!(cmd.steps.len(), 2);
         assert_eq!(cmd.steps[1].value, 127);
         assert_eq!(cmd.steps[1].short.as_deref(), Some("On"));
+    }
+
     fn temp_dir(name: &str) -> std::path::PathBuf {
         let dir = std::env::temp_dir().join(format!("rigpilot-defs-test-{name}"));
         let _ = std::fs::remove_dir_all(&dir);

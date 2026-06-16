@@ -25,4 +25,5 @@ serde_json = "1"
 midly = "0.5"
 tauri-plugin-dialog = "2.7.1"
 quick-xml = { version = "0.40.1", features = ["serialize"] }
+dirs = "5"
 

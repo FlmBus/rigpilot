@@ -123,6 +123,20 @@ mod tests {
     use super::*;
 
     #[test]
+    fn frontend_snapshot_preserves_tempo() {
+        // Shape exactly as the Svelte frontend sends via $state.snapshot(project).
+        let json = r#"{
+            "name": "Song",
+            "bpm": 90,
+            "timeSignature": [3, 4],
+            "tracks": []
+        }"#;
+        let p: Project = serde_json::from_str(json).unwrap();
+        assert_eq!(p.bpm, 90.0);
+        assert_eq!(p.time_signature, (3, 4));
+    }
+
+    #[test]
     fn event_json_uses_camel_case_fields() {
         let ev = Event::OneShot {
             command_id: "tap-tempo".into(),

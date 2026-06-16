@@ -364,6 +364,27 @@ mod tests {
     }
 
     #[test]
+    fn tempo_and_signature_follow_project() {
+        // Guards against regressions where export ignores project tempo/signature
+        // and always emits 120 BPM 4/4 (see issue #3).
+        let (mut project, track) = test_project();
+        project.bpm = 90.0;
+        project.time_signature = (3, 4);
+        let bytes = track_to_smf(&project, &track, &ExportOptions::default()).unwrap();
+        let smf = Smf::parse(&bytes).unwrap();
+        let tempo = smf.tracks[0].iter().find_map(|e| match e.kind {
+            TrackEventKind::Meta(MetaMessage::Tempo(t)) => Some(t.as_int()),
+            _ => None,
+        });
+        let sig = smf.tracks[0].iter().find_map(|e| match e.kind {
+            TrackEventKind::Meta(MetaMessage::TimeSignature(n, d, _, _)) => Some((n, d)),
+            _ => None,
+        });
+        assert_eq!(tempo, Some(666_667), "tempo must follow project.bpm (90 BPM)");
+        assert_eq!(sig, Some((3, 2)), "signature must follow project (3/4 -> num=3, dd=2)");
+    }
+
+    #[test]
     fn exports_valid_smf_with_correct_timing() {
         let (project, track) = test_project();
         let bytes = track_to_smf(&project, &track, &ExportOptions::default()).unwrap();

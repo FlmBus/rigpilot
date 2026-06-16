@@ -171,6 +171,34 @@ pub struct Target {
     #[allow(dead_code)]
     #[serde(rename = "@max", default = "default_max")]
     pub max: u8,
+    /// Optional discrete value set. When non-empty the automation is "stepped":
+    /// breakpoints snap to these values and export emits a sample-and-hold step
+    /// function instead of interpolating.
+    #[serde(rename = "Label", default)]
+    pub labels: Vec<Label>,
+}
+
+impl Target {
+    /// Allowed values for a stepped automation, ascending. Empty = continuous.
+    pub fn step_values(&self) -> Vec<u8> {
+        let mut v: Vec<u8> = self.labels.iter().map(|l| l.value).collect();
+        v.sort_unstable();
+        v.dedup();
+        v
+    }
+
+    /// Snaps a raw value to the nearest allowed step value (lower on a tie).
+    /// Returns the value unchanged when the target is continuous.
+    pub fn snap(&self, value: u8) -> u8 {
+        let steps = self.step_values();
+        if steps.is_empty() {
+            return value;
+        }
+        *steps
+            .iter()
+            .min_by_key(|s| (value as i16 - **s as i16).unsigned_abs())
+            .unwrap()
+    }
 }
 
 fn default_max() -> u8 {
@@ -392,6 +420,9 @@ pub struct CommandInfo {
     pub description: Option<String>,
     pub deterministic: bool,
     pub params: Vec<ParamInfo>,
+    /// Discrete value set for a stepped Automation (empty for continuous
+    /// automations and all other command types).
+    pub steps: Vec<LabelInfo>,
 }
 
 #[derive(Debug, Serialize)]
@@ -420,15 +451,15 @@ fn param_info(p: &Param) -> ParamInfo {
         min: p.min,
         max: p.max,
         default: p.default,
-        labels: p
-            .labels
-            .iter()
-            .map(|l| LabelInfo {
-                value: l.value,
-                text: l.text.clone(),
-                short: l.short.clone(),
-            })
-            .collect(),
+        labels: p.labels.iter().map(label_info).collect(),
+    }
+}
+
+fn label_info(l: &Label) -> LabelInfo {
+    LabelInfo {
+        value: l.value,
+        text: l.text.clone(),
+        short: l.short.clone(),
     }
 }
 
@@ -448,6 +479,7 @@ pub fn info(def: &DeviceDefinition) -> DefinitionInfo {
                 description: c.description.clone(),
                 deterministic: c.deterministic,
                 params: c.params().map(param_info).collect(),
+                steps: vec![],
             },
             Command::Hold(c) => CommandInfo {
                 id: c.id.clone(),
@@ -459,6 +491,7 @@ pub fn info(def: &DeviceDefinition) -> DefinitionInfo {
                 description: c.description.clone(),
                 deterministic: true,
                 params: c.params.iter().map(param_info).collect(),
+                steps: vec![],
             },
             Command::Automation(c) => CommandInfo {
                 id: c.id.clone(),
@@ -470,6 +503,7 @@ pub fn info(def: &DeviceDefinition) -> DefinitionInfo {
                 description: c.description.clone(),
                 deterministic: true,
                 params: vec![],
+                steps: c.target.labels.iter().map(label_info).collect(),
             },
         })
         .collect();
@@ -488,6 +522,65 @@ pub fn info(def: &DeviceDefinition) -> DefinitionInfo {
 mod tests {
     use super::*;
 
+    #[test]
+    fn target_snaps_to_nearest_discrete_value() {
+        let xml = r#"<DeviceDefinition id="x" version="1" xmlns="https://rigpilot.app/schemas/device-definition/1">
+          <Meta><Manufacturer>M</Manufacturer><Model>D</Model></Meta>
+          <Commands>
+            <Automation id="a" name="A">
+              <Target controller="11">
+                <Label value="0">Off</Label>
+                <Label value="127">On</Label>
+              </Target>
+            </Automation>
+          </Commands>
+        </DeviceDefinition>"#;
+        let def = parse(xml).unwrap();
+        let Command::Automation(c) = &def.commands.items[0] else {
+            panic!("expected automation");
+        };
+        assert_eq!(c.target.step_values(), vec![0, 127]);
+        assert_eq!(c.target.snap(0), 0);
+        assert_eq!(c.target.snap(63), 0); // nearer 0
+        assert_eq!(c.target.snap(64), 127); // nearer 127
+        assert_eq!(c.target.snap(127), 127);
+    }
+
+    #[test]
+    fn continuous_target_does_not_snap() {
+        let xml = r#"<DeviceDefinition id="x" version="1" xmlns="https://rigpilot.app/schemas/device-definition/1">
+          <Meta><Manufacturer>M</Manufacturer><Model>D</Model></Meta>
+          <Commands>
+            <Automation id="a" name="A"><Target controller="7"/></Automation>
+          </Commands>
+        </DeviceDefinition>"#;
+        let def = parse(xml).unwrap();
+        let Command::Automation(c) = &def.commands.items[0] else {
+            panic!("expected automation");
+        };
+        assert!(c.target.step_values().is_empty());
+        assert_eq!(c.target.snap(42), 42);
+    }
+
+    #[test]
+    fn automation_steps_exposed_in_info() {
+        let xml = r#"<DeviceDefinition id="x" version="1" xmlns="https://rigpilot.app/schemas/device-definition/1">
+          <Meta><Manufacturer>M</Manufacturer><Model>D</Model></Meta>
+          <Commands>
+            <Automation id="a" name="A">
+              <Target controller="11">
+                <Label value="0" short="Off">Off</Label>
+                <Label value="127" short="On">On</Label>
+              </Target>
+            </Automation>
+          </Commands>
+        </DeviceDefinition>"#;
+        let def = parse(xml).unwrap();
+        let cmd = &info(&def).commands[0];
+        assert_eq!(cmd.command_type, "automation");
+        assert_eq!(cmd.steps.len(), 2);
+        assert_eq!(cmd.steps[1].value, 127);
+        assert_eq!(cmd.steps[1].short.as_deref(), Some("On"));
     fn temp_dir(name: &str) -> std::path::PathBuf {
         let dir = std::env::temp_dir().join(format!("rigpilot-defs-test-{name}"));
         let _ = std::fs::remove_dir_all(&dir);

@@ -1,7 +1,7 @@
 //! SMF export: one Type-0 file per MIDI track, PPQN 960, tempo + time signature
 //! included, optional Reset Block at t=0 (see docs/plan.md §3).
 
-use crate::definition::{self, Command, DeviceDefinition, Message};
+use crate::definition::{self, Command, DeviceDefinition, Message, Target};
 use crate::project::{Event, MidiTrack, Project, Track, PPQN};
 use midly::num::{u15, u24, u28, u4, u7};
 use midly::{Format, Header, MetaMessage, MidiMessage, Smf, Timing, TrackEvent, TrackEventKind};
@@ -117,6 +117,36 @@ fn render_automation(
     }
 }
 
+/// Renders a stepped (discrete) automation: each breakpoint value is snapped to the
+/// target's allowed value set and emitted as a sample-and-hold step (a CC is sent only
+/// when the snapped value changes). No interpolation, so no out-of-set values are ever
+/// emitted — see issue #4.
+fn render_stepped_automation(
+    target: &Target,
+    start: u64,
+    breakpoints: &[(u64, u8)],
+    order: &mut u64,
+    out: &mut Vec<Emitted>,
+) {
+    let mut last: Option<u8> = None;
+    for (t, v) in breakpoints {
+        let value = target.snap(*v);
+        if last == Some(value) {
+            continue;
+        }
+        out.push(Emitted {
+            tick: start + t,
+            order: *order,
+            message: MidiMessage::Controller {
+                controller: u7::new(target.controller),
+                value: u7::new(value),
+            },
+        });
+        *order += 1;
+        last = Some(value);
+    }
+}
+
 /// Resolves a MIDI track into absolutely-timed MIDI messages (without channel).
 fn resolve_track(
     track: &MidiTrack,
@@ -215,8 +245,14 @@ fn resolve_track(
                 };
                 let mut bps = breakpoints.clone();
                 bps.sort_by_key(|(t, _)| *t);
-                let min_step = ms_to_ticks(*resolution_ms, bpm).max(1);
-                render_automation(cmd.target.controller, shift(*tick, command), &bps, min_step, &mut order, &mut out);
+                if cmd.target.step_values().is_empty() {
+                    let min_step = ms_to_ticks(*resolution_ms, bpm).max(1);
+                    render_automation(cmd.target.controller, shift(*tick, command), &bps, min_step, &mut order, &mut out);
+                } else {
+                    // Discrete target: snap each breakpoint and emit a sample-and-hold
+                    // step function (no interpolation, no in-between values).
+                    render_stepped_automation(&cmd.target, shift(*tick, command), &bps, &mut order, &mut out);
+                }
             }
         }
     }
@@ -557,5 +593,85 @@ mod tests {
         let param = pre.params().next().unwrap();
         assert_eq!(param.labels.len(), 125);
         assert_eq!(param.labels[5].text, "Performance 6");
+    }
+
+    fn stepped_def() -> DeviceDefinition {
+        let xml = r#"<DeviceDefinition id="x" version="1" xmlns="https://rigpilot.app/schemas/device-definition/1">
+          <Meta><Manufacturer>M</Manufacturer><Model>D</Model></Meta>
+          <Commands>
+            <Automation id="wah-toggle" name="Wah">
+              <Target controller="11">
+                <Label value="0" short="Off">Off</Label>
+                <Label value="127" short="On">On</Label>
+              </Target>
+            </Automation>
+          </Commands>
+        </DeviceDefinition>"#;
+        definition::parse(xml).unwrap()
+    }
+
+    fn cc_values(out: &[Emitted]) -> Vec<(u64, u8)> {
+        out.iter()
+            .filter_map(|e| match e.message {
+                MidiMessage::Controller { controller, value } if controller.as_int() == 11 => {
+                    Some((e.tick, value.as_int()))
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn stepped_automation_snaps_and_holds() {
+        let def = stepped_def();
+        let track = MidiTrack {
+            name: "t".into(),
+            definition_id: "x".into(),
+            midi_channel: 1,
+            latency_ms: 0,
+            mute: false,
+            solo: false,
+            // 0->0, 64->127, 70->127, 127->127 after snapping; sample-and-hold collapses
+            // the trailing repeats. No in-between value (64/70) is ever emitted.
+            events: vec![Event::Automation {
+                command_id: "wah-toggle".into(),
+                tick: 0,
+                length: 1000,
+                breakpoints: vec![(0, 0), (100, 64), (200, 70), (300, 127)],
+                resolution_ms: 10,
+                lane: 0,
+            }],
+        };
+        let out = resolve_track(&track, &def, 120.0, &ExportOptions { reset_block: false }).unwrap();
+        let vals = cc_values(&out);
+        assert_eq!(vals, vec![(0, 0), (100, 127)]);
+        assert!(
+            vals.iter().all(|(_, v)| *v == 0 || *v == 127),
+            "stepped automation must only emit the discrete set, got {vals:?}"
+        );
+    }
+
+    #[test]
+    fn stepped_automation_snaps_below_and_above_midpoint() {
+        let def = stepped_def();
+        let track = MidiTrack {
+            name: "t".into(),
+            definition_id: "x".into(),
+            midi_channel: 1,
+            latency_ms: 0,
+            mute: false,
+            solo: false,
+            // 63 -> 0 (nearer 0), 64 -> 127 (nearer 127)
+            events: vec![Event::Automation {
+                command_id: "wah-toggle".into(),
+                tick: 0,
+                length: 1000,
+                breakpoints: vec![(0, 63), (100, 64)],
+                resolution_ms: 10,
+                lane: 0,
+            }],
+        };
+        let out = resolve_track(&track, &def, 120.0, &ExportOptions { reset_block: false }).unwrap();
+        assert_eq!(cc_values(&out), vec![(0, 0), (100, 127)]);
     }
 }

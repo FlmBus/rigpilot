@@ -26,6 +26,8 @@ export type CommandInfo = {
   description: string | null;
   deterministic: boolean;
   params: ParamInfo[];
+  /** Discrete value set for a stepped Automation (empty = continuous). */
+  steps: LabelInfo[];
 };
 
 export type DefinitionInfo = {
@@ -98,6 +100,21 @@ export function eventLabel(cmd: CommandInfo, ev: RpEvent): string {
     parts.push(l?.short ?? (l && l.text.length <= 8 ? l.text : String(v)));
   }
   return parts.join(" ");
+}
+
+/** Nearest allowed step value for a stepped automation; identity when continuous. */
+export function snapToSteps(steps: LabelInfo[], value: number): number {
+  if (!steps.length) return value;
+  return steps.reduce(
+    (best, s) => (Math.abs(s.value - value) < Math.abs(best - value) ? s.value : best),
+    steps[0].value,
+  );
+}
+
+/** Short label text for a discrete step value, or null if none matches. */
+export function stepLabel(steps: LabelInfo[], value: number): string | null {
+  const l = steps.find((s) => s.value === value);
+  return l ? (l.short ?? l.text) : null;
 }
 
 // ---- timeline geometry shared by canvas and the header column ----

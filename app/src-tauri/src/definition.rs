@@ -258,8 +258,8 @@ pub fn resolve_value(raw: &str, params: &HashMap<String, u8>) -> Result<u8, Stri
     }
 }
 
-/// Definitions bundled with the app.
-/// TODO(M2+): load from a resource directory + project-imported files instead.
+/// Definitions bundled with the app. User-supplied definitions from the
+/// OS-specific directories (see `definition_dirs`) are merged on top via `all`.
 const BUNDLED: &[&str] = &[
     include_str!("../../../definitions/kemper-profiler-stage.xml"),
     include_str!("../../../definitions/neural-dsp-quad-cortex.xml"),
@@ -276,8 +276,92 @@ pub fn bundled() -> Result<Vec<DeviceDefinition>, String> {
     BUNDLED.iter().map(|xml| parse(xml)).collect()
 }
 
+/// App folder name used under the OS config/data directories.
+const APP_DIR: &str = "rigpilot";
+
+/// OS-specific directories scanned for user-supplied custom definitions.
+///
+/// Per-user (writable) first, then system-wide (read-only). Resolution:
+/// - Linux:   `$XDG_CONFIG_HOME/rigpilot/definitions` (~/.config/...), `/etc/rigpilot/definitions`
+/// - macOS:   `~/Library/Application Support/rigpilot/definitions`, `/Library/Application Support/rigpilot/definitions`
+/// - Windows: `%APPDATA%\rigpilot\definitions`, `%PROGRAMDATA%\rigpilot\definitions`
+pub fn definition_dirs() -> Vec<std::path::PathBuf> {
+    let mut dirs = Vec::new();
+
+    if let Some(user) = dirs::config_dir() {
+        dirs.push(user.join(APP_DIR).join("definitions"));
+    }
+
+    #[cfg(target_os = "linux")]
+    dirs.push(std::path::PathBuf::from("/etc").join(APP_DIR).join("definitions"));
+
+    #[cfg(target_os = "macos")]
+    dirs.push(
+        std::path::PathBuf::from("/Library/Application Support")
+            .join(APP_DIR)
+            .join("definitions"),
+    );
+
+    #[cfg(target_os = "windows")]
+    if let Ok(program_data) = std::env::var("PROGRAMDATA") {
+        dirs.push(
+            std::path::PathBuf::from(program_data)
+                .join(APP_DIR)
+                .join("definitions"),
+        );
+    }
+
+    dirs
+}
+
+/// Loads custom definitions from the OS-specific directories.
+///
+/// Missing directories are skipped silently. A malformed file is logged and
+/// skipped so one bad file cannot break definition discovery.
+fn user() -> Vec<DeviceDefinition> {
+    load_from(&definition_dirs())
+}
+
+/// Scans the given directories for `*.xml` definitions (testable seam).
+fn load_from(dirs: &[std::path::PathBuf]) -> Vec<DeviceDefinition> {
+    let mut out = Vec::new();
+    for dir in dirs {
+        let entries = match std::fs::read_dir(dir) {
+            Ok(e) => e,
+            Err(_) => continue, // dir absent / unreadable -> skip
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("xml") {
+                continue;
+            }
+            match std::fs::read_to_string(&path) {
+                Ok(xml) => match parse(&xml) {
+                    Ok(def) => out.push(def),
+                    Err(e) => eprintln!("skipping invalid definition {}: {e}", path.display()),
+                },
+                Err(e) => eprintln!("could not read definition {}: {e}", path.display()),
+            }
+        }
+    }
+    out
+}
+
+/// All available definitions: user-supplied first (override bundled by id),
+/// then bundled. De-duplicated by id, keeping the first occurrence.
+pub fn all() -> Result<Vec<DeviceDefinition>, String> {
+    let mut seen = std::collections::HashSet::new();
+    let mut out = Vec::new();
+    for def in user().into_iter().chain(bundled()?) {
+        if seen.insert(def.id.clone()) {
+            out.push(def);
+        }
+    }
+    Ok(out)
+}
+
 pub fn find(id: &str) -> Result<DeviceDefinition, String> {
-    bundled()?
+    all()?
         .into_iter()
         .find(|d| d.id == id)
         .ok_or_else(|| format!("unknown device definition '{id}'"))
@@ -397,5 +481,49 @@ pub fn info(def: &DeviceDefinition) -> DefinitionInfo {
         description: def.meta.description.clone(),
         default_latency: def.defaults.as_ref().map(|d| d.latency).unwrap_or(0),
         commands,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_dir(name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("rigpilot-defs-test-{name}"));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn definition_dirs_are_os_specific_and_under_app_dir() {
+        let dirs = definition_dirs();
+        assert!(!dirs.is_empty(), "should resolve at least one dir");
+        assert!(
+            dirs.iter().all(|d| d.ends_with("definitions")
+                && d.components().any(|c| c.as_os_str() == APP_DIR)),
+            "every dir lives under <os-config>/{APP_DIR}/definitions, got {dirs:?}"
+        );
+    }
+
+    #[test]
+    fn load_from_reads_xml_and_skips_non_xml_and_invalid() {
+        let dir = temp_dir("load");
+        // a valid definition lifted from the bundled set
+        std::fs::write(dir.join("custom.xml"), BUNDLED[0]).unwrap();
+        // ignored: wrong extension
+        std::fs::write(dir.join("notes.txt"), "ignore me").unwrap();
+        // skipped, not fatal: malformed xml
+        std::fs::write(dir.join("broken.xml"), "<not-a-definition/>").unwrap();
+
+        let defs = load_from(&[dir]);
+        assert_eq!(defs.len(), 1, "only the one valid xml loads");
+    }
+
+    #[test]
+    fn missing_dir_is_skipped() {
+        let missing = std::env::temp_dir().join("rigpilot-defs-test-does-not-exist");
+        let _ = std::fs::remove_dir_all(&missing);
+        assert!(load_from(&[missing]).is_empty());
     }
 }

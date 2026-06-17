@@ -64,11 +64,14 @@
       <ControlChange controller="14" value="127"/>
     </OneShot>
 
-    <Hold id="tuner" name="Tuner" group="Misc"
-             description="Shows the tuner for the duration of the block (convention: 'Tuner' = CC15, 64-127 = on, 0-63 = off).">
-      <Engage><ControlChange controller="15" value="127"/></Engage>
-      <Disengage><ControlChange controller="15" value="0"/></Disengage>
-    </Hold>
+    <OneShot id="tuner" name="Tuner" group="Misc"
+             description="Shows or hides the tuner (convention: 'Tuner' = CC15, 64-127 = on, 0-63 = off).">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="Show">Show</Label>
+        <Label value="0" short="Hide">Hide</Label>
+      </Param>
+      <ControlChange controller="15" value="$state"/>
+    </OneShot>
 
   </Commands>
 </DeviceDefinition>

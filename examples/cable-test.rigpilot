@@ -15,7 +15,8 @@
         { "kind": "one-shot", "commandId": "load-slot-1", "tick": 10, "params": {}, "lane": 0 },
         { "kind": "one-shot", "commandId": "preselect-performance", "tick": 7680, "params": { "performance": 1 }, "lane": 0 },
         { "kind": "one-shot", "commandId": "load-slot-2", "tick": 7690, "params": {}, "lane": 0 },
-        { "kind": "hold", "commandId": "stomp-a", "tick": 15360, "length": 7680, "params": {}, "lane": 1 },
+        { "kind": "one-shot", "commandId": "stomp-a", "tick": 15360, "params": { "state": 1 }, "lane": 1 },
+        { "kind": "one-shot", "commandId": "stomp-a", "tick": 23040, "params": { "state": 0 }, "lane": 1 },
         { "kind": "automation", "commandId": "volume-pedal", "tick": 23040, "length": 3840, "breakpoints": [[0, 127], [3840, 0]], "lane": 2 }
       ]
     }

@@ -7,7 +7,7 @@
     <Model>DNAfx GiT Pro</Model>
     <Author>Flemming Busman</Author>
     <Source>Thomann user manual ID 517099 (11.01.2022), sections MIDI SETTING / PC Mapping / CC Reference</Source>
-    <Description>In MENU > MIDI SETTING: direction must be 'MIDI IN' (default), and the channel (default 1) must match the channel configured in RigPilot's Device Settings. VERIFY ON HARDWARE: the manual lists the ON/OFF CCs (10-20, 49, 51) and footswitch CCs (21-24) with value range 0-127 without defining the semantics. The Hold commands assume value-switched behavior (0 = off, 127 = on); if they turn out to be edge-triggered toggles, remodel them as non-deterministic One-Shots.</Description>
+    <Description>In MENU > MIDI SETTING: direction must be 'MIDI IN' (default), and the channel (default 1) must match the channel configured in RigPilot's Device Settings. VERIFY ON HARDWARE: the manual lists the ON/OFF CCs (10-20, 49, 51) and footswitch CCs (21-24) with value range 0-127 without defining the semantics. The On/Off commands assume value-switched behavior (0 = off, 127 = on); if they turn out to be edge-triggered toggles, drop the State param and set deterministic="false".</Description>
   </Meta>
 
   <Commands>
@@ -290,61 +290,94 @@
     <!-- ============ Modules ============
          VERIFY value semantics (see header). -->
 
-    <Hold id="module-dynamic" name="Dynamic Module" group="Modules"
-             description="Dynamic module is ON for the duration of the block, OFF afterwards.">
-      <Engage><ControlChange controller="10" value="127"/></Engage>
-      <Disengage><ControlChange controller="10" value="0"/></Disengage>
-    </Hold>
-    <Hold id="module-wah" name="Wah Module" group="Modules"
-             description="Wah module is ON for the duration of the block, OFF afterwards.">
-      <Engage><ControlChange controller="11" value="127"/></Engage>
-      <Disengage><ControlChange controller="11" value="0"/></Disengage>
-    </Hold>
-    <Hold id="module-ds" name="Distortion (DS) Module" group="Modules"
-             description="Distortion module is ON for the duration of the block, OFF afterwards.">
-      <Engage><ControlChange controller="12" value="127"/></Engage>
-      <Disengage><ControlChange controller="12" value="0"/></Disengage>
-    </Hold>
-    <Hold id="module-amp" name="Amp Module" group="Modules"
-             description="Amp module is ON for the duration of the block, OFF afterwards.">
-      <Engage><ControlChange controller="13" value="127"/></Engage>
-      <Disengage><ControlChange controller="13" value="0"/></Disengage>
-    </Hold>
-    <Hold id="module-cab" name="Cab Module" group="Modules"
-             description="Cab module is ON for the duration of the block, OFF afterwards.">
-      <Engage><ControlChange controller="14" value="127"/></Engage>
-      <Disengage><ControlChange controller="14" value="0"/></Disengage>
-    </Hold>
-    <Hold id="module-fx-loop" name="FX Loop Module" group="Modules"
-             description="FX Loop module is ON for the duration of the block, OFF afterwards.">
-      <Engage><ControlChange controller="15" value="127"/></Engage>
-      <Disengage><ControlChange controller="15" value="0"/></Disengage>
-    </Hold>
-    <Hold id="module-ns" name="Noise Suppressor (NS) Module" group="Modules"
-             description="Noise suppressor is ON for the duration of the block, OFF afterwards.">
-      <Engage><ControlChange controller="16" value="127"/></Engage>
-      <Disengage><ControlChange controller="16" value="0"/></Disengage>
-    </Hold>
-    <Hold id="module-eq" name="EQ Module" group="Modules"
-             description="EQ module is ON for the duration of the block, OFF afterwards.">
-      <Engage><ControlChange controller="17" value="127"/></Engage>
-      <Disengage><ControlChange controller="17" value="0"/></Disengage>
-    </Hold>
-    <Hold id="module-modulation" name="Modulation Module" group="Modules"
-             description="Modulation module is ON for the duration of the block, OFF afterwards.">
-      <Engage><ControlChange controller="18" value="127"/></Engage>
-      <Disengage><ControlChange controller="18" value="0"/></Disengage>
-    </Hold>
-    <Hold id="module-delay" name="Delay Module" group="Modules"
-             description="Delay module is ON for the duration of the block, OFF afterwards.">
-      <Engage><ControlChange controller="19" value="127"/></Engage>
-      <Disengage><ControlChange controller="19" value="0"/></Disengage>
-    </Hold>
-    <Hold id="module-reverb" name="Reverb Module" group="Modules"
-             description="Reverb module is ON for the duration of the block, OFF afterwards.">
-      <Engage><ControlChange controller="20" value="127"/></Engage>
-      <Disengage><ControlChange controller="20" value="0"/></Disengage>
-    </Hold>
+    <OneShot id="module-dynamic" name="Dynamic Module" group="Modules"
+             description="Turns the Dynamic module on or off.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="10" value="$state"/>
+    </OneShot>
+    <OneShot id="module-wah" name="Wah Module" group="Modules"
+             description="Turns the Wah module on or off.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="11" value="$state"/>
+    </OneShot>
+    <OneShot id="module-ds" name="Distortion (DS) Module" group="Modules"
+             description="Turns the Distortion module on or off.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="12" value="$state"/>
+    </OneShot>
+    <OneShot id="module-amp" name="Amp Module" group="Modules"
+             description="Turns the Amp module on or off.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="13" value="$state"/>
+    </OneShot>
+    <OneShot id="module-cab" name="Cab Module" group="Modules"
+             description="Turns the Cab module on or off.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="14" value="$state"/>
+    </OneShot>
+    <OneShot id="module-fx-loop" name="FX Loop Module" group="Modules"
+             description="Turns the FX Loop module on or off.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="15" value="$state"/>
+    </OneShot>
+    <OneShot id="module-ns" name="Noise Suppressor (NS) Module" group="Modules"
+             description="Turns the Noise Suppressor on or off.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="16" value="$state"/>
+    </OneShot>
+    <OneShot id="module-eq" name="EQ Module" group="Modules"
+             description="Turns the EQ module on or off.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="17" value="$state"/>
+    </OneShot>
+    <OneShot id="module-modulation" name="Modulation Module" group="Modules"
+             description="Turns the Modulation module on or off.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="18" value="$state"/>
+    </OneShot>
+    <OneShot id="module-delay" name="Delay Module" group="Modules"
+             description="Turns the Delay module on or off.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="19" value="$state"/>
+    </OneShot>
+    <OneShot id="module-reverb" name="Reverb Module" group="Modules"
+             description="Turns the Reverb module on or off.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="20" value="$state"/>
+    </OneShot>
 
     <!-- ============ Footswitches ============
          VERIFY: footswitch CCs likely emulate a physical press (toggle). -->
@@ -368,11 +401,14 @@
 
     <!-- ============ Pedals ============ -->
 
-    <Hold id="pedal-1-active" name="Pedal 1 Active" group="Pedals"
-             description="Expression pedal 1 is active for the duration of the block.">
-      <Engage><ControlChange controller="51" value="127"/></Engage>
-      <Disengage><ControlChange controller="51" value="0"/></Disengage>
-    </Hold>
+    <OneShot id="pedal-1-active" name="Pedal 1 Active" group="Pedals"
+             description="Activates or deactivates expression pedal 1.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">Active</Label>
+        <Label value="0" short="Off">Inactive</Label>
+      </Param>
+      <ControlChange controller="51" value="$state"/>
+    </OneShot>
     <Automation id="pedal-1" name="Pedal 1 Position" group="Pedals"
              description="Expression pedal 1 position.">
       <Target controller="52"/>
@@ -388,19 +424,25 @@
              description="A single tempo tap. Place several in a row to set the tempo.">
       <ControlChange controller="25" value="127"/>
     </OneShot>
-    <Hold id="tuner" name="Tuner" group="Misc"
-             description="Tuner is shown for the duration of the block.">
-      <Engage><ControlChange controller="27" value="127"/></Engage>
-      <Disengage><ControlChange controller="27" value="0"/></Disengage>
-    </Hold>
+    <OneShot id="tuner" name="Tuner" group="Misc"
+             description="Shows or hides the tuner.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="Show">Show</Label>
+        <Label value="0" short="Hide">Hide</Label>
+      </Param>
+      <ControlChange controller="27" value="$state"/>
+    </OneShot>
 
     <!-- ============ Looper &amp; Rhythm ============ -->
 
-    <Hold id="looper" name="Looper" group="Looper &amp; Rhythm"
-             description="Looper view is open for the duration of the block.">
-      <Engage><ControlChange controller="26" value="127"/></Engage>
-      <Disengage><ControlChange controller="26" value="0"/></Disengage>
-    </Hold>
+    <OneShot id="looper" name="Looper" group="Looper &amp; Rhythm"
+             description="Opens or closes the looper view.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="Open">Open</Label>
+        <Label value="0" short="Close">Close</Label>
+      </Param>
+      <ControlChange controller="26" value="$state"/>
+    </OneShot>
     <OneShot id="looper-rec-dub" name="Looper Rec/Dub" group="Looper &amp; Rhythm" deterministic="false"
              description="Starts recording or overdubbing - depends on the looper's current state.">
       <ControlChange controller="28" value="127"/>
@@ -417,11 +459,14 @@
              description="Clears the recorded loop.">
       <ControlChange controller="48" value="127"/>
     </OneShot>
-    <Hold id="rhythm" name="Rhythm" group="Looper &amp; Rhythm"
-             description="Rhythm (drum machine) runs for the duration of the block.">
-      <Engage><ControlChange controller="49" value="127"/></Engage>
-      <Disengage><ControlChange controller="49" value="0"/></Disengage>
-    </Hold>
+    <OneShot id="rhythm" name="Rhythm" group="Looper &amp; Rhythm"
+             description="Runs or stops the Rhythm (drum machine).">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="Run">Run</Label>
+        <Label value="0" short="Stop">Stop</Label>
+      </Param>
+      <ControlChange controller="49" value="$state"/>
+    </OneShot>
     <OneShot id="rhythm-tap" name="Rhythm Tap" group="Looper &amp; Rhythm"
              description="A single rhythm tempo tap.">
       <ControlChange controller="50" value="127"/>

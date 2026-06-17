@@ -185,119 +185,91 @@
          Absolute on/off goes through NRPN: CC99 = address page,
          CC98 = parameter number (3 = On/Off), CC6/CC38 = 14-bit value.   -->
 
-    <Hold id="stomp-a" name="Stomp A" group="Stomps"
-             description="Stomp A is ON for the duration of the block, OFF afterwards (absolute switching via NRPN).">
-      <Engage>
-        <ControlChange controller="99" value="50"/>
-        <ControlChange controller="98" value="3"/>
-        <ControlChange controller="6"  value="0"/>
-        <ControlChange controller="38" value="1"/>
-      </Engage>
-      <Disengage>
-        <ControlChange controller="99" value="50"/>
-        <ControlChange controller="98" value="3"/>
-        <ControlChange controller="6"  value="0"/>
-        <ControlChange controller="38" value="0"/>
-      </Disengage>
-    </Hold>
+    <OneShot id="stomp-a" name="Stomp A" group="Stomps"
+             description="Switches Stomp A on or off (absolute switching via NRPN).">
+      <Param id="state" name="State" min="0" max="1" default="1">
+        <Label value="1" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="99" value="50"/>
+      <ControlChange controller="98" value="3"/>
+      <ControlChange controller="6"  value="0"/>
+      <ControlChange controller="38" value="$state"/>
+    </OneShot>
 
-    <Hold id="stomp-b" name="Stomp B" group="Stomps"
-             description="Stomp B is ON for the duration of the block, OFF afterwards (absolute switching via NRPN).">
-      <Engage>
-        <ControlChange controller="99" value="51"/>
-        <ControlChange controller="98" value="3"/>
-        <ControlChange controller="6"  value="0"/>
-        <ControlChange controller="38" value="1"/>
-      </Engage>
-      <Disengage>
-        <ControlChange controller="99" value="51"/>
-        <ControlChange controller="98" value="3"/>
-        <ControlChange controller="6"  value="0"/>
-        <ControlChange controller="38" value="0"/>
-      </Disengage>
-    </Hold>
+    <OneShot id="stomp-b" name="Stomp B" group="Stomps"
+             description="Switches Stomp B on or off (absolute switching via NRPN).">
+      <Param id="state" name="State" min="0" max="1" default="1">
+        <Label value="1" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="99" value="51"/>
+      <ControlChange controller="98" value="3"/>
+      <ControlChange controller="6"  value="0"/>
+      <ControlChange controller="38" value="$state"/>
+    </OneShot>
 
-    <Hold id="stomp-c" name="Stomp C" group="Stomps"
-             description="Stomp C is ON for the duration of the block, OFF afterwards (absolute switching via NRPN).">
-      <Engage>
-        <ControlChange controller="99" value="52"/>
-        <ControlChange controller="98" value="3"/>
-        <ControlChange controller="6"  value="0"/>
-        <ControlChange controller="38" value="1"/>
-      </Engage>
-      <Disengage>
-        <ControlChange controller="99" value="52"/>
-        <ControlChange controller="98" value="3"/>
-        <ControlChange controller="6"  value="0"/>
-        <ControlChange controller="38" value="0"/>
-      </Disengage>
-    </Hold>
+    <OneShot id="stomp-c" name="Stomp C" group="Stomps"
+             description="Switches Stomp C on or off (absolute switching via NRPN).">
+      <Param id="state" name="State" min="0" max="1" default="1">
+        <Label value="1" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="99" value="52"/>
+      <ControlChange controller="98" value="3"/>
+      <ControlChange controller="6"  value="0"/>
+      <ControlChange controller="38" value="$state"/>
+    </OneShot>
 
-    <Hold id="stomp-d" name="Stomp D" group="Stomps"
-             description="Stomp D is ON for the duration of the block, OFF afterwards (absolute switching via NRPN).">
-      <Engage>
-        <ControlChange controller="99" value="53"/>
-        <ControlChange controller="98" value="3"/>
-        <ControlChange controller="6"  value="0"/>
-        <ControlChange controller="38" value="1"/>
-      </Engage>
-      <Disengage>
-        <ControlChange controller="99" value="53"/>
-        <ControlChange controller="98" value="3"/>
-        <ControlChange controller="6"  value="0"/>
-        <ControlChange controller="38" value="0"/>
-      </Disengage>
-    </Hold>
+    <OneShot id="stomp-d" name="Stomp D" group="Stomps"
+             description="Switches Stomp D on or off (absolute switching via NRPN).">
+      <Param id="state" name="State" min="0" max="1" default="1">
+        <Label value="1" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="99" value="53"/>
+      <ControlChange controller="98" value="3"/>
+      <ControlChange controller="6"  value="0"/>
+      <ControlChange controller="38" value="$state"/>
+    </OneShot>
 
-    <Hold id="stomp-x" name="Stomp X" group="Stomps"
-             description="Stomp X is ON for the duration of the block, OFF afterwards (absolute switching via NRPN).">
-      <Engage>
-        <ControlChange controller="99" value="56"/>
-        <ControlChange controller="98" value="3"/>
-        <ControlChange controller="6"  value="0"/>
-        <ControlChange controller="38" value="1"/>
-      </Engage>
-      <Disengage>
-        <ControlChange controller="99" value="56"/>
-        <ControlChange controller="98" value="3"/>
-        <ControlChange controller="6"  value="0"/>
-        <ControlChange controller="38" value="0"/>
-      </Disengage>
-    </Hold>
+    <OneShot id="stomp-x" name="Stomp X" group="Stomps"
+             description="Switches Stomp X on or off (absolute switching via NRPN).">
+      <Param id="state" name="State" min="0" max="1" default="1">
+        <Label value="1" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="99" value="56"/>
+      <ControlChange controller="98" value="3"/>
+      <ControlChange controller="6"  value="0"/>
+      <ControlChange controller="38" value="$state"/>
+    </OneShot>
 
-    <Hold id="stomp-mod" name="Stomp MOD" group="Stomps"
-             description="Stomp MOD is ON for the duration of the block, OFF afterwards (absolute switching via NRPN).">
-      <Engage>
-        <ControlChange controller="99" value="58"/>
-        <ControlChange controller="98" value="3"/>
-        <ControlChange controller="6"  value="0"/>
-        <ControlChange controller="38" value="1"/>
-      </Engage>
-      <Disengage>
-        <ControlChange controller="99" value="58"/>
-        <ControlChange controller="98" value="3"/>
-        <ControlChange controller="6"  value="0"/>
-        <ControlChange controller="38" value="0"/>
-      </Disengage>
-    </Hold>
+    <OneShot id="stomp-mod" name="Stomp MOD" group="Stomps"
+             description="Switches Stomp MOD on or off (absolute switching via NRPN).">
+      <Param id="state" name="State" min="0" max="1" default="1">
+        <Label value="1" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="99" value="58"/>
+      <ControlChange controller="98" value="3"/>
+      <ControlChange controller="6"  value="0"/>
+      <ControlChange controller="38" value="$state"/>
+    </OneShot>
 
-    <Hold id="stomp-delay" name="Stomp DELAY" group="Stomps"
-             description="Stomp DELAY is ON for the duration of the block, OFF afterwards (absolute switching via NRPN).">
-      <Engage>
-        <ControlChange controller="99" value="60"/>
-        <ControlChange controller="98" value="3"/>
-        <ControlChange controller="6"  value="0"/>
-        <ControlChange controller="38" value="1"/>
-      </Engage>
-      <Disengage>
-        <ControlChange controller="99" value="60"/>
-        <ControlChange controller="98" value="3"/>
-        <ControlChange controller="6"  value="0"/>
-        <ControlChange controller="38" value="0"/>
-      </Disengage>
-    </Hold>
+    <OneShot id="stomp-delay" name="Stomp DELAY" group="Stomps"
+             description="Switches Stomp DELAY on or off (absolute switching via NRPN).">
+      <Param id="state" name="State" min="0" max="1" default="1">
+        <Label value="1" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="99" value="60"/>
+      <ControlChange controller="98" value="3"/>
+      <ControlChange controller="6"  value="0"/>
+      <ControlChange controller="38" value="$state"/>
+    </OneShot>
 
-    <!-- Toggle variants (state-dependent — prefer the Holds above for shows) -->
+    <!-- Toggle variants (state-dependent — prefer the On/Off Stomp commands above for shows) -->
     <OneShot id="toggle-all-stomps" name="Toggle All Stomps" group="Stomps" deterministic="false"
              description="Flips ALL stomps on/off relative to their current state. Prefer the Stomp blocks for predictable shows.">
       <ControlChange controller="16" value="1"/>
@@ -317,11 +289,14 @@
 
     <!-- ============ Effects ============ -->
 
-    <Hold id="rotary-fast" name="Rotary Speaker Fast" group="Effects"
-             description="Rotary speaker runs FAST for the duration of the block, slow afterwards.">
-      <Engage><ControlChange controller="33" value="1"/></Engage>
-      <Disengage><ControlChange controller="33" value="0"/></Disengage>
-    </Hold>
+    <OneShot id="rotary-fast" name="Rotary Speaker Speed" short="Rotary" group="Effects"
+             description="Sets the rotary speaker to fast or slow.">
+      <Param id="state" name="Speed" min="0" max="1" default="1">
+        <Label value="1" short="Fast">Fast</Label>
+        <Label value="0" short="Slow">Slow</Label>
+      </Param>
+      <ControlChange controller="33" value="$state"/>
+    </OneShot>
 
     <Hold id="delay-infinity" name="Delay Feedback Infinity" group="Effects"
              description="Delay feedback is set to infinity for the duration of the block.">
@@ -383,11 +358,14 @@
       <ControlChange controller="30" value="0"/>
     </OneShot>
 
-    <Hold id="show-tuner" name="Show Tuner" group="Misc"
-             description="Shows the tuner for the duration of the block.">
-      <Engage><ControlChange controller="31" value="1"/></Engage>
-      <Disengage><ControlChange controller="31" value="0"/></Disengage>
-    </Hold>
+    <OneShot id="show-tuner" name="Tuner" short="Tuner" group="Misc"
+             description="Shows or hides the tuner.">
+      <Param id="state" name="State" min="0" max="1" default="1">
+        <Label value="1" short="Show">Show</Label>
+        <Label value="0" short="Hide">Hide</Label>
+      </Param>
+      <ControlChange controller="31" value="$state"/>
+    </OneShot>
 
     <Automation id="monitor-volume" name="Monitor Output Volume" group="Misc"
              description="Continuous control over the global monitor output volume.">

@@ -362,7 +362,7 @@ mod tests {
                     lane: 0,
                 },
                 Event::Hold {
-                    command_id: "stomp-a".into(),
+                    command_id: "delay-hold".into(),
                     tick: 3840, // bar 2
                     length: 3840,
                     params: HashMap::new(),
@@ -439,13 +439,14 @@ mod tests {
         // All on channel 2 (stored 0-based as 1)
         assert!(events.iter().all(|(_, ch, _)| *ch == 1));
 
-        // Reset block at tick 0: disengage of stomp-a (NRPN, 4 CCs) is present
-        // before anything else; CC38=0 closes it.
+        // Reset block at tick 0: disengage of delay-hold (CC35=0) is present
+        // before anything else.
         let at_zero: Vec<_> = events.iter().filter(|(t, _, _)| *t == 0).collect();
-        assert!(at_zero.len() >= 5); // 4 reset CCs + preselect CC47
+        assert!(at_zero.len() >= 2); // reset CC35 + preselect CC47
         assert!(matches!(
             at_zero[0].2,
-            MidiMessage::Controller { controller, .. } if controller.as_int() == 99
+            MidiMessage::Controller { controller, value }
+            if controller.as_int() == 35 && value.as_int() == 0
         ));
 
         // Preselect performance: CC47 value 5 at tick 0 (after the reset block)
@@ -460,15 +461,15 @@ mod tests {
             if controller.as_int() == 51 && value.as_int() == 1
         )));
 
-        // Hold: engage NRPN ends with CC38=1 at bar 2 (tick 3840),
-        // disengage CC38=0 at bar 3 (tick 7680)
+        // Hold: engage CC35=1 at bar 2 (tick 3840),
+        // disengage CC35=0 at bar 3 (tick 7680)
         assert!(events.iter().any(|(t, _, m)| *t == 3840 && matches!(
             m, MidiMessage::Controller { controller, value }
-            if controller.as_int() == 38 && value.as_int() == 1
+            if controller.as_int() == 35 && value.as_int() == 1
         )));
         assert!(events.iter().any(|(t, _, m)| *t == 7680 && matches!(
             m, MidiMessage::Controller { controller, value }
-            if controller.as_int() == 38 && value.as_int() == 0
+            if controller.as_int() == 35 && value.as_int() == 0
         )));
 
         // Automation: CC7 ramp 0->127 between ticks 7680 and 9600,
@@ -502,10 +503,10 @@ mod tests {
         assert!(events.iter().any(|(t, _, m)| *t == 0 && matches!(
             m, MidiMessage::Controller { controller, .. } if controller.as_int() == 51
         )));
-        // stomp-a engage end (CC38=1) was at 3840 -> now 3840 - 192 = 3648
+        // delay-hold engage (CC35=1) was at 3840 -> now 3840 - 192 = 3648
         assert!(events.iter().any(|(t, _, m)| *t == 3648 && matches!(
             m, MidiMessage::Controller { controller, value }
-            if controller.as_int() == 38 && value.as_int() == 1
+            if controller.as_int() == 35 && value.as_int() == 1
         )));
     }
 

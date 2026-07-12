@@ -110,8 +110,8 @@ Grab the latest build from the [**Releases page**](https://github.com/FlmBus/rig
 | Platform | Package |
 |---|---|
 | 🪟 Windows x64 | `.exe` installer (NSIS) or `.msi` |
-| 🍎 macOS (Apple Silicon) | `RigPilot_*_arm64.dmg` |
-| 🍎 macOS (Intel) | `RigPilot_*_x86_64.dmg` |
+| 🍎 macOS (Apple Silicon) | `RigPilot_*_aarch64.dmg` |
+| 🍎 macOS (Intel) | `RigPilot_*_x64.dmg` |
 | 🐧 Linux x64 | `.AppImage`, `.deb` or `.rpm` |
 
 > [!NOTE]

@@ -313,6 +313,46 @@ pub fn track_to_smf(project: &Project, track: &MidiTrack, options: &ExportOption
     Ok(bytes)
 }
 
+/// One channel-tagged MIDI message at an absolute tick — the shared unit for both
+/// SMF export and live output. The stream is sorted by `(tick, order)` for stable,
+/// deterministic emission of simultaneous messages.
+pub struct TimedMessage {
+    pub tick: u64,
+    pub order: u64,
+    /// Zero-based MIDI channel (0..=15).
+    pub channel: u8,
+    pub message: MidiMessage,
+}
+
+/// Resolves every MIDI track of the project into a single time-ordered stream of
+/// channel-tagged messages. Reused by live output so what plays live is identical
+/// to what `export` writes to disk (same latency compensation, reset block, etc.).
+pub fn resolve_project(
+    project: &Project,
+    options: &ExportOptions,
+) -> Result<Vec<TimedMessage>, String> {
+    let mut all: Vec<TimedMessage> = Vec::new();
+    for track in &project.tracks {
+        if let Track::Midi(t) = track {
+            if !(1..=16).contains(&t.midi_channel) {
+                return Err(format!("track '{}': MIDI channel must be 1-16", t.name));
+            }
+            let def = definition::find(&t.definition_id)?;
+            let channel = t.midi_channel - 1;
+            for e in resolve_track(t, &def, project.bpm, options)? {
+                all.push(TimedMessage {
+                    tick: e.tick,
+                    order: e.order,
+                    channel,
+                    message: e.message,
+                });
+            }
+        }
+    }
+    all.sort_by_key(|m| (m.tick, m.order));
+    Ok(all)
+}
+
 /// Exports every MIDI track of the project to `<out_dir>/<project> - <track>.mid`.
 /// Returns the written file paths.
 pub fn export(project: &Project, out_dir: &str, options: &ExportOptions) -> Result<Vec<String>, String> {

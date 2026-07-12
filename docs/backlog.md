@@ -11,6 +11,10 @@ Collected after the first M2 hands-on session. Items map mostly onto M3.
   the browser on them a mile away"). Explicitly NOT wanted: more effects/bells/whistles.
 - [x] **Band colors:** pink-magenta + white, high-contrast design, dark base.
 
+> Fully realized by the **"Embedded Console"** redesign (2026-06-15): dark instrument look,
+> custom controls, unified topbar, glass/marker clips. Design language + decisions in
+> [ui-design.md](ui-design.md).
+
 ## Editor (M3 scope, confirmed + sharpened by feedback)
 - [x] **Selection model:** click selects an event; Ctrl (toggle) and Shift (range/add)
   modifiers are a must. Selection applies to *anything* — events, audio tracks, tracks.

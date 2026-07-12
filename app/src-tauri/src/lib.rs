@@ -8,7 +8,7 @@ use project::Project;
 
 #[tauri::command]
 fn list_definitions() -> Result<Vec<DefinitionInfo>, String> {
-    Ok(definition::bundled()?.iter().map(definition::info).collect())
+    Ok(definition::all()?.iter().map(definition::info).collect())
 }
 
 #[tauri::command]

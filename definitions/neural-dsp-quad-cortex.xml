@@ -53,46 +53,70 @@
     <!-- ============ Footswitches ============
          VERIFY value semantics (assumed 64-127 = enable, 0-63 = bypass). -->
 
-    <Hold id="footswitch-a" name="Footswitch A" group="Footswitches"
-             description="Footswitch A is engaged for the duration of the block, bypassed afterwards.">
-      <Engage><ControlChange controller="35" value="127"/></Engage>
-      <Disengage><ControlChange controller="35" value="0"/></Disengage>
-    </Hold>
-    <Hold id="footswitch-b" name="Footswitch B" group="Footswitches"
-             description="Footswitch B is engaged for the duration of the block, bypassed afterwards.">
-      <Engage><ControlChange controller="36" value="127"/></Engage>
-      <Disengage><ControlChange controller="36" value="0"/></Disengage>
-    </Hold>
-    <Hold id="footswitch-c" name="Footswitch C" group="Footswitches"
-             description="Footswitch C is engaged for the duration of the block, bypassed afterwards.">
-      <Engage><ControlChange controller="37" value="127"/></Engage>
-      <Disengage><ControlChange controller="37" value="0"/></Disengage>
-    </Hold>
-    <Hold id="footswitch-d" name="Footswitch D" group="Footswitches"
-             description="Footswitch D is engaged for the duration of the block, bypassed afterwards.">
-      <Engage><ControlChange controller="38" value="127"/></Engage>
-      <Disengage><ControlChange controller="38" value="0"/></Disengage>
-    </Hold>
-    <Hold id="footswitch-e" name="Footswitch E" group="Footswitches"
-             description="Footswitch E is engaged for the duration of the block, bypassed afterwards.">
-      <Engage><ControlChange controller="39" value="127"/></Engage>
-      <Disengage><ControlChange controller="39" value="0"/></Disengage>
-    </Hold>
-    <Hold id="footswitch-f" name="Footswitch F" group="Footswitches"
-             description="Footswitch F is engaged for the duration of the block, bypassed afterwards.">
-      <Engage><ControlChange controller="40" value="127"/></Engage>
-      <Disengage><ControlChange controller="40" value="0"/></Disengage>
-    </Hold>
-    <Hold id="footswitch-g" name="Footswitch G" group="Footswitches"
-             description="Footswitch G is engaged for the duration of the block, bypassed afterwards.">
-      <Engage><ControlChange controller="41" value="127"/></Engage>
-      <Disengage><ControlChange controller="41" value="0"/></Disengage>
-    </Hold>
-    <Hold id="footswitch-h" name="Footswitch H" group="Footswitches"
-             description="Footswitch H is engaged for the duration of the block, bypassed afterwards.">
-      <Engage><ControlChange controller="42" value="127"/></Engage>
-      <Disengage><ControlChange controller="42" value="0"/></Disengage>
-    </Hold>
+    <OneShot id="footswitch-a" name="Footswitch A" group="Footswitches"
+             description="Enables or bypasses Footswitch A.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">Enable</Label>
+        <Label value="0" short="Off">Bypass</Label>
+      </Param>
+      <ControlChange controller="35" value="$state"/>
+    </OneShot>
+    <OneShot id="footswitch-b" name="Footswitch B" group="Footswitches"
+             description="Enables or bypasses Footswitch B.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">Enable</Label>
+        <Label value="0" short="Off">Bypass</Label>
+      </Param>
+      <ControlChange controller="36" value="$state"/>
+    </OneShot>
+    <OneShot id="footswitch-c" name="Footswitch C" group="Footswitches"
+             description="Enables or bypasses Footswitch C.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">Enable</Label>
+        <Label value="0" short="Off">Bypass</Label>
+      </Param>
+      <ControlChange controller="37" value="$state"/>
+    </OneShot>
+    <OneShot id="footswitch-d" name="Footswitch D" group="Footswitches"
+             description="Enables or bypasses Footswitch D.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">Enable</Label>
+        <Label value="0" short="Off">Bypass</Label>
+      </Param>
+      <ControlChange controller="38" value="$state"/>
+    </OneShot>
+    <OneShot id="footswitch-e" name="Footswitch E" group="Footswitches"
+             description="Enables or bypasses Footswitch E.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">Enable</Label>
+        <Label value="0" short="Off">Bypass</Label>
+      </Param>
+      <ControlChange controller="39" value="$state"/>
+    </OneShot>
+    <OneShot id="footswitch-f" name="Footswitch F" group="Footswitches"
+             description="Enables or bypasses Footswitch F.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">Enable</Label>
+        <Label value="0" short="Off">Bypass</Label>
+      </Param>
+      <ControlChange controller="40" value="$state"/>
+    </OneShot>
+    <OneShot id="footswitch-g" name="Footswitch G" group="Footswitches"
+             description="Enables or bypasses Footswitch G.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">Enable</Label>
+        <Label value="0" short="Off">Bypass</Label>
+      </Param>
+      <ControlChange controller="41" value="$state"/>
+    </OneShot>
+    <OneShot id="footswitch-h" name="Footswitch H" group="Footswitches"
+             description="Enables or bypasses Footswitch H.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">Enable</Label>
+        <Label value="0" short="Off">Bypass</Label>
+      </Param>
+      <ControlChange controller="42" value="$state"/>
+    </OneShot>
 
     <!-- ============ Pedals ============ -->
 
@@ -112,17 +136,23 @@
       <ControlChange controller="44" value="127"/>
     </OneShot>
 
-    <Hold id="tuner" name="Tuner" group="Misc"
-             description="Shows the tuner for the duration of the block.">
-      <Engage><ControlChange controller="45" value="127"/></Engage>
-      <Disengage><ControlChange controller="45" value="0"/></Disengage>
-    </Hold>
+    <OneShot id="tuner" name="Tuner" group="Misc"
+             description="Shows or hides the tuner.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="Show">Show</Label>
+        <Label value="0" short="Hide">Hide</Label>
+      </Param>
+      <ControlChange controller="45" value="$state"/>
+    </OneShot>
 
-    <Hold id="gig-view" name="Gig View" group="Misc"
-             description="Shows Gig View for the duration of the block.">
-      <Engage><ControlChange controller="46" value="127"/></Engage>
-      <Disengage><ControlChange controller="46" value="0"/></Disengage>
-    </Hold>
+    <OneShot id="gig-view" name="Gig View" group="Misc"
+             description="Shows or hides Gig View.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="Show">Show</Label>
+        <Label value="0" short="Hide">Hide</Label>
+      </Param>
+      <ControlChange controller="46" value="$state"/>
+    </OneShot>
 
     <OneShot id="ignore-duplicate-pc-on" name="Ignore Duplicate PC: On" group="Misc"
              description="Makes the device ignore repeated identical Program Changes.">
@@ -135,11 +165,14 @@
 
     <!-- ============ Looper X ============ -->
 
-    <Hold id="looper-open" name="Looper X Open" group="Looper"
-             description="Looper X is open for the duration of the block.">
-      <Engage><ControlChange controller="48" value="127"/></Engage>
-      <Disengage><ControlChange controller="48" value="0"/></Disengage>
-    </Hold>
+    <OneShot id="looper-open" name="Looper X Open/Close" short="Looper X" group="Looper"
+             description="Opens or closes the Looper X view.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="Open">Open</Label>
+        <Label value="0" short="Close">Close</Label>
+      </Param>
+      <ControlChange controller="48" value="$state"/>
+    </OneShot>
 
   </Commands>
 </DeviceDefinition>

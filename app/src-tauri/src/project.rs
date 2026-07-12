@@ -10,6 +10,10 @@ fn default_volume() -> f32 {
     1.0
 }
 
+fn default_resolution_ms() -> u32 {
+    10
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Project {
@@ -94,6 +98,11 @@ pub enum Event {
         length: u64,
         /// (tick offset relative to event start, value); kept sorted by offset.
         breakpoints: Vec<(u64, u8)>,
+        /// Minimum spacing between exported CC steps, in milliseconds (converted
+        /// to ticks per project BPM at export). Lower = smoother, higher = fewer
+        /// messages on a busy MIDI bus.
+        #[serde(default = "default_resolution_ms")]
+        resolution_ms: u32,
         #[serde(default)]
         lane: u32,
     },
@@ -112,6 +121,20 @@ pub fn load(path: &str) -> Result<Project, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn frontend_snapshot_preserves_tempo() {
+        // Shape exactly as the Svelte frontend sends via $state.snapshot(project).
+        let json = r#"{
+            "name": "Song",
+            "bpm": 90,
+            "timeSignature": [3, 4],
+            "tracks": []
+        }"#;
+        let p: Project = serde_json::from_str(json).unwrap();
+        assert_eq!(p.bpm, 90.0);
+        assert_eq!(p.time_signature, (3, 4));
+    }
 
     #[test]
     fn event_json_uses_camel_case_fields() {

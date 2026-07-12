@@ -1,7 +1,7 @@
 //! SMF export: one Type-0 file per MIDI track, PPQN 960, tempo + time signature
 //! included, optional Reset Block at t=0 (see docs/plan.md §3).
 
-use crate::definition::{self, Command, DeviceDefinition, Message};
+use crate::definition::{self, Command, DeviceDefinition, Message, Target};
 use crate::project::{Event, MidiTrack, Project, Track, PPQN};
 use midly::num::{u15, u24, u28, u4, u7};
 use midly::{Format, Header, MetaMessage, MidiMessage, Smf, Timing, TrackEvent, TrackEventKind};
@@ -18,10 +18,6 @@ impl Default for ExportOptions {
         Self { reset_block: true }
     }
 }
-
-/// Minimum tick distance between rendered automation CC steps
-/// (PPQN/96 = a 384th note; at 120 BPM that is ~5 ms).
-const AUTOMATION_MIN_STEP: u64 = (PPQN / 96) as u64;
 
 /// A resolved MIDI message at an absolute tick. `order` keeps emission stable
 /// and deterministic for simultaneous events (reset block first, then lane order).
@@ -76,6 +72,7 @@ fn render_automation(
     controller: u8,
     start: u64,
     breakpoints: &[(u64, u8)],
+    min_step: u64,
     order: &mut u64,
     out: &mut Vec<Emitted>,
 ) {
@@ -105,7 +102,7 @@ fn render_automation(
         // Step through the segment, emitting on value change with a minimum spacing.
         let mut t = t0;
         while t < t1 {
-            t = (t + AUTOMATION_MIN_STEP).min(t1);
+            t = (t + min_step).min(t1);
             let value = (v0 as f64
                 + (v1 as f64 - v0 as f64) * ((t - t0) as f64 / (t1 - t0) as f64))
                 .round() as u8;
@@ -117,6 +114,36 @@ fn render_automation(
     }
     if breakpoints.len() == 1 {
         emit(start + breakpoints[0].0, breakpoints[0].1, order);
+    }
+}
+
+/// Renders a stepped (discrete) automation: each breakpoint value is snapped to the
+/// target's allowed value set and emitted as a sample-and-hold step (a CC is sent only
+/// when the snapped value changes). No interpolation, so no out-of-set values are ever
+/// emitted — see issue #4.
+fn render_stepped_automation(
+    target: &Target,
+    start: u64,
+    breakpoints: &[(u64, u8)],
+    order: &mut u64,
+    out: &mut Vec<Emitted>,
+) {
+    let mut last: Option<u8> = None;
+    for (t, v) in breakpoints {
+        let value = target.snap(*v);
+        if last == Some(value) {
+            continue;
+        }
+        out.push(Emitted {
+            tick: start + t,
+            order: *order,
+            message: MidiMessage::Controller {
+                controller: u7::new(target.controller),
+                value: u7::new(value),
+            },
+        });
+        *order += 1;
+        last = Some(value);
     }
 }
 
@@ -211,14 +238,21 @@ fn resolve_track(
                     order += 1;
                 }
             }
-            Event::Automation { command_id, tick, breakpoints, .. } => {
+            Event::Automation { command_id, tick, breakpoints, resolution_ms, .. } => {
                 let command = find_command(def, command_id)?;
                 let Command::Automation(cmd) = command else {
                     return Err(format!("'{command_id}' is not an Automation command"));
                 };
                 let mut bps = breakpoints.clone();
                 bps.sort_by_key(|(t, _)| *t);
-                render_automation(cmd.target.controller, shift(*tick, command), &bps, &mut order, &mut out);
+                if cmd.target.step_values().is_empty() {
+                    let min_step = ms_to_ticks(*resolution_ms, bpm).max(1);
+                    render_automation(cmd.target.controller, shift(*tick, command), &bps, min_step, &mut order, &mut out);
+                } else {
+                    // Discrete target: snap each breakpoint and emit a sample-and-hold
+                    // step function (no interpolation, no in-between values).
+                    render_stepped_automation(&cmd.target, shift(*tick, command), &bps, &mut order, &mut out);
+                }
             }
         }
     }
@@ -328,7 +362,7 @@ mod tests {
                     lane: 0,
                 },
                 Event::Hold {
-                    command_id: "stomp-a".into(),
+                    command_id: "delay-hold".into(),
                     tick: 3840, // bar 2
                     length: 3840,
                     params: HashMap::new(),
@@ -339,6 +373,7 @@ mod tests {
                     tick: 7680, // bar 3
                     length: 1920,
                     breakpoints: vec![(0, 0), (1920, 127)],
+                    resolution_ms: 5, // → 10 ticks/step @120 BPM (full 7-bit detail)
                     lane: 2,
                 },
             ],
@@ -365,6 +400,27 @@ mod tests {
     }
 
     #[test]
+    fn tempo_and_signature_follow_project() {
+        // Guards against regressions where export ignores project tempo/signature
+        // and always emits 120 BPM 4/4 (see issue #3).
+        let (mut project, track) = test_project();
+        project.bpm = 90.0;
+        project.time_signature = (3, 4);
+        let bytes = track_to_smf(&project, &track, &ExportOptions::default()).unwrap();
+        let smf = Smf::parse(&bytes).unwrap();
+        let tempo = smf.tracks[0].iter().find_map(|e| match e.kind {
+            TrackEventKind::Meta(MetaMessage::Tempo(t)) => Some(t.as_int()),
+            _ => None,
+        });
+        let sig = smf.tracks[0].iter().find_map(|e| match e.kind {
+            TrackEventKind::Meta(MetaMessage::TimeSignature(n, d, _, _)) => Some((n, d)),
+            _ => None,
+        });
+        assert_eq!(tempo, Some(666_667), "tempo must follow project.bpm (90 BPM)");
+        assert_eq!(sig, Some((3, 2)), "signature must follow project (3/4 -> num=3, dd=2)");
+    }
+
+    #[test]
     fn exports_valid_smf_with_correct_timing() {
         let (project, track) = test_project();
         let bytes = track_to_smf(&project, &track, &ExportOptions::default()).unwrap();
@@ -383,13 +439,14 @@ mod tests {
         // All on channel 2 (stored 0-based as 1)
         assert!(events.iter().all(|(_, ch, _)| *ch == 1));
 
-        // Reset block at tick 0: disengage of stomp-a (NRPN, 4 CCs) is present
-        // before anything else; CC38=0 closes it.
+        // Reset block at tick 0: disengage of delay-hold (CC35=0) is present
+        // before anything else.
         let at_zero: Vec<_> = events.iter().filter(|(t, _, _)| *t == 0).collect();
-        assert!(at_zero.len() >= 5); // 4 reset CCs + preselect CC47
+        assert!(at_zero.len() >= 2); // reset CC35 + preselect CC47
         assert!(matches!(
             at_zero[0].2,
-            MidiMessage::Controller { controller, .. } if controller.as_int() == 99
+            MidiMessage::Controller { controller, value }
+            if controller.as_int() == 35 && value.as_int() == 0
         ));
 
         // Preselect performance: CC47 value 5 at tick 0 (after the reset block)
@@ -404,15 +461,15 @@ mod tests {
             if controller.as_int() == 51 && value.as_int() == 1
         )));
 
-        // Hold: engage NRPN ends with CC38=1 at bar 2 (tick 3840),
-        // disengage CC38=0 at bar 3 (tick 7680)
+        // Hold: engage CC35=1 at bar 2 (tick 3840),
+        // disengage CC35=0 at bar 3 (tick 7680)
         assert!(events.iter().any(|(t, _, m)| *t == 3840 && matches!(
             m, MidiMessage::Controller { controller, value }
-            if controller.as_int() == 38 && value.as_int() == 1
+            if controller.as_int() == 35 && value.as_int() == 1
         )));
         assert!(events.iter().any(|(t, _, m)| *t == 7680 && matches!(
             m, MidiMessage::Controller { controller, value }
-            if controller.as_int() == 38 && value.as_int() == 0
+            if controller.as_int() == 35 && value.as_int() == 0
         )));
 
         // Automation: CC7 ramp 0->127 between ticks 7680 and 9600,
@@ -446,10 +503,10 @@ mod tests {
         assert!(events.iter().any(|(t, _, m)| *t == 0 && matches!(
             m, MidiMessage::Controller { controller, .. } if controller.as_int() == 51
         )));
-        // stomp-a engage end (CC38=1) was at 3840 -> now 3840 - 192 = 3648
+        // delay-hold engage (CC35=1) was at 3840 -> now 3840 - 192 = 3648
         assert!(events.iter().any(|(t, _, m)| *t == 3648 && matches!(
             m, MidiMessage::Controller { controller, value }
-            if controller.as_int() == 38 && value.as_int() == 1
+            if controller.as_int() == 35 && value.as_int() == 1
         )));
     }
 
@@ -463,6 +520,49 @@ mod tests {
         let at_zero: Vec<_> = events.iter().filter(|(t, _, _)| *t == 0).collect();
         // only the preselect CC47 remains at tick 0
         assert_eq!(at_zero.len(), 1);
+    }
+
+    #[test]
+    fn automation_resolution_controls_step_density() {
+        // Same 0->127 ramp, exported at a fine vs. coarse resolution: the
+        // coarse one must emit noticeably fewer CC steps.
+        fn ramp_count(resolution_ms: u32) -> usize {
+            let track = MidiTrack {
+                name: "K".into(),
+                definition_id: "kemper-profiler-stage".into(),
+                midi_channel: 1,
+                latency_ms: 0,
+                mute: false,
+                solo: false,
+                events: vec![Event::Automation {
+                    command_id: "volume-pedal".into(),
+                    tick: 0,
+                    length: 1920,
+                    breakpoints: vec![(0, 0), (1920, 127)],
+                    resolution_ms,
+                    lane: 0,
+                }],
+            };
+            let project = Project {
+                name: "R".into(),
+                bpm: 120.0,
+                time_signature: (4, 4),
+                tracks: vec![Track::Midi(track.clone())],
+            };
+            let bytes =
+                track_to_smf(&project, &track, &ExportOptions { reset_block: false }).unwrap();
+            let smf = Smf::parse(&bytes).unwrap();
+            abs_events(&smf)
+                .iter()
+                .filter(|(_, _, m)| {
+                    matches!(m, MidiMessage::Controller { controller, .. } if controller.as_int() == 7)
+                })
+                .count()
+        }
+        let fine = ramp_count(5); // ~10 ticks/step @120 BPM, full 7-bit detail
+        let coarse = ramp_count(50); // ~96 ticks/step, aggressively thinned
+        assert!(coarse < fine, "coarse {coarse} should be sparser than fine {fine}");
+        assert!(coarse < 30, "coarse resolution should thin hard, got {coarse}");
     }
 
     #[test]
@@ -494,5 +594,85 @@ mod tests {
         let param = pre.params().next().unwrap();
         assert_eq!(param.labels.len(), 125);
         assert_eq!(param.labels[5].text, "Performance 6");
+    }
+
+    fn stepped_def() -> DeviceDefinition {
+        let xml = r#"<DeviceDefinition id="x" version="1" xmlns="https://rigpilot.app/schemas/device-definition/1">
+          <Meta><Manufacturer>M</Manufacturer><Model>D</Model></Meta>
+          <Commands>
+            <Automation id="wah-toggle" name="Wah">
+              <Target controller="11">
+                <Label value="0" short="Off">Off</Label>
+                <Label value="127" short="On">On</Label>
+              </Target>
+            </Automation>
+          </Commands>
+        </DeviceDefinition>"#;
+        definition::parse(xml).unwrap()
+    }
+
+    fn cc_values(out: &[Emitted]) -> Vec<(u64, u8)> {
+        out.iter()
+            .filter_map(|e| match e.message {
+                MidiMessage::Controller { controller, value } if controller.as_int() == 11 => {
+                    Some((e.tick, value.as_int()))
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn stepped_automation_snaps_and_holds() {
+        let def = stepped_def();
+        let track = MidiTrack {
+            name: "t".into(),
+            definition_id: "x".into(),
+            midi_channel: 1,
+            latency_ms: 0,
+            mute: false,
+            solo: false,
+            // 0->0, 64->127, 70->127, 127->127 after snapping; sample-and-hold collapses
+            // the trailing repeats. No in-between value (64/70) is ever emitted.
+            events: vec![Event::Automation {
+                command_id: "wah-toggle".into(),
+                tick: 0,
+                length: 1000,
+                breakpoints: vec![(0, 0), (100, 64), (200, 70), (300, 127)],
+                resolution_ms: 10,
+                lane: 0,
+            }],
+        };
+        let out = resolve_track(&track, &def, 120.0, &ExportOptions { reset_block: false }).unwrap();
+        let vals = cc_values(&out);
+        assert_eq!(vals, vec![(0, 0), (100, 127)]);
+        assert!(
+            vals.iter().all(|(_, v)| *v == 0 || *v == 127),
+            "stepped automation must only emit the discrete set, got {vals:?}"
+        );
+    }
+
+    #[test]
+    fn stepped_automation_snaps_below_and_above_midpoint() {
+        let def = stepped_def();
+        let track = MidiTrack {
+            name: "t".into(),
+            definition_id: "x".into(),
+            midi_channel: 1,
+            latency_ms: 0,
+            mute: false,
+            solo: false,
+            // 63 -> 0 (nearer 0), 64 -> 127 (nearer 127)
+            events: vec![Event::Automation {
+                command_id: "wah-toggle".into(),
+                tick: 0,
+                length: 1000,
+                breakpoints: vec![(0, 63), (100, 64)],
+                resolution_ms: 10,
+                lane: 0,
+            }],
+        };
+        let out = resolve_track(&track, &def, 120.0, &ExportOptions { reset_block: false }).unwrap();
+        assert_eq!(cc_values(&out), vec![(0, 0), (100, 127)]);
     }
 }

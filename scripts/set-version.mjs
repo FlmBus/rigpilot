@@ -17,10 +17,18 @@ execSync(`npm version ${version} --no-git-tag-version --allow-same-version`, {
   stdio: "inherit",
 });
 
-// tauri.conf.json — the version Tauri stamps into the bundles
+// tauri.conf.json — the version Tauri stamps into the bundles. Windows MSI
+// (WiX) only accepts numeric major.minor.patch, so strip any semver
+// prerelease/build suffix (e.g. 0.2.0-dev.1 -> 0.2.0). The full semver still
+// lives in the git tag / GitHub release; this is only the installer version.
 const conf = "app/src-tauri/tauri.conf.json";
+const bundleVersion = version.split(/[-+]/)[0];
 const json = JSON.parse(readFileSync(conf, "utf8"));
-json.version = version;
+json.version = bundleVersion;
 writeFileSync(conf, JSON.stringify(json, null, 2) + "\n");
 
-console.log(`version set to ${version}`);
+console.log(
+  bundleVersion === version
+    ? `version set to ${version}`
+    : `version set to ${version} (bundles use ${bundleVersion})`,
+);

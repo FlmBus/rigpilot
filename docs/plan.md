@@ -146,32 +146,38 @@ nothing the band doesn't need.
 
 ### 2.1 Main window layout
 
+*Redesigned 2026-06-15 into the "Embedded Console" look — see [ui-design.md](ui-design.md)
+for the design language and the implementation decisions behind it.*
+
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│ ⏵ ⏹ ⏺   00:01:23.4 | 33.2.1   BPM 132   [Snap ✓] [Grid: Bars|Time]   │ transport bar
-├──────────────┬───────────────────────────────────────────────────────┤
-│ Track headers│ Timeline (ruler: bars/beats or min:sec)                │
-│ ┌──────────┐ │ ───────────────▼ playhead ─────────────────────────── │
-│ │🔊 Mix     │ │ ╱╲╱╲╱╲╱╲ waveform ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲    │
-│ │ vol pan   │ │                                                       │
-│ │ M S       │ │                                                       │
-│ ├──────────┤ │ ┌────────┐      ┌─────────────────┐                    │
-│ │🎛 Kemper  │ │ │Rig #5  │      │ Mute ░░░░░░░░░░ │   ◆TapTempo       │
-│ │ ch 1  M S │ │ └────────┘      └─────────────────┘                    │
-│ │ ⚙ settings│ │        ┌─ Volume ▁▂▄▆█▆▄▂ ─┐                          │
-│ └──────────┘ │        └────────────────────┘                          │
-├──────────────┴───────────────────────────────────────────────────────┤
-│ Command palette (when a MIDI track is selected)                       │
-│ [Rig Selection ▾]  ■Select Rig  ■Tap Tempo   [Effects ▾] ■Stomp A …  │
-└──────────────────────────────────────────────────────────────────────┘
+┌ topbar ─────────────────────────────────────────────────────────────────────┐
+│ ☰  Song   ▶ ⏹  LCD: POS·BPM·SIG   SNAP▾  Bars|Time  Color  Export   ◧ ◨  – □ ✕ │
+├────────────┬──────────────────────────────────────────────┬─────────────────┤
+│ Command    │ Tracks: headers ▏ + lanes                     │ Inspector       │
+│ Palette    │  ▍Reference  M S │ ─────▼ playhead ─────────── │ (one sidebar    │
+│ (selected  │                  │ ╱╲ waveform ╱╲╱╲╱╲╱╲        │  for whatever   │
+│  MIDI      │  ▍Kemper      ⚙ │  ◆Tap  ┌ Mute ░░░ ┐          │  is selected:   │
+│  track —   │                  │        └──────────┘         │  event params,  │
+│  grouped,  │  ▍Strymon     ⚙ │   ┌ Volume ▁▂▄▆█ ┐           │  track settings,│
+│  colour-   │  ───────────────│   └──────────────┘           │  breakpoints)   │
+│  dotted)   │  ＋ Audio  ＋ MIDI │                            │                 │
+├────────────┴──────────────────────────────────────────────┴─────────────────┤
+│ status line                                                                  │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Track headers** left, **timeline** right — classic arrangement view.
-- **Command palette**: appears for the selected MIDI track, shows that track's device
-  commands, organized by *group* (collapsible), colored by *Command Type*. Drag a command onto the
-  track to create an event. A search box filters commands.
-- **Transport**: play/stop, position readout in both time and bars/beats, BPM field,
-  snap toggle, grid-mode toggle (musical ↔ raw time).
+- **Unified topbar** (one bar): custom titlebar (brand, ☰ file menu, editable song name),
+  **centered transport** (play/stop + a recessed LCD showing position and editable BPM /
+  time signature), and a right cluster — **split snap control** (toggle + ▾ grid-size menu),
+  Bars/Time grid mode, waveform Color, Export, and the Palette/Inspector toggles (◧ ◨).
+- **Command Palette left, Inspector right**, both collapsible from the topbar. The palette shows
+  the selected MIDI track's commands, grouped (collapsible) and colour-dotted by Command Type;
+  drag a command onto a lane to create an event; a search box filters.
+- **Track headers**: a colour bar, name + `ch · device`; **M/S on audio tracks only**
+  (mute = red, solo = yellow), gear (settings) for MIDI tracks. `＋ Audio` / `＋ MIDI` are ghost
+  buttons in a row beneath the last track.
+- **Inspector**: a single sidebar for any selection — event params, audio/MIDI track settings,
+  automation breakpoints.
 
 ### 2.2 MIDI track lanes — the "anonymous lanes" model
 - Each MIDI track is a grid of N horizontal lanes (FL-Studio-Playlist semantics).
@@ -248,7 +254,7 @@ The product's actual deliverable — treat as the highest-risk feature and build
 |---|---|---|
 | Shell | **Tauri 2** | Small binaries, native installers for Win/macOS, Rust backend for the parts that must be exact |
 | UI | **TypeScript + Svelte** | The whole app is one big custom widget; Svelte keeps the reactive state lean. (React fine too — team preference wins) |
-| Timeline rendering | **Canvas 2D** (single canvas for ruler/waveform/events) | DOM nodes per event won't survive zooming/scrolling a full song; canvas will. Waveform pre-rendered to peak data |
+| Timeline rendering | **Canvas 2D for waveform/grid/ruler + a DOM overlay for event clips** | Clip designs (glass, gradients, title bars, area charts) need CSS/DOM. The canvas keeps the heavy pre-rendered waveform **and owns all pointer hit-testing** — clips are a `pointer-events:none` DOM layer placed by the same geometry, so interactions stay on the canvas. Event counts per song are low enough for DOM. (Revises the original canvas-only event plan — see [ui-design.md](ui-design.md) §5.) |
 | Audio playback | **Web Audio API** in the webview | Decoding (wav/mp3/flac), transport, gain/pan per track — all built in, no native audio stack needed since audio is reference-only |
 | MIDI file writing | **Rust crate `midly`** behind a Tauri command | SMF writing where tick math bugs would be silent and fatal; Rust side is trivially unit-testable |
 | Live MIDI out (nice-to-have) | **Rust `midir`** | Cross-platform port enumeration + output; UI just streams "send these messages now" |
@@ -298,6 +304,12 @@ something the band can poke at.
   export-options dialog, snap selector down to 1/32, new high-contrast magenta/white
   theme (Archivo + IBM Plex Mono, custom controls), unsaved-changes confirmation,
   audio-import flow fixed (file first, then save prompt). Pending: band hands-on.
+- **M3.1 — Native UI redesign ("Embedded Console").**
+  **Status: done 2026-06-15** — answers the band's "smells like a bootstrap web app" feedback.
+  The full dark instrument look is migrated into the app: `theme.css` design system, unified
+  topbar (centered transport + LCD), Palette-left / Inspector-right, glass/marker/area-chart clips
+  with tall-lane title bars, a DOM clip overlay over the canvas waveform, and a browser dev-guard.
+  See [ui-design.md](ui-design.md). Pending: band hands-on.
 - **M4 — Automation + validation.** Automation blocks with breakpoint editing, the
   conflict validator + problems list, export gating.
 - **M5 — Band test ("eat your own dog food").** All three members program one real
@@ -333,3 +345,10 @@ something the band can poke at.
    friendly names (research doc, "Schema implications").
 7. **Firmware/model variants** with differing MIDI behavior get separate definition
    files (like QLC+ fixture revisions), e.g. "Quad Cortex (CorOS 4.x)".
+8. **UI redesign — "Embedded Console" (2026-06-15):** dark instrument look (abstract depth,
+   *not* skeuomorphism); unified topbar with centered transport, Palette-left / Inspector-right,
+   `theme.css` design-system tokens + utility classes. Timeline events became a **DOM overlay over
+   the canvas waveform** (revises §4's canvas-only event rendering; interactions still run on the
+   canvas). Added a **browser dev-guard** (`devmock.ts`) so the UI renders without Tauri for fast
+   visual iteration. Full rationale and the gotchas (overflow-clipped menus, WebKitGTK pointer
+   quirks): [ui-design.md](ui-design.md).

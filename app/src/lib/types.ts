@@ -2,6 +2,9 @@
 
 export const PPQN = 960;
 
+/** Default automation export resolution (ms between CC steps); mirrors the Rust serde default. */
+export const DEFAULT_AUTOMATION_RESOLUTION_MS = 10;
+
 export type LabelInfo = { value: number; text: string; short: string | null };
 
 export type ParamInfo = {
@@ -23,6 +26,8 @@ export type CommandInfo = {
   description: string | null;
   deterministic: boolean;
   params: ParamInfo[];
+  /** Discrete value set for a stepped Automation (empty = continuous). */
+  steps: LabelInfo[];
 };
 
 export type DefinitionInfo = {
@@ -41,6 +46,8 @@ export type RpEvent = {
   length?: number;
   params?: Record<string, number>;
   breakpoints?: [number, number][];
+  /** Automation only: min ms between exported CC steps (defaults to DEFAULT_AUTOMATION_RESOLUTION_MS). */
+  resolutionMs?: number;
   lane: number;
 };
 
@@ -78,9 +85,9 @@ export type Project = {
 
 // Command Type drives the event color (docs/terminology.md).
 export const COMMAND_TYPE_COLORS: Record<RpEvent["kind"], string> = {
-  "one-shot": "#ffd23e",
+  "one-shot": "#ffb02e",
   hold: "#ff2e88",
-  automation: "#39d3e6",
+  automation: "#2ee08a",
 };
 
 /** Compact timeline label: short name + short param value labels. */
@@ -95,9 +102,24 @@ export function eventLabel(cmd: CommandInfo, ev: RpEvent): string {
   return parts.join(" ");
 }
 
+/** Nearest allowed step value for a stepped automation; identity when continuous. */
+export function snapToSteps(steps: LabelInfo[], value: number): number {
+  if (!steps.length) return value;
+  return steps.reduce(
+    (best, s) => (Math.abs(s.value - value) < Math.abs(best - value) ? s.value : best),
+    steps[0].value,
+  );
+}
+
+/** Short label text for a discrete step value, or null if none matches. */
+export function stepLabel(steps: LabelInfo[], value: number): string | null {
+  const l = steps.find((s) => s.value === value);
+  return l ? (l.short ?? l.text) : null;
+}
+
 // ---- timeline geometry shared by canvas and the header column ----
 export const RULER_H = 28;
-export const LANE_H = 36;
+export const LANE_H = 72;
 export const AUDIO_ROW_H = 72;
 
 /** Visible lanes of a MIDI track: always one empty lane below the deepest event. */

@@ -78,6 +78,7 @@ code required to add a device. Shipped so far:
 | HeadRush Prime | [`headrush-prime.xml`](definitions/headrush-prime.xml) |
 | Kemper Profiler Stage | [`kemper-profiler-stage.xml`](definitions/kemper-profiler-stage.xml) |
 | Neural DSP Quad Cortex | [`neural-dsp-quad-cortex.xml`](definitions/neural-dsp-quad-cortex.xml) |
+| QLC+ lighting show (Horizont HILO) | [`qlcplus-horizont-hilo.xml`](definitions/qlcplus-horizont-hilo.xml) |
 
 A definition declares **Commands** (name, type, group, parameters, MIDI messages),
 optional **Init Messages** for putting the device into a known state, and per-command
@@ -109,14 +110,44 @@ Grab the latest build from the [**Releases page**](https://github.com/FlmBus/rig
 | Platform | Package |
 |---|---|
 | 🪟 Windows x64 | `.exe` installer (NSIS) or `.msi` |
-| 🍎 macOS (Apple Silicon) | `RigPilot_*_arm64.dmg` |
-| 🍎 macOS (Intel) | `RigPilot_*_x86_64.dmg` |
+| 🍎 macOS (Apple Silicon) | `RigPilot_*_aarch64.dmg` |
+| 🍎 macOS (Intel) | `RigPilot_*_x64.dmg` |
 | 🐧 Linux x64 | `.AppImage`, `.deb` or `.rpm` |
 
 > [!NOTE]
-> Builds are currently unsigned. On macOS: right-click → *Open* on first launch
-> (or `xattr -d com.apple.quarantine RigPilot.app`). On Windows, SmartScreen will
-> ask once whether you're sure. You are.
+> Builds are currently **unsigned and un-notarized** (RigPilot ships without a paid
+> Apple Developer certificate). On Windows, SmartScreen asks once whether you're sure.
+> You are. On macOS, see below.
+
+### 🍎 macOS: *"RigPilot is damaged and can't be opened"*
+
+The app isn't damaged. Because the build is un-notarized, macOS — especially on Apple
+Silicon (M-series) — attaches a **quarantine flag** to anything downloaded through a
+browser and Gatekeeper then refuses to launch it with that misleading message.
+
+**One-liner install** — picks the right build for your Mac, installs it into
+`/Applications`, and clears the quarantine flag:
+
+```zsh
+curl -fsSL https://raw.githubusercontent.com/FlmBus/rigpilot/main/scripts/install-macos.sh | bash
+```
+
+Then launch RigPilot from your Applications folder. Re-run the same command any time to
+update to the latest release. (Script source: [`scripts/install-macos.sh`](scripts/install-macos.sh).)
+
+**Prefer to do it by hand?** Drag RigPilot into `/Applications`, then strip the flag once:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/RigPilot.app
+```
+
+The old right-click → *Open* trick often no longer works on recent Apple Silicon macOS,
+so the `xattr` command is the reliable route.
+
+> [!TIP]
+> Files that don't arrive through a quarantining app never get flagged. If you copy the
+> `.app` over via `scp`, USB, or your local network instead of a browser download, no
+> workaround is needed at all.
 
 ## 🛠️ Building from source
 

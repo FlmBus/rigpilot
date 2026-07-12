@@ -121,10 +121,10 @@ export class Player {
     return this._isPlaying ? this.startPos + (ctx.currentTime - this.startedAt) : whenStopped;
   }
 
-  async play(tracks: TrackPlayback[], fromSeconds: number) {
+  async play(tracks: TrackPlayback[], fromSeconds: number, leadSeconds = 0.05) {
     this.stop();
     await ctx.resume();
-    this.startedAt = ctx.currentTime + 0.05; // small scheduling headroom
+    this.startedAt = ctx.currentTime + leadSeconds; // scheduling headroom (shared with live MIDI lead)
     this.startPos = fromSeconds;
     for (const t of tracks) {
       const source = ctx.createBufferSource();

@@ -1,5 +1,6 @@
 mod definition;
 mod export;
+mod midi_out;
 mod project;
 
 use definition::DefinitionInfo;
@@ -77,12 +78,17 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .manage(midi_out::MidiEngine::default())
         .invoke_handler(tauri::generate_handler![
             list_definitions,
             save_project,
             load_project,
             import_audio,
-            export_midi
+            export_midi,
+            midi_out::list_midi_ports,
+            midi_out::midi_start,
+            midi_out::midi_stop,
+            midi_out::midi_panic
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

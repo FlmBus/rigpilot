@@ -65,6 +65,46 @@
   let inspectorOpen = $state(true);
   let gridMenuOpen = $state(false);
 
+  // Live MIDI output. The chosen port + on/off state are machine-level (a
+  // bandmate's ports differ), so they live in localStorage, not the project.
+  const ls = typeof localStorage !== "undefined" ? localStorage : null;
+  let midiLive = $state(ls?.getItem("rigpilot:midiLive") === "1");
+  let midiPort = $state<string | null>(ls?.getItem("rigpilot:midiPort") ?? null);
+  let midiPorts = $state<string[]>([]);
+  // Shared lead-in (ms) so the MIDI scheduler and audio clock start aligned.
+  const MIDI_LEAD_MS = 60;
+
+  async function refreshMidiPorts() {
+    if (!IS_TAURI) return;
+    try {
+      midiPorts = await invoke<string[]>("list_midi_ports");
+      // Drop a remembered port that has since disappeared.
+      if (midiPort && !midiPorts.includes(midiPort)) midiPort = null;
+    } catch (e) {
+      status = String(e);
+    }
+  }
+  function setMidiLive(on: boolean) {
+    midiLive = on;
+    ls?.setItem("rigpilot:midiLive", on ? "1" : "0");
+    if (on) refreshMidiPorts();
+    else if (isPlaying) invoke("midi_stop").catch(() => {});
+  }
+  function setMidiPort(name: string) {
+    midiPort = name || null;
+    if (midiPort) ls?.setItem("rigpilot:midiPort", midiPort);
+    else ls?.removeItem("rigpilot:midiPort");
+  }
+  async function midiPanic() {
+    if (!IS_TAURI || !midiPort) return;
+    try {
+      await invoke("midi_panic", { portName: midiPort });
+      status = "MIDI panic — all notes off.";
+    } catch (e) {
+      status = String(e);
+    }
+  }
+
   // per-track accent colour for the header bar (model has no colour field)
   const TRACK_COLORS = ["#ff2e88", "#2ee08a", "#ffb02e", "#39d3e6", "#c084fc", "#fb7185", "#38bdf8"];
   const trackColor = (ti: number, type: string) =>
@@ -90,6 +130,7 @@
     invoke<DefinitionInfo[]>("list_definitions")
       .then((d) => (definitions = d))
       .catch((e) => (status = String(e)));
+    refreshMidiPorts();
   });
 
   const projectDir = $derived(
@@ -180,8 +221,19 @@
   });
 
   async function play() {
-    await player.play(playbackTracks(), playheadSec);
+    await player.play(playbackTracks(), playheadSec, MIDI_LEAD_MS / 1000);
     isPlaying = true;
+    if (IS_TAURI && midiLive && midiPort) {
+      invoke("midi_start", {
+        project: $state.snapshot(project),
+        portName: midiPort,
+        fromSeconds: playheadSec,
+        startInMs: MIDI_LEAD_MS,
+        options: { resetBlock: true },
+      }).catch((e) => (status = String(e)));
+    } else if (IS_TAURI && midiLive && !midiPort) {
+      status = "Live MIDI is on, but no output port is selected.";
+    }
     const tick = () => {
       if (!isPlaying) return;
       playheadSec = player.position(playheadSec);
@@ -192,6 +244,7 @@
   function pause() {
     playheadSec = player.stop();
     isPlaying = false;
+    if (IS_TAURI && midiLive) invoke("midi_stop").catch(() => {});
   }
   function stop() {
     if (isPlaying) pause();
@@ -638,6 +691,24 @@
       <button class="toggle" class:active={coloredWaves} title="Spectral waveform coloring"
         onclick={() => (coloredWaves = !coloredWaves)}>Color</button>
       <span class="vsep"></span>
+      <div class="midi-live">
+        <button class="toggle" class:active={midiLive}
+          title="Send MIDI live to a hardware/virtual port during playback"
+          onclick={() => setMidiLive(!midiLive)}>◉ MIDI</button>
+        {#if midiLive}
+          <select class="port" title="MIDI output port" value={midiPort ?? ""}
+            onpointerdown={refreshMidiPorts}
+            onchange={(e) => setMidiPort(e.currentTarget.value)}>
+            <option value="" disabled>Select port…</option>
+            {#each midiPorts as p}
+              <option value={p}>{p}</option>
+            {/each}
+          </select>
+          <button class="danger" title="Panic — all notes off" disabled={!midiPort}
+            onclick={midiPanic}>⏻</button>
+        {/if}
+      </div>
+      <span class="vsep"></span>
       <button class="primary" onclick={() => (exportOpen = true)} disabled={!project.tracks.some((t) => t.type === "midi")}>Export</button>
       <span class="vsep"></span>
       <div class="cellgroup flat">
@@ -924,6 +995,8 @@
   .seg.small button { height: 19px; padding: 0 9px; font-size: 11px; }
   .pt { min-width: 34px; font-size: 13px; }
   .vsep { width: 1px; align-self: stretch; background: #000; box-shadow: 1px 0 0 rgba(255, 255, 255, 0.03); margin: 9px 2px; }
+  .midi-live { display: flex; align-items: center; gap: 6px; }
+  .midi-live .port { max-width: 190px; text-overflow: ellipsis; }
   .drop-before { box-shadow: inset 0 2px 0 var(--accent); }
 
   .main { display: flex; flex: 1; min-height: 0; }

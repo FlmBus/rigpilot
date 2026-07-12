@@ -30,6 +30,7 @@ env:
   LINUX_DEPS: >-
     libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
     libxdo-dev build-essential pkg-config libssl-dev curl wget file
+    libasound2-dev
     libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
     gstreamer1.0-plugins-base gstreamer1.0-plugins-good
     gstreamer1.0-plugins-bad gstreamer1.0-libav

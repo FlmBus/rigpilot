@@ -294,6 +294,7 @@ const BUNDLED: &[&str] = &[
     include_str!("../../../definitions/harley-benton-dnafx-git-pro.xml"),
     include_str!("../../../definitions/fractal-axe-fx-iii.xml"),
     include_str!("../../../definitions/headrush-prime.xml"),
+    include_str!("../../../definitions/qlcplus-horizont-hilo.xml"),
 ];
 
 pub fn parse(xml: &str) -> Result<DeviceDefinition, String> {

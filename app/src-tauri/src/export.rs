@@ -584,7 +584,7 @@ mod tests {
     #[test]
     fn all_bundled_definitions_parse() {
         let defs = definition::bundled().unwrap();
-        assert_eq!(defs.len(), 5);
+        assert_eq!(defs.len(), 6);
         let kemper = defs.iter().find(|d| d.id == "kemper-profiler-stage").unwrap();
         assert!(kemper.commands.items.len() > 30);
         // the performance param carries its 125 labels

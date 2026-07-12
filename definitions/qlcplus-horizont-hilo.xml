@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- QLC+ (Horizont HILO lighting show) - RigPilot Device Definition
+
+     RigPilot drives a QLC+ show over MIDI rather than a physical device. QLC+'s
+     MIDI input plugin only reacts to Note On; every command here still emits a
+     matching Note Off (velocity 0) purely for MIDI hygiene - QLC+ ignores it.
+
+     Because a single Note On can only *toggle* a QLC+ virtual-console widget,
+     blinders and scene toggles are state-dependent (deterministic="false"):
+     the first event turns the function on, the next turns it off. Turning a
+     blinder on and off again therefore takes two events.
+
+     Note numbering: C-1 = MIDI note 0 (so middle C = C4 = 60).
+       Octave -1 (0-11)  : transport / global (Tap Tempo, Blackout)
+       Octave  0 (12-23) : blinders (C0 = All, C#0 = Group 1, ...)
+       Octave  1 (24-35) : song scene toggles (C1 = Scene 1, ...)          -->
+<DeviceDefinition id="qlcplus-horizont-hilo" version="1.0"
+                  xmlns="https://rigpilot.app/schemas/device-definition/1">
+  <Meta>
+    <Manufacturer>QLC+</Manufacturer>
+    <Model>Horizont HILO</Model>
+    <Author>Flemming Busman</Author>
+    <Source>QLC+ MIDI input plugin (Note On only) - project show mapping</Source>
+    <Description>Controls a QLC+ lighting show. Set the QLC+ MIDI input profile to the MIDI channel configured in RigPilot's Device Settings. QLC+ reacts only to Note On; Note Offs are emitted for consistency but ignored. Note numbering uses C-1 = MIDI note 0 (middle C = C4 = 60). Blinders and scene toggles are state-dependent toggles: one event turns them on, the next turns them off.</Description>
+  </Meta>
+
+  <Commands>
+
+    <!-- ============ Songs ============ -->
+
+    <!-- Program Change selects the QLC+ song/show by 0-based index. -->
+    <OneShot id="select-song" name="Select Song" short="Song" group="Songs"
+             description="Selects the QLC+ song by index via Program Change (0-based: 0 = Song 1).">
+      <Param id="song" name="Song #" min="0" max="127" default="0"/>
+      <ProgramChange program="$song"/>
+    </OneShot>
+
+    <!-- ============ Transport / Global (octave -1) ============ -->
+
+    <!-- C-1 = note 0. A single tempo tap; place several in a row to set tempo. -->
+    <OneShot id="tap-tempo" name="Tap Tempo" group="Transport"
+             description="A single tempo tap. Place several in a row to set the tempo.">
+      <NoteOn note="0"/>
+      <NoteOff note="0" velocity="0"/>
+    </OneShot>
+
+    <!-- C#-1 = note 1. Panic button: blackout / stop all functions. -->
+    <OneShot id="blackout" name="Blackout / Stop All" short="Blackout" group="Transport"
+             description="Blackout / stop all - forces the show to a dark, known-clean state.">
+      <NoteOn note="1"/>
+      <NoteOff note="1" velocity="0"/>
+    </OneShot>
+
+    <!-- ============ Blinders (octave 0, toggles) ============ -->
+
+    <OneShot id="blinder-all" name="Blinder All" short="Blind All" group="Blinders" deterministic="false"
+             description="Toggles all blinders (C0). State-dependent: one event on, next event off.">
+      <NoteOn note="12"/>
+      <NoteOff note="12" velocity="0"/>
+    </OneShot>
+    <OneShot id="blinder-group-1" name="Blinder Group 1" short="Blind 1" group="Blinders" deterministic="false"
+             description="Toggles blinder group 1 (C#0). State-dependent.">
+      <NoteOn note="13"/>
+      <NoteOff note="13" velocity="0"/>
+    </OneShot>
+    <OneShot id="blinder-group-2" name="Blinder Group 2" short="Blind 2" group="Blinders" deterministic="false"
+             description="Toggles blinder group 2 (D0). State-dependent.">
+      <NoteOn note="14"/>
+      <NoteOff note="14" velocity="0"/>
+    </OneShot>
+    <OneShot id="blinder-group-3" name="Blinder Group 3" short="Blind 3" group="Blinders" deterministic="false"
+             description="Toggles blinder group 3 (D#0). State-dependent.">
+      <NoteOn note="15"/>
+      <NoteOff note="15" velocity="0"/>
+    </OneShot>
+    <OneShot id="blinder-group-4" name="Blinder Group 4" short="Blind 4" group="Blinders" deterministic="false"
+             description="Toggles blinder group 4 (E0). State-dependent.">
+      <NoteOn note="16"/>
+      <NoteOff note="16" velocity="0"/>
+    </OneShot>
+    <OneShot id="blinder-group-5" name="Blinder Group 5" short="Blind 5" group="Blinders" deterministic="false"
+             description="Toggles blinder group 5 (F0). State-dependent.">
+      <NoteOn note="17"/>
+      <NoteOff note="17" velocity="0"/>
+    </OneShot>
+    <OneShot id="blinder-group-6" name="Blinder Group 6" short="Blind 6" group="Blinders" deterministic="false"
+             description="Toggles blinder group 6 (F#0). State-dependent.">
+      <NoteOn note="18"/>
+      <NoteOff note="18" velocity="0"/>
+    </OneShot>
+    <OneShot id="blinder-group-7" name="Blinder Group 7" short="Blind 7" group="Blinders" deterministic="false"
+             description="Toggles blinder group 7 (G0). State-dependent.">
+      <NoteOn note="19"/>
+      <NoteOff note="19" velocity="0"/>
+    </OneShot>
+    <OneShot id="blinder-group-8" name="Blinder Group 8" short="Blind 8" group="Blinders" deterministic="false"
+             description="Toggles blinder group 8 (G#0). State-dependent.">
+      <NoteOn note="20"/>
+      <NoteOff note="20" velocity="0"/>
+    </OneShot>
+    <OneShot id="blinder-group-9" name="Blinder Group 9" short="Blind 9" group="Blinders" deterministic="false"
+             description="Toggles blinder group 9 (A0). State-dependent.">
+      <NoteOn note="21"/>
+      <NoteOff note="21" velocity="0"/>
+    </OneShot>
+    <OneShot id="blinder-group-10" name="Blinder Group 10" short="Blind 10" group="Blinders" deterministic="false"
+             description="Toggles blinder group 10 (A#0). State-dependent.">
+      <NoteOn note="22"/>
+      <NoteOff note="22" velocity="0"/>
+    </OneShot>
+    <OneShot id="blinder-group-11" name="Blinder Group 11" short="Blind 11" group="Blinders" deterministic="false"
+             description="Toggles blinder group 11 (B0). State-dependent.">
+      <NoteOn note="23"/>
+      <NoteOff note="23" velocity="0"/>
+    </OneShot>
+
+    <!-- Blinder fade time, repurposing CC5 (Portamento Time): 0 = instant, 127 = slowest. -->
+    <OneShot id="blinder-fade-time" name="Blinder Fade-Time" short="Fade" group="Blinders"
+             description="Sets the blinder fade time via CC5 (Portamento Time). 0 = instant, 127 = slowest.">
+      <Param id="fade" name="Fade Time" min="0" max="127" default="0">
+        <Label value="0" short="Instant">Instant</Label>
+        <Label value="127" short="Slow">Slowest</Label>
+      </Param>
+      <ControlChange controller="5" value="$fade"/>
+    </OneShot>
+
+    <!-- ============ Song Scenes (octave 1, toggles) ============ -->
+
+    <OneShot id="song-scene-1" name="Song Scene 1" short="Scene 1" group="Scenes" deterministic="false"
+             description="Toggles song scene 1 (C1). State-dependent: one event on, next event off.">
+      <NoteOn note="24"/>
+      <NoteOff note="24" velocity="0"/>
+    </OneShot>
+    <OneShot id="song-scene-2" name="Song Scene 2" short="Scene 2" group="Scenes" deterministic="false"
+             description="Toggles song scene 2 (C#1). State-dependent.">
+      <NoteOn note="25"/>
+      <NoteOff note="25" velocity="0"/>
+    </OneShot>
+    <OneShot id="song-scene-3" name="Song Scene 3" short="Scene 3" group="Scenes" deterministic="false"
+             description="Toggles song scene 3 (D1). State-dependent.">
+      <NoteOn note="26"/>
+      <NoteOff note="26" velocity="0"/>
+    </OneShot>
+    <OneShot id="song-scene-4" name="Song Scene 4" short="Scene 4" group="Scenes" deterministic="false"
+             description="Toggles song scene 4 (D#1). State-dependent.">
+      <NoteOn note="27"/>
+      <NoteOff note="27" velocity="0"/>
+    </OneShot>
+    <OneShot id="song-scene-5" name="Song Scene 5" short="Scene 5" group="Scenes" deterministic="false"
+             description="Toggles song scene 5 (E1). State-dependent.">
+      <NoteOn note="28"/>
+      <NoteOff note="28" velocity="0"/>
+    </OneShot>
+    <OneShot id="song-scene-6" name="Song Scene 6" short="Scene 6" group="Scenes" deterministic="false"
+             description="Toggles song scene 6 (F1). State-dependent.">
+      <NoteOn note="29"/>
+      <NoteOff note="29" velocity="0"/>
+    </OneShot>
+    <OneShot id="song-scene-7" name="Song Scene 7" short="Scene 7" group="Scenes" deterministic="false"
+             description="Toggles song scene 7 (F#1). State-dependent.">
+      <NoteOn note="30"/>
+      <NoteOff note="30" velocity="0"/>
+    </OneShot>
+    <OneShot id="song-scene-8" name="Song Scene 8" short="Scene 8" group="Scenes" deterministic="false"
+             description="Toggles song scene 8 (G1). State-dependent.">
+      <NoteOn note="31"/>
+      <NoteOff note="31" velocity="0"/>
+    </OneShot>
+    <OneShot id="song-scene-9" name="Song Scene 9" short="Scene 9" group="Scenes" deterministic="false"
+             description="Toggles song scene 9 (G#1). State-dependent.">
+      <NoteOn note="32"/>
+      <NoteOff note="32" velocity="0"/>
+    </OneShot>
+    <OneShot id="song-scene-10" name="Song Scene 10" short="Scene 10" group="Scenes" deterministic="false"
+             description="Toggles song scene 10 (A1). State-dependent.">
+      <NoteOn note="33"/>
+      <NoteOff note="33" velocity="0"/>
+    </OneShot>
+    <OneShot id="song-scene-11" name="Song Scene 11" short="Scene 11" group="Scenes" deterministic="false"
+             description="Toggles song scene 11 (A#1). State-dependent.">
+      <NoteOn note="34"/>
+      <NoteOff note="34" velocity="0"/>
+    </OneShot>
+    <OneShot id="song-scene-12" name="Song Scene 12" short="Scene 12" group="Scenes" deterministic="false"
+             description="Toggles song scene 12 (B1). State-dependent.">
+      <NoteOn note="35"/>
+      <NoteOff note="35" velocity="0"/>
+    </OneShot>
+
+  </Commands>
+</DeviceDefinition>

@@ -78,6 +78,7 @@ code required to add a device. Shipped so far:
 | HeadRush Prime | [`headrush-prime.xml`](definitions/headrush-prime.xml) |
 | Kemper Profiler Stage | [`kemper-profiler-stage.xml`](definitions/kemper-profiler-stage.xml) |
 | Neural DSP Quad Cortex | [`neural-dsp-quad-cortex.xml`](definitions/neural-dsp-quad-cortex.xml) |
+| QLC+ lighting show (Horizont HILO) | [`qlcplus-horizont-hilo.xml`](definitions/qlcplus-horizont-hilo.xml) |
 
 A definition declares **Commands** (name, type, group, parameters, MIDI messages),
 optional **Init Messages** for putting the device into a known state, and per-command

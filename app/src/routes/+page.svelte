@@ -56,6 +56,11 @@
   let settingsIsNew = $state(false);
   let exportOpen = $state(false);
   let resetBlock = $state(true);
+  // Remembered custom export folder (survives restarts). When unset the export
+  // defaults to the project's own directory.
+  let lastExportDir = $state<string | null>(
+    typeof localStorage !== "undefined" ? localStorage.getItem("rigpilot:lastExportDir") : null,
+  );
   let paletteOpen = $state(true);
   let inspectorOpen = $state(true);
   let gridMenuOpen = $state(false);
@@ -92,6 +97,9 @@
       ? projectPath.slice(0, Math.max(projectPath.lastIndexOf("/"), projectPath.lastIndexOf("\\")))
       : null,
   );
+
+  // Where Export writes: a remembered custom folder wins, otherwise the project dir.
+  const exportDir = $derived(lastExportDir ?? projectDir);
 
   const snapTicks = $derived.by(() => {
     if (!snapOn) return null;
@@ -514,14 +522,30 @@
     }
   }
 
+  // Pick a custom export folder and remember it for next time.
+  async function chooseExportDir() {
+    const dir = await open({ directory: true, defaultPath: exportDir ?? undefined });
+    if (typeof dir !== "string") return;
+    lastExportDir = dir;
+    localStorage.setItem("rigpilot:lastExportDir", dir);
+  }
+
   async function runExport() {
     if (!IS_TAURI) {
       exportOpen = false;
       status = "Export needs the desktop app (browser dev mode).";
       return;
     }
-    const dir = await open({ directory: true });
-    if (typeof dir !== "string") return;
+    // Default to the project dir; only prompt when there is no target yet
+    // (unsaved project and no remembered folder).
+    let dir = exportDir;
+    if (!dir) {
+      const chosen = await open({ directory: true });
+      if (typeof chosen !== "string") return;
+      dir = chosen;
+      lastExportDir = dir;
+      localStorage.setItem("rigpilot:lastExportDir", dir);
+    }
     try {
       const files = await invoke<string[]>("export_midi", {
         project: $state.snapshot(project),
@@ -529,7 +553,7 @@
         options: { resetBlock },
       });
       status = files.length
-        ? `Exported: ${files.join(", ")}`
+        ? `Exported to ${dir}: ${files.join(", ")}`
         : "Nothing to export — add a MIDI track first.";
       exportOpen = false;
     } catch (e) {
@@ -802,9 +826,14 @@
         start, so a restart always begins from a clean device state.</span>
       </span>
     </label>
+    <div class="modal-row export-target">
+      <span class="microlabel">Folder</span>
+      <span class="path" title={exportDir ?? ""}>{exportDir ?? "Not chosen yet — you'll be asked"}</span>
+      <button onclick={chooseExportDir}>Change…</button>
+    </div>
     <div class="modal-actions">
       <button onclick={() => (exportOpen = false)}>Cancel</button>
-      <button class="primary" onclick={runExport}>Choose folder &amp; export</button>
+      <button class="primary" onclick={runExport}>Export</button>
     </div>
   </Modal>
 {/if}
@@ -1056,5 +1085,19 @@
     display: flex;
     justify-content: flex-end;
     gap: 6px;
+  }
+  .export-target {
+    grid-template-columns: 110px 1fr auto;
+    margin: 12px 0;
+  }
+  .export-target .path {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--fg-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    text-align: left;
   }
 </style>

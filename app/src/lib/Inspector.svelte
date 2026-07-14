@@ -228,6 +228,7 @@
     font-size: 12px;
     margin: 6px 0 0;
     line-height: 1.45;
+    -webkit-user-select: text;
     user-select: text;
   }
   .empty {
@@ -264,6 +265,7 @@
     font-size: 11px;
     color: var(--fg-dim);
     word-break: break-all;
+    -webkit-user-select: text;
     user-select: text;
   }
 </style>

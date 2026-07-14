@@ -55,7 +55,9 @@ body {
   font-size: 13px;
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
   user-select: none;
+  -webkit-user-drag: none;
   overflow: hidden;
 }
 

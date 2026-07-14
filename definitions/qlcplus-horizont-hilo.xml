@@ -114,15 +114,12 @@
       <NoteOff note="23" velocity="0"/>
     </OneShot>
 
-    <!-- Blinder fade time, repurposing CC5 (Portamento Time): 0 = instant, 127 = slowest. -->
-    <OneShot id="blinder-fade-time" name="Blinder Fade-Time" short="Fade" group="Blinders"
-             description="Sets the blinder fade time via CC5 (Portamento Time). 0 = instant, 127 = slowest.">
-      <Param id="fade" name="Fade Time" min="0" max="127" default="0">
-        <Label value="0" short="Instant">Instant</Label>
-        <Label value="127" short="Slow">Slowest</Label>
-      </Param>
-      <ControlChange controller="5" value="$fade"/>
-    </OneShot>
+    <!-- Blinder fade time, repurposing CC5 (Portamento Time): 0 = instant, 127 = slowest.
+         Automation so the fade time can be swept over the song as a value curve. -->
+    <Automation id="blinder-fade-time" name="Blinder Fade-Time" short="Fade" group="Blinders"
+             description="Blinder fade time via CC5 (Portamento Time) as a value curve. 0 = instant, 127 = slowest.">
+      <Target controller="5" min="0" max="127"/>
+    </Automation>
 
     <!-- ============ Song Scenes (octave 1, toggles) ============ -->
 

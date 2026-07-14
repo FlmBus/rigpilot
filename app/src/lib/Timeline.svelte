@@ -223,7 +223,21 @@
 
   let drag: Drag | null = null;
   let marquee = $state<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
-  let dropGhost = $state<{ ti: number; lane: number; tick: number } | null>(null);
+  let dropGhost = $state<{
+    ti: number;
+    lane: number;
+    tick: number;
+    kind: CommandInfo["commandType"];
+  } | null>(null);
+
+  // Command type of a palette command, so the drop ghost can mirror the real
+  // event shape (diamond for one-shot, block for hold/automation).
+  function commandKind(definitionId: string, commandId: string): CommandInfo["commandType"] {
+    const cmd = definitions
+      .find((d) => d.id === definitionId)
+      ?.commands.find((c) => c.id === commandId);
+    return cmd?.commandType ?? "hold";
+  }
   let hoverCursor = $state("default");
 
   function canvasPos(e: { clientX: number; clientY: number }) {
@@ -450,7 +464,12 @@
       Math.max(0, Math.floor((y - tops[ti] - 2) / LANE_H)),
       midiLanes(project.tracks[ti]) - 1,
     );
-    dropGhost = { ti, lane, tick: snap(tickAt(x)) };
+    dropGhost = {
+      ti,
+      lane,
+      tick: snap(tickAt(x)),
+      kind: payload ? commandKind(payload.definitionId, payload.commandId) : "hold",
+    };
   }
 
   function ondrop(e: DragEvent) {
@@ -521,13 +540,32 @@
       // waveform/grid/playhead while clips get the full CSS design + interactions stay on canvas.
     });
 
-    // drop ghost
+    // drop ghost — mirrors the shape of the event that will be created
     if (dropGhost) {
       const x = xOf(dropGhost.tick);
-      const y = tops[dropGhost.ti] + 3 + dropGhost.lane * LANE_H;
-      ctx.strokeStyle = "#ff2e88";
+      const y = tops[dropGhost.ti] + 2 + dropGhost.lane * LANE_H;
+      const h = LANE_H - 3;
+      const color = COMMAND_TYPE_COLORS[dropGhost.kind];
+      ctx.strokeStyle = color;
       ctx.setLineDash([4, 3]);
-      ctx.strokeRect(x, y, 40, LANE_H - 4);
+      if (dropGhost.kind === "one-shot") {
+        // diamond marker centered on the dispatch tick, like a real one-shot
+        const cx = x;
+        const cy = y + h / 2;
+        const s = 8.5;
+        ctx.fillStyle = color + "30";
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - s);
+        ctx.lineTo(cx + s, cy);
+        ctx.lineTo(cx, cy + s);
+        ctx.lineTo(cx - s, cy);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        // hold/automation start as a short block at the drop tick
+        ctx.strokeRect(x, y, 40, h);
+      }
       ctx.setLineDash([]);
     }
 

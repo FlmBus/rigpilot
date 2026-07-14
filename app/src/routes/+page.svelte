@@ -56,9 +56,54 @@
   let settingsIsNew = $state(false);
   let exportOpen = $state(false);
   let resetBlock = $state(true);
+  // Remembered custom export folder (survives restarts). When unset the export
+  // defaults to the project's own directory.
+  let lastExportDir = $state<string | null>(
+    typeof localStorage !== "undefined" ? localStorage.getItem("rigpilot:lastExportDir") : null,
+  );
   let paletteOpen = $state(true);
   let inspectorOpen = $state(true);
   let gridMenuOpen = $state(false);
+
+  // Live MIDI output. The chosen port + on/off state are machine-level (a
+  // bandmate's ports differ), so they live in localStorage, not the project.
+  const ls = typeof localStorage !== "undefined" ? localStorage : null;
+  let midiLive = $state(ls?.getItem("rigpilot:midiLive") === "1");
+  let midiPort = $state<string | null>(ls?.getItem("rigpilot:midiPort") ?? null);
+  let midiPorts = $state<string[]>([]);
+  // Shared lead-in (ms) so the MIDI scheduler and audio clock start aligned.
+  const MIDI_LEAD_MS = 60;
+
+  async function refreshMidiPorts() {
+    if (!IS_TAURI) return;
+    try {
+      midiPorts = await invoke<string[]>("list_midi_ports");
+      // Drop a remembered port that has since disappeared.
+      if (midiPort && !midiPorts.includes(midiPort)) midiPort = null;
+    } catch (e) {
+      status = String(e);
+    }
+  }
+  function setMidiLive(on: boolean) {
+    midiLive = on;
+    ls?.setItem("rigpilot:midiLive", on ? "1" : "0");
+    if (on) refreshMidiPorts();
+    else if (isPlaying) invoke("midi_stop").catch(() => {});
+  }
+  function setMidiPort(name: string) {
+    midiPort = name || null;
+    if (midiPort) ls?.setItem("rigpilot:midiPort", midiPort);
+    else ls?.removeItem("rigpilot:midiPort");
+  }
+  async function midiPanic() {
+    if (!IS_TAURI || !midiPort) return;
+    try {
+      await invoke("midi_panic", { portName: midiPort });
+      status = "MIDI panic — all notes off.";
+    } catch (e) {
+      status = String(e);
+    }
+  }
 
   // per-track accent colour for the header bar (model has no colour field)
   const TRACK_COLORS = ["#ff2e88", "#2ee08a", "#ffb02e", "#39d3e6", "#c084fc", "#fb7185", "#38bdf8"];
@@ -85,6 +130,7 @@
     invoke<DefinitionInfo[]>("list_definitions")
       .then((d) => (definitions = d))
       .catch((e) => (status = String(e)));
+    refreshMidiPorts();
   });
 
   const projectDir = $derived(
@@ -92,6 +138,9 @@
       ? projectPath.slice(0, Math.max(projectPath.lastIndexOf("/"), projectPath.lastIndexOf("\\")))
       : null,
   );
+
+  // Where Export writes: a remembered custom folder wins, otherwise the project dir.
+  const exportDir = $derived(lastExportDir ?? projectDir);
 
   const snapTicks = $derived.by(() => {
     if (!snapOn) return null;
@@ -172,8 +221,19 @@
   });
 
   async function play() {
-    await player.play(playbackTracks(), playheadSec);
+    await player.play(playbackTracks(), playheadSec, MIDI_LEAD_MS / 1000);
     isPlaying = true;
+    if (IS_TAURI && midiLive && midiPort) {
+      invoke("midi_start", {
+        project: $state.snapshot(project),
+        portName: midiPort,
+        fromSeconds: playheadSec,
+        startInMs: MIDI_LEAD_MS,
+        options: { resetBlock: true },
+      }).catch((e) => (status = String(e)));
+    } else if (IS_TAURI && midiLive && !midiPort) {
+      status = "Live MIDI is on, but no output port is selected.";
+    }
     const tick = () => {
       if (!isPlaying) return;
       playheadSec = player.position(playheadSec);
@@ -184,6 +244,7 @@
   function pause() {
     playheadSec = player.stop();
     isPlaying = false;
+    if (IS_TAURI && midiLive) invoke("midi_stop").catch(() => {});
   }
   function stop() {
     if (isPlaying) pause();
@@ -514,14 +575,30 @@
     }
   }
 
+  // Pick a custom export folder and remember it for next time.
+  async function chooseExportDir() {
+    const dir = await open({ directory: true, defaultPath: exportDir ?? undefined });
+    if (typeof dir !== "string") return;
+    lastExportDir = dir;
+    localStorage.setItem("rigpilot:lastExportDir", dir);
+  }
+
   async function runExport() {
     if (!IS_TAURI) {
       exportOpen = false;
       status = "Export needs the desktop app (browser dev mode).";
       return;
     }
-    const dir = await open({ directory: true });
-    if (typeof dir !== "string") return;
+    // Default to the project dir; only prompt when there is no target yet
+    // (unsaved project and no remembered folder).
+    let dir = exportDir;
+    if (!dir) {
+      const chosen = await open({ directory: true });
+      if (typeof chosen !== "string") return;
+      dir = chosen;
+      lastExportDir = dir;
+      localStorage.setItem("rigpilot:lastExportDir", dir);
+    }
     try {
       const files = await invoke<string[]>("export_midi", {
         project: $state.snapshot(project),
@@ -529,7 +606,7 @@
         options: { resetBlock },
       });
       status = files.length
-        ? `Exported: ${files.join(", ")}`
+        ? `Exported to ${dir}: ${files.join(", ")}`
         : "Nothing to export — add a MIDI track first.";
       exportOpen = false;
     } catch (e) {
@@ -613,6 +690,24 @@
       </div>
       <button class="toggle" class:active={coloredWaves} title="Spectral waveform coloring"
         onclick={() => (coloredWaves = !coloredWaves)}>Color</button>
+      <span class="vsep"></span>
+      <div class="midi-live">
+        <button class="toggle" class:active={midiLive}
+          title="Send MIDI live to a hardware/virtual port during playback"
+          onclick={() => setMidiLive(!midiLive)}>◉ MIDI</button>
+        {#if midiLive}
+          <select class="port" title="MIDI output port" value={midiPort ?? ""}
+            onpointerdown={refreshMidiPorts}
+            onchange={(e) => setMidiPort(e.currentTarget.value)}>
+            <option value="" disabled>Select port…</option>
+            {#each midiPorts as p}
+              <option value={p}>{p}</option>
+            {/each}
+          </select>
+          <button class="danger" title="Panic — all notes off" disabled={!midiPort}
+            onclick={midiPanic}>⏻</button>
+        {/if}
+      </div>
       <span class="vsep"></span>
       <button class="primary" onclick={() => (exportOpen = true)} disabled={!project.tracks.some((t) => t.type === "midi")}>Export</button>
       <span class="vsep"></span>
@@ -802,9 +897,14 @@
         start, so a restart always begins from a clean device state.</span>
       </span>
     </label>
+    <div class="modal-row export-target">
+      <span class="microlabel">Folder</span>
+      <span class="path" title={exportDir ?? ""}>{exportDir ?? "Not chosen yet — you'll be asked"}</span>
+      <button onclick={chooseExportDir}>Change…</button>
+    </div>
     <div class="modal-actions">
       <button onclick={() => (exportOpen = false)}>Cancel</button>
-      <button class="primary" onclick={runExport}>Choose folder &amp; export</button>
+      <button class="primary" onclick={runExport}>Export</button>
     </div>
   </Modal>
 {/if}
@@ -895,6 +995,8 @@
   .seg.small button { height: 19px; padding: 0 9px; font-size: 11px; }
   .pt { min-width: 34px; font-size: 13px; }
   .vsep { width: 1px; align-self: stretch; background: #000; box-shadow: 1px 0 0 rgba(255, 255, 255, 0.03); margin: 9px 2px; }
+  .midi-live { display: flex; align-items: center; gap: 6px; }
+  .midi-live .port { max-width: 190px; text-overflow: ellipsis; }
   .drop-before { box-shadow: inset 0 2px 0 var(--accent); }
 
   .main { display: flex; flex: 1; min-height: 0; }
@@ -1056,5 +1158,19 @@
     display: flex;
     justify-content: flex-end;
     gap: 6px;
+  }
+  .export-target {
+    grid-template-columns: 110px 1fr auto;
+    margin: 12px 0;
+  }
+  .export-target .path {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--fg-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    text-align: left;
   }
 </style>

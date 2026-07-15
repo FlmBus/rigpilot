@@ -7,7 +7,7 @@
     <Model>DNAfx GiT Pro</Model>
     <Author>Flemming Busman</Author>
     <Source>Thomann user manual ID 517099 (11.01.2022), sections MIDI SETTING / PC Mapping / CC Reference</Source>
-    <Description>In MENU > MIDI SETTING: direction must be 'MIDI IN' (default), and the channel (default 1) must match the channel configured in RigPilot's Device Settings. VERIFY ON HARDWARE: the manual lists the ON/OFF CCs (10-20, 49, 51) and footswitch CCs (21-24) with value range 0-127 without defining the semantics. The On/Off commands assume value-switched behavior (0 = off, 127 = on); if they turn out to be edge-triggered toggles, drop the State param and set deterministic="false".</Description>
+    <Description>In MENU > MIDI SETTING: direction must be 'MIDI IN' (default), and the channel (default 1) must match the channel configured in RigPilot's Device Settings. Value semantics were verified on hardware: the CCs are value-switched (127 = on, 0 = off), so every command below (except the pedal position sweeps) carries an On/Off State parameter. Note: the "Select Preset (33A-64D)" bank suffers from a device firmware bug where several slots load the wrong preset - this is a hardware defect, not a definition issue.</Description>
   </Meta>
 
   <Commands>
@@ -288,7 +288,7 @@
     </OneShot>
 
     <!-- ============ Modules ============
-         VERIFY value semantics (see header). -->
+         Value-switched on/off (127 = on, 0 = off), verified on hardware. -->
 
     <OneShot id="module-dynamic" name="Dynamic Module" group="Modules"
              description="Turns the Dynamic module on or off.">
@@ -380,23 +380,40 @@
     </OneShot>
 
     <!-- ============ Footswitches ============
-         VERIFY: footswitch CCs likely emulate a physical press (toggle). -->
+         Value-switched on/off (127/0); the effect still depends on the current
+         footswitch mode, so these stay deterministic="false". -->
 
     <OneShot id="footswitch-a" name="Footswitch A" group="Footswitches" deterministic="false"
-             description="Emulates pressing footswitch A - effect depends on the current footswitch mode.">
-      <ControlChange controller="21" value="127"/>
+             description="Sends footswitch A on or off - effect depends on the current footswitch mode.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="21" value="$state"/>
     </OneShot>
     <OneShot id="footswitch-b" name="Footswitch B" group="Footswitches" deterministic="false"
-             description="Emulates pressing footswitch B - effect depends on the current footswitch mode.">
-      <ControlChange controller="22" value="127"/>
+             description="Sends footswitch B on or off - effect depends on the current footswitch mode.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="22" value="$state"/>
     </OneShot>
     <OneShot id="footswitch-c" name="Footswitch C" group="Footswitches" deterministic="false"
-             description="Emulates pressing footswitch C - effect depends on the current footswitch mode.">
-      <ControlChange controller="23" value="127"/>
+             description="Sends footswitch C on or off - effect depends on the current footswitch mode.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="23" value="$state"/>
     </OneShot>
     <OneShot id="footswitch-d" name="Footswitch D" group="Footswitches" deterministic="false"
-             description="Emulates pressing footswitch D - effect depends on the current footswitch mode.">
-      <ControlChange controller="24" value="127"/>
+             description="Sends footswitch D on or off - effect depends on the current footswitch mode.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="24" value="$state"/>
     </OneShot>
 
     <!-- ============ Pedals ============ -->
@@ -421,8 +438,12 @@
     <!-- ============ Misc ============ -->
 
     <OneShot id="tap-tempo" name="Tap Tempo" group="Misc"
-             description="A single tempo tap. Place several in a row to set the tempo.">
-      <ControlChange controller="25" value="127"/>
+             description="A single tempo tap (On); send Off to release. Place several in a row to set the tempo.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="25" value="$state"/>
     </OneShot>
     <OneShot id="tuner" name="Tuner" group="Misc"
              description="Shows or hides the tuner.">
@@ -444,20 +465,36 @@
       <ControlChange controller="26" value="$state"/>
     </OneShot>
     <OneShot id="looper-rec-dub" name="Looper Rec/Dub" group="Looper &amp; Rhythm" deterministic="false"
-             description="Starts recording or overdubbing - depends on the looper's current state.">
-      <ControlChange controller="28" value="127"/>
+             description="Starts recording or overdubbing (On); send Off to release. Depends on the looper's current state.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="28" value="$state"/>
     </OneShot>
     <OneShot id="looper-play" name="Looper Play" group="Looper &amp; Rhythm"
-             description="Starts looper playback.">
-      <ControlChange controller="46" value="127"/>
+             description="Starts looper playback (On); send Off to release.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="46" value="$state"/>
     </OneShot>
     <OneShot id="looper-stop" name="Looper Stop" group="Looper &amp; Rhythm"
-             description="Stops looper playback.">
-      <ControlChange controller="47" value="127"/>
+             description="Stops looper playback (On); send Off to release.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="47" value="$state"/>
     </OneShot>
     <OneShot id="looper-clear" name="Looper Clear" group="Looper &amp; Rhythm"
-             description="Clears the recorded loop.">
-      <ControlChange controller="48" value="127"/>
+             description="Clears the recorded loop (On); send Off to release.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="48" value="$state"/>
     </OneShot>
     <OneShot id="rhythm" name="Rhythm" group="Looper &amp; Rhythm"
              description="Runs or stops the Rhythm (drum machine).">
@@ -468,8 +505,12 @@
       <ControlChange controller="49" value="$state"/>
     </OneShot>
     <OneShot id="rhythm-tap" name="Rhythm Tap" group="Looper &amp; Rhythm"
-             description="A single rhythm tempo tap.">
-      <ControlChange controller="50" value="127"/>
+             description="A single rhythm tempo tap (On); send Off to release.">
+      <Param id="state" name="State" min="0" max="127" default="127">
+        <Label value="127" short="On">On</Label>
+        <Label value="0" short="Off">Off</Label>
+      </Param>
+      <ControlChange controller="50" value="$state"/>
     </OneShot>
 
   </Commands>

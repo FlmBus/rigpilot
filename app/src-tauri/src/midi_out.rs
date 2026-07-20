@@ -62,9 +62,18 @@ fn open_port(port_name: &str) -> Result<MidiOutputConnection, String> {
     out.connect(&port, "rigpilot-out").map_err(|e| e.to_string())
 }
 
+/// Locks the playback slot, recovering from a poisoned mutex (a panicked
+/// scheduler thread must not take the whole app down with it).
+fn lock_playback(engine: &MidiEngine) -> std::sync::MutexGuard<'_, Option<Playback>> {
+    engine
+        .playback
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 /// Stops the current playback (if any), signalling the thread to flush + silence.
 fn stop_playback(engine: &MidiEngine) {
-    if let Some(pb) = engine.playback.lock().unwrap().take() {
+    if let Some(pb) = lock_playback(engine).take() {
         pb.stop.store(true, Ordering::Relaxed);
         let _ = pb.handle.join();
     }
@@ -96,6 +105,13 @@ pub fn midi_start(
     let options = options.unwrap_or_default();
     let messages = export::resolve_project(&project, &options)?;
 
+    if !project.bpm.is_finite() || project.bpm <= 0.0 {
+        return Err(format!("Invalid project BPM: {}", project.bpm));
+    }
+    if !from_seconds.is_finite() || from_seconds < 0.0 {
+        return Err(format!("Invalid playback position: {from_seconds}"));
+    }
+
     // Precompute the wall-clock schedule before opening the port.
     let secs_per_tick = 60.0 / (project.bpm * PPQN as f64);
     let origin = Instant::now() + Duration::from_millis(start_in_ms);
@@ -106,7 +122,10 @@ pub fn midi_start(
             continue; // before the playhead
         }
         if let Some(bytes) = to_raw(m.channel, &m.message) {
-            schedule.push((origin + Duration::from_secs_f64(secs - from_seconds), bytes));
+            // Clamp: the epsilon in the skip above can leave a tiny negative
+            // offset, and Duration::from_secs_f64 aborts on negative input.
+            let offset = (secs - from_seconds).max(0.0);
+            schedule.push((origin + Duration::from_secs_f64(offset), bytes));
         }
     }
 
@@ -136,7 +155,7 @@ pub fn midi_start(
         // (the sequence's own Disengage/Reset messages already ran).
     });
 
-    *engine.playback.lock().unwrap() = Some(Playback { stop, handle });
+    *lock_playback(&engine) = Some(Playback { stop, handle });
     Ok(())
 }
 

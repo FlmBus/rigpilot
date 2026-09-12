@@ -2,7 +2,7 @@
 //! included, optional Reset Block at t=0 (see docs/plan.md §3).
 
 use crate::definition::{self, Command, DeviceDefinition, Message, Target};
-use crate::project::{Event, MidiTrack, Project, Track, PPQN};
+use crate::project::{self, Breakpoint, Event, MidiTrack, Project, Shape, Track, PPQN};
 use midly::num::{u15, u24, u28, u4, u7};
 use midly::{Format, Header, MetaMessage, MidiMessage, Smf, Timing, TrackEvent, TrackEventKind};
 use std::collections::HashMap;
@@ -11,11 +11,47 @@ use std::collections::HashMap;
 #[serde(rename_all = "camelCase")]
 pub struct ExportOptions {
     pub reset_block: bool,
+    /// How far the song runs, for curves that re-send their value periodically.
+    /// The frontend knows the reference audio's length; 0 means "derive it from
+    /// the project's own content".
+    #[serde(default)]
+    pub song_end_ticks: u64,
 }
 
 impl Default for ExportOptions {
     fn default() -> Self {
-        Self { reset_block: true }
+        Self {
+            reset_block: true,
+            song_end_ticks: 0,
+        }
+    }
+}
+
+/// Last tick anything happens on, used when the caller gives no song length.
+fn content_end(project: &Project) -> u64 {
+    let mut end = 0;
+    for track in &project.tracks {
+        let Track::Midi(t) = track else { continue };
+        for event in &t.events {
+            end = end.max(match event {
+                Event::OneShot { tick, .. } => *tick,
+                Event::Hold { tick, length, .. } => tick + length,
+            });
+        }
+        for curve in &t.automation {
+            if let Some(last) = curve.breakpoints.last() {
+                end = end.max(last.tick);
+            }
+        }
+    }
+    end
+}
+
+fn song_end(project: &Project, options: &ExportOptions) -> u64 {
+    if options.song_end_ticks > 0 {
+        options.song_end_ticks
+    } else {
+        content_end(project)
     }
 }
 
@@ -67,84 +103,132 @@ fn find_command<'a>(def: &'a DeviceDefinition, id: &str) -> Result<&'a Command, 
         .ok_or_else(|| format!("definition '{}' has no command '{}'", def.id, id))
 }
 
-/// Renders one automation event into CC steps (linear segments between breakpoints).
-fn render_automation(
-    controller: u8,
-    start: u64,
-    breakpoints: &[(u64, u8)],
-    min_step: u64,
-    order: &mut u64,
-    out: &mut Vec<Emitted>,
-) {
-    let mut emit = |tick: u64, value: u8, order: &mut u64| {
-        out.push(Emitted {
-            tick,
-            order: *order,
-            message: MidiMessage::Controller {
-                controller: u7::new(controller),
-                value: u7::new(value),
-            },
-        });
-        *order += 1;
-    };
-
-    let mut last_value: Option<u8> = None;
-    for pair in breakpoints.windows(2) {
-        let (t0, v0) = pair[0];
-        let (t1, v1) = pair[1];
-        if last_value.is_none() {
-            emit(start + t0, v0, order);
-            last_value = Some(v0);
-        }
-        if t1 <= t0 {
-            continue;
-        }
-        // Step through the segment, emitting on value change with a minimum spacing.
-        let mut t = t0;
-        while t < t1 {
-            t = (t + min_step).min(t1);
-            let value = (v0 as f64
-                + (v1 as f64 - v0 as f64) * ((t - t0) as f64 / (t1 - t0) as f64))
-                .round() as u8;
-            if last_value != Some(value) {
-                emit(start + t, value, order);
-                last_value = Some(value);
-            }
-        }
+/// The MIDI a target sends for one value. A target with declared messages uses
+/// them, with `$value` standing in for the value; otherwise it is a plain CC.
+fn target_messages(target: &Target, value: u8) -> Result<Vec<MidiMessage>, String> {
+    let declared: Vec<Message> = target.declared_messages().collect();
+    if declared.is_empty() {
+        let controller = target
+            .controller
+            .ok_or("an automation target needs either a controller or messages")?;
+        return Ok(vec![MidiMessage::Controller {
+            controller: u7::new(controller),
+            value: u7::new(value),
+        }]);
     }
-    if breakpoints.len() == 1 {
-        emit(start + breakpoints[0].0, breakpoints[0].1, order);
+    let params = HashMap::from([("value".to_string(), value)]);
+    declared.iter().map(|m| resolve_message(m, &params)).collect()
+}
+
+/// Keeps a value inside the target's declared range (a bad definition with
+/// min > max is left alone rather than panicking in `clamp`).
+fn clamp_to_target(target: &Target, value: u8) -> u8 {
+    if target.min <= target.max {
+        value.clamp(target.min, target.max)
+    } else {
+        value
     }
 }
 
-/// Renders a stepped (discrete) automation: each breakpoint value is snapped to the
-/// target's allowed value set and emitted as a sample-and-hold step (a CC is sent only
-/// when the snapped value changes). No interpolation, so no out-of-set values are ever
-/// emitted — see issue #4.
-fn render_stepped_automation(
+/// Renders one Automation Lane's curve into CC steps.
+///
+/// A curve with breakpoints has a value everywhere, so the first value is written
+/// at the song start and the last one is simply left standing (a CC holds on the
+/// device by itself). `Hold` segments and discrete targets emit one message at the
+/// next breakpoint; `Linear`/`Curve` segments are sampled at `resolution_ms` and
+/// emitted only where the rounded value actually changes.
+///
+/// A segment's shape is stored on the breakpoint it arrives at (FL-Studio style).
+///
+/// `shift` is the caller's latency compensation, applied per emitted tick.
+#[allow(clippy::too_many_arguments)]
+fn render_curve(
     target: &Target,
-    start: u64,
-    breakpoints: &[(u64, u8)],
+    breakpoints: &[Breakpoint],
+    resolution_ms: u32,
+    resend_ms: u32,
+    bpm: f64,
+    song_end: u64,
+    shift: &dyn Fn(u64) -> u64,
     order: &mut u64,
     out: &mut Vec<Emitted>,
-) {
+) -> Result<(), String> {
+    let Some(first) = breakpoints.first() else {
+        return Ok(());
+    };
+    let stepped = !target.step_values().is_empty();
+    let forced = target.forced_shape();
+    let min_step = ms_to_ticks(resolution_ms, bpm).max(1);
+
+    // Collected unshifted, so the re-send pass can reason about real song time.
+    let mut msgs: Vec<(u64, u8)> = Vec::new();
     let mut last: Option<u8> = None;
-    for (t, v) in breakpoints {
-        let value = target.snap(*v);
-        if last == Some(value) {
+    let push = |tick: u64, raw: u8, msgs: &mut Vec<(u64, u8)>, last: &mut Option<u8>| {
+        let value = if stepped {
+            target.snap(raw)
+        } else {
+            clamp_to_target(target, raw)
+        };
+        if *last == Some(value) {
+            return;
+        }
+        msgs.push((tick, value));
+        *last = Some(value);
+    };
+
+    // The first value is in effect from the song start, not from the first point.
+    push(0, first.value, &mut msgs, &mut last);
+
+    for pair in breakpoints.windows(2) {
+        let (a, b) = (&pair[0], &pair[1]);
+        if b.tick <= a.tick {
             continue;
         }
-        out.push(Emitted {
-            tick: start + t,
-            order: *order,
-            message: MidiMessage::Controller {
-                controller: u7::new(target.controller),
-                value: u7::new(value),
-            },
-        });
-        *order += 1;
-        last = Some(value);
+        let shape = forced.unwrap_or(b.shape);
+        if shape == Shape::Hold {
+            push(b.tick, b.value, &mut msgs, &mut last);
+            continue;
+        }
+        let mut t = a.tick;
+        while t < b.tick {
+            t = (t + min_step).min(b.tick);
+            let value = project::value_at(breakpoints, t, forced).unwrap_or(b.value);
+            push(t, value, &mut msgs, &mut last);
+        }
     }
+
+    if resend_ms > 0 {
+        msgs = with_resends(&msgs, ms_to_ticks(resend_ms, bpm).max(1), song_end);
+    }
+
+    for (tick, value) in msgs {
+        for message in target_messages(target, value)? {
+            out.push(Emitted {
+                tick: shift(tick),
+                order: *order,
+                message,
+            });
+            *order += 1;
+        }
+    }
+    Ok(())
+}
+
+/// Repeats the standing value whenever `every` ticks pass without a message, so a
+/// dropped CC cannot leave the device stuck on the wrong value. The value itself
+/// never changes — these are duplicates, not extra curve detail.
+fn with_resends(msgs: &[(u64, u8)], every: u64, song_end: u64) -> Vec<(u64, u8)> {
+    let mut out: Vec<(u64, u8)> = Vec::with_capacity(msgs.len());
+    for (i, &(tick, value)) in msgs.iter().enumerate() {
+        out.push((tick, value));
+        let next = msgs.get(i + 1).map(|m| m.0).unwrap_or(song_end);
+        let mut t = tick.saturating_add(every);
+        while t < next {
+            out.push((t, value));
+            t += every;
+        }
+    }
+    out
 }
 
 /// Resolves a MIDI track into absolutely-timed MIDI messages (without channel).
@@ -152,6 +236,7 @@ fn resolve_track(
     track: &MidiTrack,
     def: &DeviceDefinition,
     bpm: f64,
+    song_end: u64,
     options: &ExportOptions,
 ) -> Result<Vec<Emitted>, String> {
     let mut out: Vec<Emitted> = Vec::new();
@@ -238,23 +323,38 @@ fn resolve_track(
                     order += 1;
                 }
             }
-            Event::Automation { command_id, tick, breakpoints, resolution_ms, .. } => {
-                let command = find_command(def, command_id)?;
-                let Command::Automation(cmd) = command else {
-                    return Err(format!("'{command_id}' is not an Automation command"));
-                };
-                let mut bps = breakpoints.clone();
-                bps.sort_by_key(|(t, _)| *t);
-                if cmd.target.step_values().is_empty() {
-                    let min_step = ms_to_ticks(*resolution_ms, bpm).max(1);
-                    render_automation(cmd.target.controller, shift(*tick, command), &bps, min_step, &mut order, &mut out);
-                } else {
-                    // Discrete target: snap each breakpoint and emit a sample-and-hold
-                    // step function (no interpolation, no in-between values).
-                    render_stepped_automation(&cmd.target, shift(*tick, command), &bps, &mut order, &mut out);
-                }
-            }
         }
+    }
+
+    // ---- Automation Lanes ----
+    // Rendered after the events, so at equal ticks the emission order is
+    // Reset Block -> Events -> automation, deterministically.
+    for curve in &track.automation {
+        if !curve.enabled || curve.breakpoints.is_empty() {
+            continue;
+        }
+        let command = find_command(def, &curve.command_id)?;
+        let Command::Automation(cmd) = command else {
+            return Err(format!(
+                "'{}' is not an Automation command",
+                curve.command_id
+            ));
+        };
+        let mut bps = curve.breakpoints.clone();
+        bps.sort_by_key(|b| b.tick);
+        bps.dedup_by_key(|b| b.tick);
+        let shift_curve = |tick: u64| shift(tick, command);
+        render_curve(
+            &cmd.target,
+            &bps,
+            curve.resolution_ms,
+            curve.resend_ms,
+            bpm,
+            song_end,
+            &shift_curve,
+            &mut order,
+            &mut out,
+        )?;
     }
 
     out.sort_by_key(|e| (e.tick, e.order));
@@ -267,7 +367,7 @@ pub fn track_to_smf(project: &Project, track: &MidiTrack, options: &ExportOption
         return Err(format!("track '{}': MIDI channel must be 1-16", track.name));
     }
     let def = definition::find(&track.definition_id)?;
-    let events = resolve_track(track, &def, project.bpm, options)?;
+    let events = resolve_track(track, &def, project.bpm, song_end(project, options), options)?;
     let channel = u4::new(track.midi_channel - 1);
 
     let mut smf = Smf::new(Header::new(
@@ -332,6 +432,7 @@ pub fn resolve_project(
     options: &ExportOptions,
 ) -> Result<Vec<TimedMessage>, String> {
     let mut all: Vec<TimedMessage> = Vec::new();
+    let end = song_end(project, options);
     for track in &project.tracks {
         if let Track::Midi(t) = track {
             if !(1..=16).contains(&t.midi_channel) {
@@ -339,7 +440,7 @@ pub fn resolve_project(
             }
             let def = definition::find(&t.definition_id)?;
             let channel = t.midi_channel - 1;
-            for e in resolve_track(t, &def, project.bpm, options)? {
+            for e in resolve_track(t, &def, project.bpm, end, options)? {
                 all.push(TimedMessage {
                     tick: e.tick,
                     order: e.order,
@@ -377,7 +478,50 @@ fn sanitize(name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::project::{MidiTrack, Project};
+    use crate::project::{AutomationCurve, AutomationView, MidiTrack, Project, FORMAT_VERSION};
+
+    fn bp(tick: u64, value: u8) -> Breakpoint {
+        Breakpoint {
+            tick,
+            value,
+            shape: Shape::Linear,
+            tension: 0.0,
+        }
+    }
+
+    fn shaped(tick: u64, value: u8, shape: Shape, tension: f32) -> Breakpoint {
+        Breakpoint {
+            tick,
+            value,
+            shape,
+            tension,
+        }
+    }
+
+    fn curve(command_id: &str, resolution_ms: u32, breakpoints: Vec<Breakpoint>) -> AutomationCurve {
+        AutomationCurve {
+            command_id: command_id.into(),
+            enabled: true,
+            resolution_ms,
+            resend_ms: 0,
+            breakpoints,
+        }
+    }
+
+    /// A bare MIDI track carrying only automation, for the curve tests.
+    fn curve_track(definition_id: &str, curves: Vec<AutomationCurve>) -> MidiTrack {
+        MidiTrack {
+            name: "t".into(),
+            definition_id: definition_id.into(),
+            midi_channel: 1,
+            latency_ms: 0,
+            mute: false,
+            solo: false,
+            events: vec![],
+            automation: curves,
+            automation_view: AutomationView::default(),
+        }
+    }
 
     fn test_project() -> (Project, MidiTrack) {
         // Bar 1 beat 1 = tick 0; at PPQN 960 one 4/4 bar = 3840 ticks.
@@ -408,17 +552,14 @@ mod tests {
                     params: HashMap::new(),
                     lane: 1,
                 },
-                Event::Automation {
-                    command_id: "volume-pedal".into(),
-                    tick: 7680, // bar 3
-                    length: 1920,
-                    breakpoints: vec![(0, 0), (1920, 127)],
-                    resolution_ms: 5, // → 10 ticks/step @120 BPM (full 7-bit detail)
-                    lane: 2,
-                },
             ],
+            // Volume ramp 0 -> 127 across bar 3; resolution 5 ms → 10 ticks/step
+            // @120 BPM, i.e. full 7-bit detail.
+            automation: vec![curve("volume-pedal", 5, vec![bp(7680, 0), bp(9600, 127)])],
+            automation_view: AutomationView::default(),
         };
         let project = Project {
+            format_version: FORMAT_VERSION,
             name: "Test Song".into(),
             bpm: 120.0,
             time_signature: (4, 4),
@@ -512,8 +653,8 @@ mod tests {
             if controller.as_int() == 35 && value.as_int() == 0
         )));
 
-        // Automation: CC7 ramp 0->127 between ticks 7680 and 9600,
-        // monotonically increasing, ending at 127
+        // Automation: the curve's first value is in effect from the song start,
+        // then ramps 0 -> 127 between ticks 7680 and 9600.
         let ramp: Vec<_> = events
             .iter()
             .filter_map(|(t, _, m)| match m {
@@ -523,11 +664,13 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(ramp.first().unwrap(), &(7680, 0));
+        assert_eq!(ramp.first().unwrap(), &(0, 0), "first value at the song start");
+        // nothing between the song start and the first breakpoint: the value is flat
+        assert!(!ramp.iter().any(|(t, _)| *t > 0 && *t < 7680));
         assert_eq!(ramp.last().unwrap(), &(9600, 127));
         assert!(ramp.windows(2).all(|w| w[0].1 < w[1].1 && w[0].0 < w[1].0));
         // dense enough to be smooth, sparse enough not to flood
-        assert!(ramp.len() > 60 && ramp.len() <= 128);
+        assert!(ramp.len() > 60 && ramp.len() <= 129);
     }
 
     #[test]
@@ -536,7 +679,7 @@ mod tests {
         // 100 ms at 120 BPM = 0.1 * 2 beats/s = 0.2 beats = 192 ticks
         track.latency_ms = 100;
         project.tracks = vec![Track::Midi(track.clone())];
-        let bytes = track_to_smf(&project, &track, &ExportOptions { reset_block: false }).unwrap();
+        let bytes = track_to_smf(&project, &track, &ExportOptions { reset_block: false, song_end_ticks: 0 }).unwrap();
         let smf = Smf::parse(&bytes).unwrap();
         let events = abs_events(&smf);
         // load-slot-2 (CC51) was placed at tick 10 -> shifted to 0 (clamped)
@@ -554,12 +697,32 @@ mod tests {
     fn reset_block_can_be_disabled() {
         let (project, track) = test_project();
         let bytes =
-            track_to_smf(&project, &track, &ExportOptions { reset_block: false }).unwrap();
+            track_to_smf(&project, &track, &ExportOptions { reset_block: false, song_end_ticks: 0 }).unwrap();
         let smf = Smf::parse(&bytes).unwrap();
         let events = abs_events(&smf);
         let at_zero: Vec<_> = events.iter().filter(|(t, _, _)| *t == 0).collect();
-        // only the preselect CC47 remains at tick 0
-        assert_eq!(at_zero.len(), 1);
+        // the preselect CC47 and the curve's first value on CC7 — no reset CC35
+        assert_eq!(at_zero.len(), 2);
+        assert!(!at_zero.iter().any(|(_, _, m)| matches!(
+            m, MidiMessage::Controller { controller, .. } if controller.as_int() == 35
+        )));
+    }
+
+    #[test]
+    fn tick_zero_order_is_reset_block_then_events_then_automation() {
+        let (project, track) = test_project();
+        let bytes = track_to_smf(&project, &track, &ExportOptions::default()).unwrap();
+        let smf = Smf::parse(&bytes).unwrap();
+        let controllers: Vec<u8> = abs_events(&smf)
+            .iter()
+            .filter(|(t, _, _)| *t == 0)
+            .filter_map(|(_, _, m)| match m {
+                MidiMessage::Controller { controller, .. } => Some(controller.as_int()),
+                _ => None,
+            })
+            .collect();
+        // 35 = Hold disengage (reset block), 47 = preselect (event), 7 = curve
+        assert_eq!(controllers, vec![35, 47, 7]);
     }
 
     #[test]
@@ -567,30 +730,19 @@ mod tests {
         // Same 0->127 ramp, exported at a fine vs. coarse resolution: the
         // coarse one must emit noticeably fewer CC steps.
         fn ramp_count(resolution_ms: u32) -> usize {
-            let track = MidiTrack {
-                name: "K".into(),
-                definition_id: "kemper-profiler-stage".into(),
-                midi_channel: 1,
-                latency_ms: 0,
-                mute: false,
-                solo: false,
-                events: vec![Event::Automation {
-                    command_id: "volume-pedal".into(),
-                    tick: 0,
-                    length: 1920,
-                    breakpoints: vec![(0, 0), (1920, 127)],
-                    resolution_ms,
-                    lane: 0,
-                }],
-            };
+            let track = curve_track(
+                "kemper-profiler-stage",
+                vec![curve("volume-pedal", resolution_ms, vec![bp(0, 0), bp(1920, 127)])],
+            );
             let project = Project {
+                format_version: FORMAT_VERSION,
                 name: "R".into(),
                 bpm: 120.0,
                 time_signature: (4, 4),
                 tracks: vec![Track::Midi(track.clone())],
             };
             let bytes =
-                track_to_smf(&project, &track, &ExportOptions { reset_block: false }).unwrap();
+                track_to_smf(&project, &track, &ExportOptions { reset_block: false, song_end_ticks: 0 }).unwrap();
             let smf = Smf::parse(&bytes).unwrap();
             abs_events(&smf)
                 .iter()
@@ -603,6 +755,214 @@ mod tests {
         let coarse = ramp_count(50); // ~96 ticks/step, aggressively thinned
         assert!(coarse < fine, "coarse {coarse} should be sparser than fine {fine}");
         assert!(coarse < 30, "coarse resolution should thin hard, got {coarse}");
+    }
+
+    /// Kemper CC7 (volume pedal) — continuous, full 0..127 range.
+    fn render_kemper_curve(c: AutomationCurve) -> Vec<(u64, u8)> {
+        let def = definition::find("kemper-profiler-stage").unwrap();
+        let track = curve_track("kemper-profiler-stage", vec![c]);
+        let out =
+            resolve_track(&track, &def, 120.0, 0, &ExportOptions { reset_block: false, song_end_ticks: 0 }).unwrap();
+        cc_values(&out, 7)
+    }
+
+    #[test]
+    fn first_value_is_written_at_the_song_start() {
+        // One point deep into the song: the knob is parked on its value from tick 0.
+        let vals = render_kemper_curve(curve("volume-pedal", 10, vec![bp(19_200, 80)]));
+        assert_eq!(vals, vec![(0, 80)]);
+    }
+
+    #[test]
+    fn nothing_is_emitted_after_the_last_breakpoint() {
+        let vals = render_kemper_curve(curve("volume-pedal", 10, vec![bp(0, 0), bp(960, 64)]));
+        assert_eq!(vals.last().unwrap(), &(960, 64));
+        assert!(!vals.iter().any(|(t, _)| *t > 960));
+    }
+
+    #[test]
+    fn hold_segment_emits_one_step_at_the_next_point() {
+        let vals = render_kemper_curve(curve(
+            "volume-pedal",
+            10,
+            vec![bp(0, 20), shaped(960, 100, Shape::Hold, 0.0)],
+        ));
+        assert_eq!(vals, vec![(0, 20), (960, 100)], "a hold jumps, it does not ramp");
+    }
+
+    #[test]
+    fn curve_segment_bows_away_from_the_straight_line() {
+        let bowed = render_kemper_curve(curve(
+            "volume-pedal",
+            5,
+            vec![bp(0, 0), shaped(960, 100, Shape::Curve, 1.0)],
+        ));
+        let straight = render_kemper_curve(curve("volume-pedal", 5, vec![bp(0, 0), bp(960, 100)]));
+        let at = |vals: &[(u64, u8)], tick: u64| {
+            vals.iter().filter(|(t, _)| *t <= tick).last().unwrap().1
+        };
+        // tension 1.0 → p = 4: halfway through, 0.5^4 * 100 ≈ 6 against a linear 50
+        assert!(at(&bowed, 480) <= 10, "got {}", at(&bowed, 480));
+        assert!((45..=55).contains(&at(&straight, 480)), "got {}", at(&straight, 480));
+        // both still arrive at the same place
+        assert_eq!(bowed.last().unwrap().1, 100);
+        assert_eq!(straight.last().unwrap().1, 100);
+    }
+
+    #[test]
+    fn resend_repeats_a_constant_value_across_the_song() {
+        // "Park the pedal at 80" plus re-send every 500 ms: one message at the song
+        // start, then a duplicate every 500 ms so a dropped CC cannot strand the device.
+        let mut c = curve("volume-pedal", 10, vec![bp(0, 80)]);
+        c.resend_ms = 500; // @120 BPM = 960 ticks
+        let def = definition::find("kemper-profiler-stage").unwrap();
+        let track = curve_track("kemper-profiler-stage", vec![c]);
+        let out = resolve_track(
+            &track,
+            &def,
+            120.0,
+            3840, // one 4/4 bar of song
+            &ExportOptions { reset_block: false, song_end_ticks: 3840 },
+        )
+        .unwrap();
+        let vals = cc_values(&out, 7);
+        assert_eq!(vals, vec![(0, 80), (960, 80), (1920, 80), (2880, 80)]);
+    }
+
+    #[test]
+    fn resend_fills_the_gaps_of_a_moving_curve_without_changing_it() {
+        let mut c = curve("volume-pedal", 10, vec![bp(0, 0), bp(240, 10), bp(3840, 10)]);
+        c.resend_ms = 500;
+        let def = definition::find("kemper-profiler-stage").unwrap();
+        let track = curve_track("kemper-profiler-stage", vec![c.clone()]);
+        let plain = {
+            let mut c2 = c.clone();
+            c2.resend_ms = 0;
+            resolve_track(
+                &curve_track("kemper-profiler-stage", vec![c2]),
+                &def,
+                120.0,
+                3840,
+                &ExportOptions { reset_block: false, song_end_ticks: 3840 },
+            )
+            .unwrap()
+        };
+        let out = resolve_track(
+            &track,
+            &def,
+            120.0,
+            3840,
+            &ExportOptions { reset_block: false, song_end_ticks: 3840 },
+        )
+        .unwrap();
+        let with = cc_values(&out, 7);
+        let without = cc_values(&plain, 7);
+        assert!(with.len() > without.len(), "re-sends must add messages");
+        // every original message survives, and nothing new introduces a new value
+        for m in &without {
+            assert!(with.contains(m), "lost {m:?}");
+        }
+        let long_gap = with.windows(2).any(|w| w[1].0 - w[0].0 > 960);
+        assert!(!long_gap, "no gap may exceed the re-send interval: {with:?}");
+    }
+
+    #[test]
+    fn a_target_can_declare_its_own_messages() {
+        // QLC+ selects songs with a Program Change, not a CC — and only jumps.
+        let def = definition::find("qlcplus-horizont-hilo").unwrap();
+        let track = curve_track(
+            "qlcplus-horizont-hilo",
+            vec![curve("select-song", 10, vec![bp(0, 0), bp(1920, 4)])],
+        );
+        let out = resolve_track(
+            &track,
+            &def,
+            120.0,
+            0,
+            &ExportOptions { reset_block: false, song_end_ticks: 0 },
+        )
+        .unwrap();
+        let programs: Vec<(u64, u8)> = out
+            .iter()
+            .filter_map(|e| match e.message {
+                MidiMessage::ProgramChange { program } => Some((e.tick, program.as_int())),
+                _ => None,
+            })
+            .collect();
+        // song 1 from the start, song 5 from bar 2 — and nothing in between
+        assert_eq!(programs, vec![(0, 0), (1920, 4)]);
+        assert!(
+            !out.iter().any(|e| matches!(e.message, MidiMessage::Controller { .. })),
+            "a Program Change target must not emit CCs"
+        );
+    }
+
+    #[test]
+    fn a_definition_can_restrict_the_curve_type() {
+        let def = definition::find("qlcplus-horizont-hilo").unwrap();
+        let Command::Automation(cmd) = find_command(&def, "select-song").unwrap() else {
+            panic!("select-song should be an Automation")
+        };
+        assert_eq!(cmd.target.allowed_shapes(), vec![crate::project::Shape::Hold]);
+        assert_eq!(cmd.target.forced_shape(), Some(crate::project::Shape::Hold));
+
+        // A stored Linear is ignored: the export still jumps.
+        let track = curve_track(
+            "qlcplus-horizont-hilo",
+            vec![curve(
+                "select-song",
+                10,
+                vec![shaped(0, 0, Shape::Linear, 0.0), shaped(960, 10, Shape::Linear, 0.0)],
+            )],
+        );
+        let out = resolve_track(
+            &track,
+            &def,
+            120.0,
+            0,
+            &ExportOptions { reset_block: false, song_end_ticks: 0 },
+        )
+        .unwrap();
+        let programs: Vec<u8> = out
+            .iter()
+            .filter_map(|e| match e.message {
+                MidiMessage::ProgramChange { program } => Some(program.as_int()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(programs, vec![0, 10], "no intermediate songs may be selected");
+    }
+
+    #[test]
+    fn disabled_or_empty_curves_emit_nothing() {
+        let mut off = curve("volume-pedal", 10, vec![bp(0, 0), bp(960, 127)]);
+        off.enabled = false;
+        assert!(render_kemper_curve(off).is_empty(), "a disabled curve is skipped");
+        assert!(
+            render_kemper_curve(curve("volume-pedal", 10, vec![])).is_empty(),
+            "a curve with no points sends nothing"
+        );
+    }
+
+    #[test]
+    fn curve_values_are_clamped_to_the_target_range() {
+        let xml = r#"<DeviceDefinition id="r" version="1" xmlns="https://rigpilot.app/schemas/device-definition/1">
+          <Meta><Manufacturer>M</Manufacturer><Model>D</Model></Meta>
+          <Commands>
+            <Automation id="narrow" name="Narrow"><Target controller="9" min="10" max="100"/></Automation>
+          </Commands>
+        </DeviceDefinition>"#;
+        let def = definition::parse(xml).unwrap();
+        let track = curve_track("r", vec![curve("narrow", 5, vec![bp(0, 0), bp(960, 127)])]);
+        let out =
+            resolve_track(&track, &def, 120.0, 0, &ExportOptions { reset_block: false, song_end_ticks: 0 }).unwrap();
+        let vals = cc_values(&out, 9);
+        assert!(
+            vals.iter().all(|(_, v)| (10..=100).contains(v)),
+            "values must stay inside the declared range, got {vals:?}"
+        );
+        assert_eq!(vals.first().unwrap().1, 10);
+        assert_eq!(vals.last().unwrap().1, 100);
     }
 
     #[test]
@@ -651,10 +1011,10 @@ mod tests {
         definition::parse(xml).unwrap()
     }
 
-    fn cc_values(out: &[Emitted]) -> Vec<(u64, u8)> {
+    fn cc_values(out: &[Emitted], controller: u8) -> Vec<(u64, u8)> {
         out.iter()
             .filter_map(|e| match e.message {
-                MidiMessage::Controller { controller, value } if controller.as_int() == 11 => {
+                MidiMessage::Controller { controller: c, value } if c.as_int() == controller => {
                     Some((e.tick, value.as_int()))
                 }
                 _ => None,
@@ -662,29 +1022,18 @@ mod tests {
             .collect()
     }
 
+    fn render_stepped(breakpoints: Vec<Breakpoint>) -> Vec<(u64, u8)> {
+        let def = stepped_def();
+        let track = curve_track("x", vec![curve("wah-toggle", 10, breakpoints)]);
+        let out = resolve_track(&track, &def, 120.0, 0, &ExportOptions { reset_block: false, song_end_ticks: 0 }).unwrap();
+        cc_values(&out, 11)
+    }
+
     #[test]
     fn stepped_automation_snaps_and_holds() {
-        let def = stepped_def();
-        let track = MidiTrack {
-            name: "t".into(),
-            definition_id: "x".into(),
-            midi_channel: 1,
-            latency_ms: 0,
-            mute: false,
-            solo: false,
-            // 0->0, 64->127, 70->127, 127->127 after snapping; sample-and-hold collapses
-            // the trailing repeats. No in-between value (64/70) is ever emitted.
-            events: vec![Event::Automation {
-                command_id: "wah-toggle".into(),
-                tick: 0,
-                length: 1000,
-                breakpoints: vec![(0, 0), (100, 64), (200, 70), (300, 127)],
-                resolution_ms: 10,
-                lane: 0,
-            }],
-        };
-        let out = resolve_track(&track, &def, 120.0, &ExportOptions { reset_block: false }).unwrap();
-        let vals = cc_values(&out);
+        // 0->0, 64->127, 70->127, 127->127 after snapping; sample-and-hold collapses
+        // the trailing repeats. No in-between value (64/70) is ever emitted.
+        let vals = render_stepped(vec![bp(0, 0), bp(100, 64), bp(200, 70), bp(300, 127)]);
         assert_eq!(vals, vec![(0, 0), (100, 127)]);
         assert!(
             vals.iter().all(|(_, v)| *v == 0 || *v == 127),
@@ -694,25 +1043,20 @@ mod tests {
 
     #[test]
     fn stepped_automation_snaps_below_and_above_midpoint() {
-        let def = stepped_def();
-        let track = MidiTrack {
-            name: "t".into(),
-            definition_id: "x".into(),
-            midi_channel: 1,
-            latency_ms: 0,
-            mute: false,
-            solo: false,
-            // 63 -> 0 (nearer 0), 64 -> 127 (nearer 127)
-            events: vec![Event::Automation {
-                command_id: "wah-toggle".into(),
-                tick: 0,
-                length: 1000,
-                breakpoints: vec![(0, 63), (100, 64)],
-                resolution_ms: 10,
-                lane: 0,
-            }],
-        };
-        let out = resolve_track(&track, &def, 120.0, &ExportOptions { reset_block: false }).unwrap();
-        assert_eq!(cc_values(&out), vec![(0, 0), (100, 127)]);
+        // 63 -> 0 (nearer 0), 64 -> 127 (nearer 127)
+        assert_eq!(
+            render_stepped(vec![bp(0, 63), bp(100, 64)]),
+            vec![(0, 0), (100, 127)]
+        );
+    }
+
+    #[test]
+    fn stepped_automation_ignores_a_stored_linear_shape() {
+        // A discrete target never interpolates, whatever the segment says.
+        let vals = render_stepped(vec![
+            shaped(0, 0, Shape::Linear, 0.0),
+            shaped(1000, 127, Shape::Curve, 0.8),
+        ]);
+        assert_eq!(vals, vec![(0, 0), (1000, 127)]);
     }
 }

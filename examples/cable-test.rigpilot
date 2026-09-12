@@ -1,4 +1,5 @@
 {
+  "formatVersion": 2,
   "name": "Cable Test",
   "bpm": 120,
   "timeSignature": [4, 4],
@@ -16,9 +17,21 @@
         { "kind": "one-shot", "commandId": "preselect-performance", "tick": 7680, "params": { "performance": 1 }, "lane": 0 },
         { "kind": "one-shot", "commandId": "load-slot-2", "tick": 7690, "params": {}, "lane": 0 },
         { "kind": "one-shot", "commandId": "stomp-a", "tick": 15360, "params": { "state": 1 }, "lane": 1 },
-        { "kind": "one-shot", "commandId": "stomp-a", "tick": 23040, "params": { "state": 0 }, "lane": 1 },
-        { "kind": "automation", "commandId": "volume-pedal", "tick": 23040, "length": 3840, "breakpoints": [[0, 127], [3840, 0]], "lane": 2 }
-      ]
+        { "kind": "one-shot", "commandId": "stomp-a", "tick": 23040, "params": { "state": 0 }, "lane": 1 }
+      ],
+      "automation": [
+        {
+          "commandId": "volume-pedal",
+          "enabled": true,
+          "resolutionMs": 10,
+          "resendMs": 0,
+          "breakpoints": [
+            { "tick": 23040, "value": 127, "shape": "linear", "tension": 0 },
+            { "tick": 26880, "value": 0, "shape": "linear", "tension": 0 }
+          ]
+        }
+      ],
+      "automationView": { "command": "volume-pedal", "height": 96 }
     }
   ]
 }

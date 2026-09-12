@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- QLC+ (Horizont HILO lighting show) - RigPilot Device Definition
 
-     RigPilot drives a QLC+ show over MIDI rather than a physical device. QLC+'s
-     MIDI input plugin only reacts to Note On; every command here still emits a
-     matching Note Off (velocity 0) purely for MIDI hygiene - QLC+ ignores it.
+     RigPilot drives a QLC+ show over MIDI rather than a physical device.
 
-     Because a single Note On can only *toggle* a QLC+ virtual-console widget,
-     blinders and scene toggles are state-dependent (deterministic="false"):
-     the first event turns the function on, the next turns it off. Turning a
-     blinder on and off again therefore takes two events.
+     Scene toggles are wired to Toggle-mode virtual-console buttons: a single
+     Note On flips the function on, the next flips it off. They are therefore
+     state-dependent (deterministic="false") and emit a Note Off (velocity 0)
+     only for MIDI hygiene - QLC+ ignores it for a toggle button.
+
+     Blinders are Flash-mode buttons: they light only while held. They are
+     modelled as Hold commands - the Note On (Engage) flashes them on and the
+     Note Off (Disengage) releases them, so QLC+ *does* act on both here.
 
      Note numbering: C-1 = MIDI note 0 (so middle C = C4 = 60).
        Octave -1 (0-11)  : transport / global (Tap Tempo, Blackout)
@@ -20,18 +22,148 @@
     <Manufacturer>QLC+</Manufacturer>
     <Model>Horizont HILO</Model>
     <Author>Flemming Busman</Author>
-    <Source>QLC+ MIDI input plugin (Note On only) - project show mapping</Source>
-    <Description>Controls a QLC+ lighting show. Set the QLC+ MIDI input profile to the MIDI channel configured in RigPilot's Device Settings. QLC+ reacts only to Note On; Note Offs are emitted for consistency but ignored. Note numbering uses C-1 = MIDI note 0 (middle C = C4 = 60). Blinders and scene toggles are state-dependent toggles: one event turns them on, the next turns them off.</Description>
+    <Source>QLC+ MIDI input plugin - project show mapping</Source>
+    <Description>Controls a QLC+ lighting show. Set the QLC+ MIDI input profile to the MIDI channel configured in RigPilot's Device Settings. Note numbering uses C-1 = MIDI note 0 (middle C = C4 = 60). Select Song sends a Program Change; pick the song by its number (the label list is 1-based). Scene toggles are state-dependent Toggle buttons (one event on, the next off). Blinders are Flash buttons modelled as Hold commands: they light only while held. Blinder Fade-Time (CC5) is a 0-127 value curve mapped to 0 ms - 5000 ms on the QLC+ side.</Description>
   </Meta>
 
   <Commands>
 
     <!-- ============ Songs ============ -->
 
-    <!-- Program Change selects the QLC+ song/show by 0-based index. -->
+    <!-- Program Change selects the QLC+ song/show. QLC+ is 0-based (PC 0 = Song 1),
+         but the labels are 1-based so the user just picks the song number. -->
     <OneShot id="select-song" name="Select Song" short="Song" group="Songs"
-             description="Selects the QLC+ song by index via Program Change (0-based: 0 = Song 1).">
-      <Param id="song" name="Song #" min="0" max="127" default="0"/>
+             description="Selects the QLC+ song via Program Change. Pick the song by its number (label 1 = Song 1 = PC 0).">
+      <Param id="song" name="Song #" min="0" max="127" default="0">
+        <Label value="0">1</Label>
+        <Label value="1">2</Label>
+        <Label value="2">3</Label>
+        <Label value="3">4</Label>
+        <Label value="4">5</Label>
+        <Label value="5">6</Label>
+        <Label value="6">7</Label>
+        <Label value="7">8</Label>
+        <Label value="8">9</Label>
+        <Label value="9">10</Label>
+        <Label value="10">11</Label>
+        <Label value="11">12</Label>
+        <Label value="12">13</Label>
+        <Label value="13">14</Label>
+        <Label value="14">15</Label>
+        <Label value="15">16</Label>
+        <Label value="16">17</Label>
+        <Label value="17">18</Label>
+        <Label value="18">19</Label>
+        <Label value="19">20</Label>
+        <Label value="20">21</Label>
+        <Label value="21">22</Label>
+        <Label value="22">23</Label>
+        <Label value="23">24</Label>
+        <Label value="24">25</Label>
+        <Label value="25">26</Label>
+        <Label value="26">27</Label>
+        <Label value="27">28</Label>
+        <Label value="28">29</Label>
+        <Label value="29">30</Label>
+        <Label value="30">31</Label>
+        <Label value="31">32</Label>
+        <Label value="32">33</Label>
+        <Label value="33">34</Label>
+        <Label value="34">35</Label>
+        <Label value="35">36</Label>
+        <Label value="36">37</Label>
+        <Label value="37">38</Label>
+        <Label value="38">39</Label>
+        <Label value="39">40</Label>
+        <Label value="40">41</Label>
+        <Label value="41">42</Label>
+        <Label value="42">43</Label>
+        <Label value="43">44</Label>
+        <Label value="44">45</Label>
+        <Label value="45">46</Label>
+        <Label value="46">47</Label>
+        <Label value="47">48</Label>
+        <Label value="48">49</Label>
+        <Label value="49">50</Label>
+        <Label value="50">51</Label>
+        <Label value="51">52</Label>
+        <Label value="52">53</Label>
+        <Label value="53">54</Label>
+        <Label value="54">55</Label>
+        <Label value="55">56</Label>
+        <Label value="56">57</Label>
+        <Label value="57">58</Label>
+        <Label value="58">59</Label>
+        <Label value="59">60</Label>
+        <Label value="60">61</Label>
+        <Label value="61">62</Label>
+        <Label value="62">63</Label>
+        <Label value="63">64</Label>
+        <Label value="64">65</Label>
+        <Label value="65">66</Label>
+        <Label value="66">67</Label>
+        <Label value="67">68</Label>
+        <Label value="68">69</Label>
+        <Label value="69">70</Label>
+        <Label value="70">71</Label>
+        <Label value="71">72</Label>
+        <Label value="72">73</Label>
+        <Label value="73">74</Label>
+        <Label value="74">75</Label>
+        <Label value="75">76</Label>
+        <Label value="76">77</Label>
+        <Label value="77">78</Label>
+        <Label value="78">79</Label>
+        <Label value="79">80</Label>
+        <Label value="80">81</Label>
+        <Label value="81">82</Label>
+        <Label value="82">83</Label>
+        <Label value="83">84</Label>
+        <Label value="84">85</Label>
+        <Label value="85">86</Label>
+        <Label value="86">87</Label>
+        <Label value="87">88</Label>
+        <Label value="88">89</Label>
+        <Label value="89">90</Label>
+        <Label value="90">91</Label>
+        <Label value="91">92</Label>
+        <Label value="92">93</Label>
+        <Label value="93">94</Label>
+        <Label value="94">95</Label>
+        <Label value="95">96</Label>
+        <Label value="96">97</Label>
+        <Label value="97">98</Label>
+        <Label value="98">99</Label>
+        <Label value="99">100</Label>
+        <Label value="100">101</Label>
+        <Label value="101">102</Label>
+        <Label value="102">103</Label>
+        <Label value="103">104</Label>
+        <Label value="104">105</Label>
+        <Label value="105">106</Label>
+        <Label value="106">107</Label>
+        <Label value="107">108</Label>
+        <Label value="108">109</Label>
+        <Label value="109">110</Label>
+        <Label value="110">111</Label>
+        <Label value="111">112</Label>
+        <Label value="112">113</Label>
+        <Label value="113">114</Label>
+        <Label value="114">115</Label>
+        <Label value="115">116</Label>
+        <Label value="116">117</Label>
+        <Label value="117">118</Label>
+        <Label value="118">119</Label>
+        <Label value="119">120</Label>
+        <Label value="120">121</Label>
+        <Label value="121">122</Label>
+        <Label value="122">123</Label>
+        <Label value="123">124</Label>
+        <Label value="124">125</Label>
+        <Label value="125">126</Label>
+        <Label value="126">127</Label>
+        <Label value="127">128</Label>
+      </Param>
       <ProgramChange program="$song"/>
     </OneShot>
 
@@ -51,73 +183,74 @@
       <NoteOff note="1" velocity="0"/>
     </OneShot>
 
-    <!-- ============ Blinders (octave 0, toggles) ============ -->
+    <!-- ============ Blinders (octave 0, Flash-mode Holds) ============ -->
 
-    <OneShot id="blinder-all" name="Blinder All" short="Blind All" group="Blinders" deterministic="false"
-             description="Toggles all blinders (C0). State-dependent: one event on, next event off.">
-      <NoteOn note="12"/>
-      <NoteOff note="12" velocity="0"/>
-    </OneShot>
-    <OneShot id="blinder-group-1" name="Blinder Group 1" short="Blind 1" group="Blinders" deterministic="false"
-             description="Toggles blinder group 1 (C#0). State-dependent.">
-      <NoteOn note="13"/>
-      <NoteOff note="13" velocity="0"/>
-    </OneShot>
-    <OneShot id="blinder-group-2" name="Blinder Group 2" short="Blind 2" group="Blinders" deterministic="false"
-             description="Toggles blinder group 2 (D0). State-dependent.">
-      <NoteOn note="14"/>
-      <NoteOff note="14" velocity="0"/>
-    </OneShot>
-    <OneShot id="blinder-group-3" name="Blinder Group 3" short="Blind 3" group="Blinders" deterministic="false"
-             description="Toggles blinder group 3 (D#0). State-dependent.">
-      <NoteOn note="15"/>
-      <NoteOff note="15" velocity="0"/>
-    </OneShot>
-    <OneShot id="blinder-group-4" name="Blinder Group 4" short="Blind 4" group="Blinders" deterministic="false"
-             description="Toggles blinder group 4 (E0). State-dependent.">
-      <NoteOn note="16"/>
-      <NoteOff note="16" velocity="0"/>
-    </OneShot>
-    <OneShot id="blinder-group-5" name="Blinder Group 5" short="Blind 5" group="Blinders" deterministic="false"
-             description="Toggles blinder group 5 (F0). State-dependent.">
-      <NoteOn note="17"/>
-      <NoteOff note="17" velocity="0"/>
-    </OneShot>
-    <OneShot id="blinder-group-6" name="Blinder Group 6" short="Blind 6" group="Blinders" deterministic="false"
-             description="Toggles blinder group 6 (F#0). State-dependent.">
-      <NoteOn note="18"/>
-      <NoteOff note="18" velocity="0"/>
-    </OneShot>
-    <OneShot id="blinder-group-7" name="Blinder Group 7" short="Blind 7" group="Blinders" deterministic="false"
-             description="Toggles blinder group 7 (G0). State-dependent.">
-      <NoteOn note="19"/>
-      <NoteOff note="19" velocity="0"/>
-    </OneShot>
-    <OneShot id="blinder-group-8" name="Blinder Group 8" short="Blind 8" group="Blinders" deterministic="false"
-             description="Toggles blinder group 8 (G#0). State-dependent.">
-      <NoteOn note="20"/>
-      <NoteOff note="20" velocity="0"/>
-    </OneShot>
-    <OneShot id="blinder-group-9" name="Blinder Group 9" short="Blind 9" group="Blinders" deterministic="false"
-             description="Toggles blinder group 9 (A0). State-dependent.">
-      <NoteOn note="21"/>
-      <NoteOff note="21" velocity="0"/>
-    </OneShot>
-    <OneShot id="blinder-group-10" name="Blinder Group 10" short="Blind 10" group="Blinders" deterministic="false"
-             description="Toggles blinder group 10 (A#0). State-dependent.">
-      <NoteOn note="22"/>
-      <NoteOff note="22" velocity="0"/>
-    </OneShot>
-    <OneShot id="blinder-group-11" name="Blinder Group 11" short="Blind 11" group="Blinders" deterministic="false"
-             description="Toggles blinder group 11 (B0). State-dependent.">
-      <NoteOn note="23"/>
-      <NoteOff note="23" velocity="0"/>
-    </OneShot>
+    <Hold id="blinder-all" name="Blinder All" short="Blind All" group="Blinders"
+             description="Flashes blinder all - lit only while the event is held.">
+      <Engage><NoteOn note="12"/></Engage>
+      <Disengage><NoteOff note="12" velocity="0"/></Disengage>
+    </Hold>
+    <Hold id="blinder-group-1" name="Blinder Group 1" short="Blind 1" group="Blinders"
+             description="Flashes blinder group 1 - lit only while the event is held.">
+      <Engage><NoteOn note="13"/></Engage>
+      <Disengage><NoteOff note="13" velocity="0"/></Disengage>
+    </Hold>
+    <Hold id="blinder-group-2" name="Blinder Group 2" short="Blind 2" group="Blinders"
+             description="Flashes blinder group 2 - lit only while the event is held.">
+      <Engage><NoteOn note="14"/></Engage>
+      <Disengage><NoteOff note="14" velocity="0"/></Disengage>
+    </Hold>
+    <Hold id="blinder-group-3" name="Blinder Group 3" short="Blind 3" group="Blinders"
+             description="Flashes blinder group 3 - lit only while the event is held.">
+      <Engage><NoteOn note="15"/></Engage>
+      <Disengage><NoteOff note="15" velocity="0"/></Disengage>
+    </Hold>
+    <Hold id="blinder-group-4" name="Blinder Group 4" short="Blind 4" group="Blinders"
+             description="Flashes blinder group 4 - lit only while the event is held.">
+      <Engage><NoteOn note="16"/></Engage>
+      <Disengage><NoteOff note="16" velocity="0"/></Disengage>
+    </Hold>
+    <Hold id="blinder-group-5" name="Blinder Group 5" short="Blind 5" group="Blinders"
+             description="Flashes blinder group 5 - lit only while the event is held.">
+      <Engage><NoteOn note="17"/></Engage>
+      <Disengage><NoteOff note="17" velocity="0"/></Disengage>
+    </Hold>
+    <Hold id="blinder-group-6" name="Blinder Group 6" short="Blind 6" group="Blinders"
+             description="Flashes blinder group 6 - lit only while the event is held.">
+      <Engage><NoteOn note="18"/></Engage>
+      <Disengage><NoteOff note="18" velocity="0"/></Disengage>
+    </Hold>
+    <Hold id="blinder-group-7" name="Blinder Group 7" short="Blind 7" group="Blinders"
+             description="Flashes blinder group 7 - lit only while the event is held.">
+      <Engage><NoteOn note="19"/></Engage>
+      <Disengage><NoteOff note="19" velocity="0"/></Disengage>
+    </Hold>
+    <Hold id="blinder-group-8" name="Blinder Group 8" short="Blind 8" group="Blinders"
+             description="Flashes blinder group 8 - lit only while the event is held.">
+      <Engage><NoteOn note="20"/></Engage>
+      <Disengage><NoteOff note="20" velocity="0"/></Disengage>
+    </Hold>
+    <Hold id="blinder-group-9" name="Blinder Group 9" short="Blind 9" group="Blinders"
+             description="Flashes blinder group 9 - lit only while the event is held.">
+      <Engage><NoteOn note="21"/></Engage>
+      <Disengage><NoteOff note="21" velocity="0"/></Disengage>
+    </Hold>
+    <Hold id="blinder-group-10" name="Blinder Group 10" short="Blind 10" group="Blinders"
+             description="Flashes blinder group 10 - lit only while the event is held.">
+      <Engage><NoteOn note="22"/></Engage>
+      <Disengage><NoteOff note="22" velocity="0"/></Disengage>
+    </Hold>
+    <Hold id="blinder-group-11" name="Blinder Group 11" short="Blind 11" group="Blinders"
+             description="Flashes blinder group 11 - lit only while the event is held.">
+      <Engage><NoteOn note="23"/></Engage>
+      <Disengage><NoteOff note="23" velocity="0"/></Disengage>
+    </Hold>
 
-    <!-- Blinder fade time, repurposing CC5 (Portamento Time): 0 = instant, 127 = slowest.
+    <!-- Blinder fade time, repurposing CC5 (Portamento Time), full 0-127 range.
+         The QLC+ show scales this to 0 ms - 5000 ms (0 = instant, 127 = 5000 ms).
          Automation so the fade time can be swept over the song as a value curve. -->
     <Automation id="blinder-fade-time" name="Blinder Fade-Time" short="Fade" group="Blinders"
-             description="Blinder fade time via CC5 (Portamento Time) as a value curve. 0 = instant, 127 = slowest.">
+             description="Blinder fade time via CC5 (Portamento Time) as a 0-127 value curve, scaled to 0 ms - 5000 ms in the QLC+ show (0 = instant, 127 = 5000 ms).">
       <Target controller="5" min="0" max="127"/>
     </Automation>
 

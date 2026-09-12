@@ -4,30 +4,96 @@
     PPQN,
     DEFAULT_AUTOMATION_RESOLUTION_MS,
     barTicks,
+    stepLabel,
+    type BpSelection,
     type DefinitionInfo,
     type EventRef,
     type Project,
+    type Shape,
   } from "./types";
+  import { allowedShapes, clampValue, findCurve, forcedShape, rangeOf } from "./automation";
 
   let {
     project,
     definitions,
     selection,
+    bpSelection,
+    laneSelection,
     selectedTrack,
     oncommit,
     ondeleteevents,
+    ondeletebreakpoints,
+    onlaneaction,
     onopentracksettings,
     onremovetrack,
   }: {
     project: Project;
     definitions: DefinitionInfo[];
     selection: EventRef[];
+    bpSelection: BpSelection | null;
+    laneSelection: number | null;
     selectedTrack: number | null;
     oncommit: () => void;
     ondeleteevents: () => void;
+    ondeletebreakpoints: () => void;
+    onlaneaction: (action: "constant" | "clear" | "toggle", ti: number, commandId: string) => void;
     onopentracksettings: (ti: number) => void;
     onremovetrack: (ti: number) => void;
   } = $props();
+
+  // ---- automation selections ----
+  function commandOf(ti: number, commandId: string) {
+    const t = project.tracks[ti];
+    if (t?.type !== "midi") return null;
+    return (
+      definitions.find((d) => d.id === t.definitionId)?.commands.find((c) => c.id === commandId) ??
+      null
+    );
+  }
+
+  const bpCurve = $derived.by(() => {
+    if (!bpSelection) return null;
+    const t = project.tracks[bpSelection.ti];
+    return t?.type === "midi" ? (findCurve(t, bpSelection.commandId) ?? null) : null;
+  });
+  const bpCmd = $derived(bpSelection ? commandOf(bpSelection.ti, bpSelection.commandId) : null);
+  const bpIndex = $derived(bpSelection?.idx.length === 1 ? bpSelection.idx[0] : null);
+  const point = $derived(bpIndex !== null ? (bpCurve?.breakpoints[bpIndex] ?? null) : null);
+  /** The shape describes the segment arriving at the point, so the first has none. */
+  const isFirstPoint = $derived(bpIndex === 0);
+  const bpSpan = $derived.by(() => {
+    if (!bpSelection || !bpCurve || bpSelection.idx.length < 2) return null;
+    const ticks = bpSelection.idx.map((i) => bpCurve.breakpoints[i]?.tick ?? 0);
+    return { from: Math.min(...ticks), to: Math.max(...ticks) };
+  });
+
+  const laneTrack = $derived(laneSelection !== null ? project.tracks[laneSelection] : null);
+  const laneCmd = $derived.by(() => {
+    if (laneSelection === null || laneTrack?.type !== "midi") return null;
+    const id = laneTrack.automationView.command;
+    return id ? commandOf(laneSelection, id) : null;
+  });
+  const laneCurve = $derived.by(() => {
+    if (laneTrack?.type !== "midi" || !laneCmd) return null;
+    return findCurve(laneTrack, laneCmd.id) ?? null;
+  });
+
+  const posOf = (tick: number) => ({
+    bar: Math.floor(tick / bpb) + 1,
+    beat: (tick % bpb) / PPQN + 1,
+  });
+
+  function setPointTick(bar: number, beat: number) {
+    if (!point || !bpCurve || bpIndex === null) return;
+    const prev = bpCurve.breakpoints[bpIndex - 1];
+    const next = bpCurve.breakpoints[bpIndex + 1];
+    const want = Math.max(0, Math.round((bar - 1) * bpb + (beat - 1) * PPQN));
+    oncommit();
+    point.tick = Math.max(
+      prev ? prev.tick + 1 : 0,
+      Math.min(next ? next.tick - 1 : Number.MAX_SAFE_INTEGER, want),
+    );
+  }
 
   const single = $derived(selection.length === 1 ? selection[0] : null);
   const event = $derived.by(() => {
@@ -58,19 +124,181 @@
   function setLength(beats: number) {
     if (!event || event.kind === "one-shot") return;
     oncommit();
-    const next = Math.max(PPQN / 8, Math.round(beats * PPQN));
-    if (event.kind === "automation" && event.breakpoints && event.length) {
-      const f = next / event.length;
-      for (const bp of event.breakpoints) bp[0] = Math.round(bp[0] * f);
-    }
-    event.length = next;
+    event.length = Math.max(PPQN / 8, Math.round(beats * PPQN));
   }
 </script>
 
 <aside class="inspector panel">
   <div class="head microlabel">Inspector</div>
   <div class="body">
-    {#if event && single && command}
+    {#if point && bpCmd && bpSelection && bpIndex !== null}
+      {@const pos = posOf(point.tick)}
+      <div class="section">
+        <div class="title">{bpCmd.name}</div>
+        <div class="microlabel kind">breakpoint</div>
+      </div>
+      <hr />
+      <div class="grid">
+        <span class="microlabel">Bar</span>
+        <Num min={1} value={pos.bar} onchange={(v) => setPointTick(v, pos.beat)} />
+        <span class="microlabel">Beat</span>
+        <Num min={1} step={0.25} value={pos.beat} onchange={(v) => setPointTick(pos.bar, v)} />
+        <span class="microlabel">Value</span>
+        {#if bpCmd.steps.length > 0}
+          <select
+            value={point.value}
+            onchange={(e) => { oncommit(); point!.value = Number(e.currentTarget.value); }}
+          >
+            {#each bpCmd.steps as st}
+              <option value={st.value}>{st.text}</option>
+            {/each}
+          </select>
+        {:else}
+          <Num
+            min={rangeOf(bpCmd)[0]}
+            max={rangeOf(bpCmd)[1]}
+            value={point.value}
+            onchange={(v) => { oncommit(); point!.value = clampValue(bpCmd, v); }}
+          />
+        {/if}
+        {#if !isFirstPoint && !forcedShape(bpCmd)}
+          <span class="microlabel" title="Shape of the line arriving at this point">Curve type</span>
+          <select
+            value={point.shape}
+            onchange={(e) => {
+              oncommit();
+              point!.shape = e.currentTarget.value as Shape;
+              if (point!.shape !== "curve") point!.tension = 0;
+            }}
+          >
+            {#each allowedShapes(bpCmd) as shape}
+              <option value={shape}>
+                {shape === "linear" ? "Linear" : shape === "curve" ? "Curve" : "Hold"}
+              </option>
+            {/each}
+          </select>
+          {#if point.shape === "curve"}
+            <span class="microlabel" title="Negative bends the other way">Bend</span>
+            <Num
+              min={-1}
+              max={1}
+              step={0.05}
+              value={point.tension}
+              onchange={(v) => { oncommit(); point!.tension = v; }}
+            />
+          {/if}
+        {/if}
+      </div>
+      {#if bpCmd.steps.length > 0}
+        <p class="desc">
+          {bpCmd.name} only understands fixed steps{stepLabel(bpCmd.steps, point.value)
+            ? ` — this point is “${stepLabel(bpCmd.steps, point.value)}”`
+            : ""}, so the curve always jumps instead of ramping.
+        </p>
+      {:else if forcedShape(bpCmd) === "hold"}
+        <p class="desc">{bpCmd.name} can only jump between values, so every segment holds.</p>
+      {/if}
+      <hr />
+      <button class="danger" onclick={ondeletebreakpoints}>Delete point</button>
+    {:else if bpSelection && bpSelection.idx.length > 1 && bpCmd}
+      <div class="section">
+        <div class="title">{bpSelection.idx.length} points selected</div>
+        <div class="microlabel kind">{bpCmd.name}</div>
+        {#if bpSpan}
+          {@const from = posOf(bpSpan.from)}
+          {@const to = posOf(bpSpan.to)}
+          <p class="desc mono">
+            bar {from.bar}.{from.beat.toFixed(2)} → {to.bar}.{to.beat.toFixed(2)}
+          </p>
+        {/if}
+        <p class="desc">Drag up or down to move them together. ↑/↓ nudges by one.</p>
+      </div>
+      <hr />
+      <button class="danger" onclick={ondeletebreakpoints}>
+        Delete {bpSelection.idx.length} points
+      </button>
+    {:else if laneCmd && laneSelection !== null}
+      <div class="section">
+        <div class="title">{laneCmd.name}</div>
+        <div class="microlabel kind">automation lane</div>
+        {#if laneCmd.description}<p class="desc">{laneCmd.description}</p>{/if}
+      </div>
+      <hr />
+      <div class="grid">
+        <span class="microlabel">Curve</span>
+        <button
+          class="lane-toggle"
+          class:on={laneCurve?.enabled ?? true}
+          onclick={() => onlaneaction("toggle", laneSelection!, laneCmd!.id)}
+        >
+          {(laneCurve?.enabled ?? true) ? "On" : "Off — skipped on export"}
+        </button>
+        <span class="microlabel">Points</span>
+        <span class="mono">{laneCurve?.breakpoints.length ?? 0}</span>
+        <span
+          class="microlabel"
+          title="Minimum spacing between exported CC steps for this curve"
+        >Resolution ms</span>
+        <Num
+          min={1}
+          max={1000}
+          value={laneCurve?.resolutionMs ?? DEFAULT_AUTOMATION_RESOLUTION_MS}
+          onchange={(v) => {
+            if (laneTrack?.type !== "midi" || !laneCmd) return;
+            oncommit();
+            const c = findCurve(laneTrack, laneCmd.id);
+            if (c) c.resolutionMs = v;
+          }}
+        />
+      </div>
+      <p class="desc">
+        ≈ {Math.round(1000 / (laneCurve?.resolutionMs ?? DEFAULT_AUTOMATION_RESOLUTION_MS))} CC
+        updates/s · higher ms = fewer messages on a busy MIDI bus.
+      </p>
+      <div class="grid">
+        <span
+          class="microlabel"
+          title="Re-send the standing value this often, even when the curve isn't moving"
+        >Re-send ms</span>
+        <Num
+          min={0}
+          max={10000}
+          step={50}
+          value={laneCurve?.resendMs ?? 0}
+          onchange={(v) => {
+            if (laneTrack?.type !== "midi" || !laneCmd) return;
+            oncommit();
+            const c = findCurve(laneTrack, laneCmd.id);
+            if (c) c.resendMs = v;
+          }}
+        />
+      </div>
+      <p class="desc">
+        {#if (laneCurve?.resendMs ?? 0) > 0}
+          Repeats the current value every {laneCurve!.resendMs} ms so one swallowed message can't
+          leave the device on the wrong value.
+        {:else}
+          0 = off. Set it if a dropped MIDI message would strand this control at the wrong value.
+        {/if}
+      </p>
+      {#if !laneCurve?.breakpoints.length}
+        <p class="desc">
+          No points: this curve sends nothing, so the knob keeps whatever the player set on the
+          device.
+        </p>
+      {/if}
+      <hr />
+      <button onclick={() => onlaneaction("constant", laneSelection!, laneCmd!.id)}>
+        Set to constant…
+      </button>
+      <button
+        class="danger"
+        disabled={!laneCurve?.breakpoints.length}
+        onclick={() => onlaneaction("clear", laneSelection!, laneCmd!.id)}
+      >
+        Clear curve
+      </button>
+    {:else if event && single && command}
       <div class="section">
         <div class="title">{command.name}</div>
         <div class="microlabel kind">{command.commandType}{command.deterministic ? "" : " ⚠ state-dependent"}</div>
@@ -89,29 +317,7 @@
         <span class="microlabel">Lane</span>
         <Num min={0} value={event.lane} onchange={(v) => { oncommit(); event!.lane = v; }} />
       </div>
-      {#if event.kind === "automation" && event.breakpoints}
-        <hr />
-        <div class="microlabel">Breakpoints ({event.breakpoints.length})</div>
-        <div class="bp-list">
-          {#each event.breakpoints as bp, i}
-            <div class="bp-row">
-              <span class="mono bp-t">{(bp[0] / PPQN).toFixed(2)}♩</span>
-              <Num min={0} max={127} value={bp[1]} onchange={(v) => { oncommit(); bp[1] = v; }} />
-              <button class="ghost bp-del" title="Delete breakpoint"
-                disabled={i === 0 || i === event.breakpoints.length - 1}
-                onclick={() => { oncommit(); event!.breakpoints!.splice(i, 1); }}>✕</button>
-            </div>
-          {/each}
-        </div>
-        <p class="desc">Double-click the curve to add a breakpoint, double-click a point to delete it.</p>
-        <hr />
-        <div class="grid">
-          <span class="microlabel" title="Minimum spacing between exported CC steps for this automation curve">Resolution ms</span>
-          <Num min={1} max={1000} value={event.resolutionMs ?? DEFAULT_AUTOMATION_RESOLUTION_MS}
-            onchange={(v) => { oncommit(); event!.resolutionMs = v; }} />
-        </div>
-        <p class="desc">≈ {Math.round(1000 / (event.resolutionMs ?? DEFAULT_AUTOMATION_RESOLUTION_MS))} CC updates/s · higher ms = fewer messages on a busy MIDI bus.</p>
-      {:else if command.params.length > 0 && event.params}
+      {#if command.params.length > 0 && event.params}
         <hr />
         <div class="grid">
           {#each command.params as p}
@@ -240,25 +446,15 @@
     gap: 6px 10px;
     align-items: center;
   }
-  .bp-list {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .bp-row {
-    display: grid;
-    grid-template-columns: 52px 1fr 24px;
-    gap: 6px;
-    align-items: center;
-  }
-  .bp-t {
-    font-size: 11px;
+  .lane-toggle {
+    justify-content: flex-start;
+    height: 24px;
+    font-size: 12px;
     color: var(--fg-dim);
   }
-  .bp-del {
-    height: 22px;
-    padding: 0 4px;
-    justify-content: center;
+  .lane-toggle.on {
+    color: var(--green);
+    border-color: color-mix(in srgb, var(--green) 40%, var(--line));
   }
   .file,
   .device {

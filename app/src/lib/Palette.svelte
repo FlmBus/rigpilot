@@ -9,7 +9,16 @@
 <script lang="ts">
   import { COMMAND_TYPE_COLORS, type CommandInfo, type DefinitionInfo } from "./types";
 
-  let { definition }: { definition: DefinitionInfo | undefined } = $props();
+  let {
+    definition,
+    inUse,
+    onshowautomation,
+  }: {
+    definition: DefinitionInfo | undefined;
+    /** Automation Commands whose curve already has breakpoints on the shown track. */
+    inUse: Set<string>;
+    onshowautomation: (commandId: string) => void;
+  } = $props();
 
   let query = $state("");
   let collapsed = $state<Record<string, boolean>>({});
@@ -57,21 +66,28 @@
           {#if !collapsed[group]}
             <div class="items">
               {#each commands as cmd}
+                {@const auto = cmd.commandType === "automation"}
                 <div
                   class="item"
+                  class:auto
                   role="button"
                   tabindex="0"
-                  draggable="true"
+                  draggable={!auto}
                   ondragstart={(e) => ondragstart(e, cmd)}
                   ondragend={() => (dragPayload.current = null)}
-                  title={(cmd.description ?? "") +
-                    (cmd.deterministic ? "" : "\n⚠ Result depends on the device's current state.")}
+                  onclick={() => auto && onshowautomation(cmd.id)}
+                  onkeydown={(e) => e.key === "Enter" && auto && onshowautomation(cmd.id)}
+                  title={auto
+                    ? `${cmd.description ?? cmd.name}\nClick to show this curve in the track's automation lane.`
+                    : (cmd.description ?? "") +
+                      (cmd.deterministic ? "" : "\n⚠ Result depends on the device's current state.")}
                 >
                   <span
                     class="tdot {cmd.commandType === 'hold' ? 'square' : cmd.commandType === 'automation' ? 'circle' : 'diamond'}"
                     style:background={COMMAND_TYPE_COLORS[cmd.commandType]}
                   ></span>
                   <span class="name">{cmd.name}</span>
+                  {#if auto && inUse.has(cmd.id)}<span class="used" title="This curve has breakpoints">●</span>{/if}
                   {#if !cmd.deterministic}<span class="warn">⚠</span>{/if}
                 </div>
               {/each}
@@ -173,6 +189,18 @@
   .item:active {
     cursor: grabbing;
     background: var(--bg2);
+  }
+  /* Automation has a lane of its own — there is nothing to drag onto the timeline. */
+  .item.auto {
+    cursor: pointer;
+  }
+  .item.auto:active {
+    cursor: pointer;
+  }
+  .used {
+    margin-left: auto;
+    font-size: 8px;
+    color: var(--green);
   }
   .name {
     overflow: hidden;

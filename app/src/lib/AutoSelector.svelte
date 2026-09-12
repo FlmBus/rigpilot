@@ -138,17 +138,16 @@
     width: 100%;
     height: 20px;
     padding: 0 5px;
-    background: #07070a;
+    background: var(--raised);
     border: 1px solid var(--line);
     border-radius: 4px;
-    box-shadow: var(--well-in);
-    color: var(--fg-dim);
+    color: var(--fg-2);
     font-size: 11px;
   }
   .trigger:hover,
   .trigger.open {
     color: var(--fg);
-    border-color: var(--line-strong);
+    border-color: var(--line-2);
   }
   .label {
     flex: 1;
@@ -159,11 +158,11 @@
     white-space: nowrap;
   }
   .none {
-    color: var(--fg-faint);
+    color: var(--fg-3);
   }
   .caret {
     font-size: 8px;
-    color: var(--fg-faint);
+    color: var(--fg-3);
     flex-shrink: 0;
   }
   .badge {
@@ -177,10 +176,10 @@
   .mark {
     flex-shrink: 0;
     font-size: 8px;
-    color: var(--green);
+    color: var(--auto);
   }
   .mark.off {
-    color: var(--fg-faint);
+    color: var(--fg-3);
   }
   .tdot.dim {
     opacity: 0.4;
@@ -216,32 +215,32 @@
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: var(--fg-dim);
+    color: var(--fg-2);
     font-size: 12px;
   }
   .item:hover {
     background: var(--accent);
-    color: #fff;
+    color: var(--accent-fg);
   }
   .item:hover .mark {
-    color: #fff;
+    color: var(--accent-fg);
   }
   .item.sel {
     color: var(--fg);
   }
   .none-item .hint {
-    color: var(--fg-faint);
+    color: var(--fg-3);
     font-size: 9px;
   }
   .none-item:hover .hint {
-    color: rgba(255, 255, 255, 0.75);
+    color: color-mix(in srgb, var(--accent-fg) 75%, transparent);
   }
   .group-label {
     padding: 6px 6px 2px;
-    color: var(--fg-faint);
+    color: var(--fg-3);
   }
   .empty {
     padding: 8px 6px;
-    color: var(--fg-faint);
+    color: var(--fg-3);
   }
 </style>

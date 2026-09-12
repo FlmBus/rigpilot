@@ -398,21 +398,19 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    background: linear-gradient(180deg, #141419, #0e0e12);
-    border-left: 1px solid #000;
-    box-shadow: var(--rim);
+    background: var(--panel);
+    border-left: 1px solid var(--line);
   }
   .head {
     display: flex;
     align-items: center;
     height: 24px;
     padding: 0 12px;
-    border-bottom: 1px solid #000;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid var(--line);
     flex-shrink: 0;
     position: sticky;
     top: 0;
-    background: #141419;
+    background: var(--panel);
     z-index: 1;
   }
   .body {
@@ -430,7 +428,7 @@
     margin-top: 3px;
   }
   .desc {
-    color: var(--fg-dim);
+    color: var(--fg-2);
     font-size: 12px;
     margin: 6px 0 0;
     line-height: 1.45;
@@ -450,16 +448,16 @@
     justify-content: flex-start;
     height: 24px;
     font-size: 12px;
-    color: var(--fg-dim);
+    color: var(--fg-2);
   }
   .lane-toggle.on {
-    color: var(--green);
-    border-color: color-mix(in srgb, var(--green) 40%, var(--line));
+    color: var(--auto);
+    border-color: color-mix(in srgb, var(--auto) 40%, var(--line));
   }
   .file,
   .device {
     font-size: 11px;
-    color: var(--fg-dim);
+    color: var(--fg-2);
     word-break: break-all;
     -webkit-user-select: text;
     user-select: text;

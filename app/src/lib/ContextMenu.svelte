@@ -102,23 +102,24 @@
   }
   button:hover:not(:disabled) {
     background: var(--accent);
-    color: #fff;
+    color: var(--accent-fg);
   }
   button:disabled {
-    color: var(--fg-faint);
+    color: var(--fg-3);
   }
   button.danger:hover:not(:disabled) {
-    background: #c2304a;
+    background: var(--danger);
+    color: var(--fg-on-warm);
   }
   .tick {
     width: 12px;
     flex-shrink: 0;
     text-align: center;
-    color: var(--green);
+    color: var(--accent);
     font-size: 13px;
   }
   button:hover:not(:disabled) .tick {
-    color: #fff;
+    color: var(--accent-fg);
   }
   .label {
     flex: 1;
@@ -128,17 +129,16 @@
   .kbd {
     margin-left: auto;
     padding-left: 12px;
-    color: var(--fg-faint);
+    color: var(--fg-3);
     font-size: 10px;
     font-family: var(--font-mono);
   }
   button:hover:not(:disabled) .kbd {
-    color: rgba(255, 255, 255, 0.8);
+    color: color-mix(in srgb, var(--accent-fg) 80%, transparent);
   }
   hr {
     margin: 4px 6px;
     border: none;
-    border-top: 1px solid #000;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
+    border-top: 1px solid var(--line);
   }
 </style>

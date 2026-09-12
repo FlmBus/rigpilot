@@ -115,19 +115,27 @@ export type AudioTrack = {
 
 export type Track = MidiTrack | AudioTrack;
 
+export type Section = { tick: number; name: string };
+
 export type Project = {
   formatVersion: number;
   name: string;
   bpm: number;
   timeSignature: [number, number];
   tracks: Track[];
+  /** Named regions (Intro, Verse 1, …). Read-only display for now — no editor yet. */
+  sections?: Section[];
 };
 
 // Command Type drives the event color (docs/terminology.md).
+// Mirrors the --hold/--shot/--auto tokens in theme.css — this app ships one
+// identity/theme, so it's simplest to keep these as a manual copy rather than
+// reading CSS custom properties at runtime. If a theme switcher ever ships,
+// read these from getComputedStyle(document.documentElement) instead.
 export const COMMAND_TYPE_COLORS: Record<CommandInfo["commandType"], string> = {
-  "one-shot": "#ffb02e",
-  hold: "#ff2e88",
-  automation: "#2ee08a",
+  "one-shot": "#e0a44a",
+  hold: "#8b85ff",
+  automation: "#3fbfa8",
 };
 
 /** Compact timeline label: short name + short param value labels. */
@@ -159,6 +167,8 @@ export function stepLabel(steps: LabelInfo[], value: number): string | null {
 
 // ---- timeline geometry shared by canvas and the header column ----
 export const RULER_H = 28;
+/** Named-sections strip, directly under the ruler. Always reserved, even with no sections yet. */
+export const SECTIONS_H = 24;
 export const LANE_H = 72;
 export const AUDIO_ROW_H = 72;
 
@@ -204,7 +214,7 @@ export function trackLayout(
   defs: Map<string, DefinitionInfo>,
 ): TrackLayout[] {
   const out: TrackLayout[] = [];
-  let y = RULER_H;
+  let y = RULER_H + SECTIONS_H;
   for (const t of tracks) {
     if (t.type === "audio") {
       out.push({ top: y, height: AUDIO_ROW_H, autoTop: y + AUDIO_ROW_H, autoHeight: 0 });

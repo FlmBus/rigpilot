@@ -7,6 +7,7 @@
     LANE_H,
     PPQN,
     RULER_H,
+    SECTIONS_H,
     barTicks,
     midiLanes,
     secondsPerBeat,
@@ -22,6 +23,7 @@
     type EventRef,
     type Project,
     type RpEvent,
+    type Section,
     type Shape,
     type TrackLayout,
   } from "./types";
@@ -57,6 +59,9 @@
     bpSelection,
     valueClip,
     coloredWaves,
+    sections = [],
+    follow = false,
+    playing = false,
     onseek,
     onzoom,
     onselectionchange,
@@ -81,6 +86,11 @@
     bpSelection: BpSelection | null;
     valueClip: { value: number; space: ValueSpace } | null;
     coloredWaves: boolean;
+    /** Named regions, read-only for now — no add/resize/move yet. */
+    sections?: Section[];
+    /** Keep the playhead in view while playing. */
+    follow?: boolean;
+    playing?: boolean;
     onseek: (seconds: number) => void;
     onzoom: (pxPerSecond: number) => void;
     onselectionchange: (refs: EventRef[]) => void;
@@ -117,12 +127,39 @@
   });
   const widthPx = $derived(Math.ceil(duration * pxPerSecond));
   const heightPx = $derived(
-    (layout.length ? layout[layout.length - 1].top + layout[layout.length - 1].height : RULER_H) +
+    (layout.length ? layout[layout.length - 1].top + layout[layout.length - 1].height : RULER_H + SECTIONS_H) +
       1,
   );
 
+  /** Zoom so the whole song fits the visible width — used by the toolbar's Fit button. */
+  export function fitToSong() {
+    const w = scroller?.clientWidth ?? 800;
+    onzoom(Math.max(4, Math.min(800, w / duration)));
+  }
+
+  // Follow: while playing, keep the playhead from running off the visible edge
+  // rather than re-centering on every frame.
+  $effect(() => {
+    if (!follow || !playing || !scroller) return;
+    const x = playhead * pxPerSecond;
+    const margin = 60;
+    if (x < scroller.scrollLeft + margin || x > scroller.scrollLeft + scroller.clientWidth - margin) {
+      scroller.scrollLeft = Math.max(0, x - scroller.clientWidth * 0.3);
+    }
+  });
+
   const xOf = (tick: number) => tickToSeconds(tick, project.bpm) * pxPerSecond;
   const tickAt = (x: number) => Math.max(0, secondsToTick(x / pxPerSecond, project.bpm));
+
+  /** Each section's rendered span — from its own tick to the next one's, or to the song's end. */
+  const sectionRects = $derived.by(() => {
+    const sorted = [...sections].sort((a, b) => a.tick - b.tick);
+    return sorted.map((s, i) => {
+      const x = xOf(s.tick);
+      const nextX = i + 1 < sorted.length ? xOf(sorted[i + 1].tick) : widthPx;
+      return { name: s.name, x, w: Math.max(1, nextX - x) };
+    });
+  });
   const snap = (tick: number) =>
     snapTicks ? Math.max(0, Math.round(tick / snapTicks) * snapTicks) : tick;
   /** Alt temporarily bypasses Snap, for events and breakpoints alike. */
@@ -486,7 +523,7 @@
     let x = xOf(ev.tick);
     let w: number;
     if (ev.kind === "one-shot") {
-      // diamond centered on the dispatch tick
+      // dot centered on the dispatch tick
       w = 19;
       x -= w / 2;
     } else {
@@ -495,8 +532,6 @@
     const y = tops[ti] + 2 + ev.lane * LANE_H;
     return { x, y, w, h: LANE_H - 3 };
   }
-
-  const CLIP_TITLE_H = 18;
 
   type Hit = { ref: EventRef; zone: "body" | "left" | "right" };
   function hitTest(x: number, y: number): Hit | null {
@@ -590,7 +625,7 @@
   } | null>(null);
 
   // Command type of a palette command, so the drop ghost can mirror the real
-  // event shape (diamond for one-shot, block for hold/automation).
+  // event shape (dot for one-shot, block for hold/automation).
   function commandKind(definitionId: string, commandId: string): CommandInfo["commandType"] {
     const cmd = definitions
       .find((d) => d.id === definitionId)
@@ -611,7 +646,7 @@
     canvas.setPointerCapture(e.pointerId);
     const { x, y } = canvasPos(e);
 
-    if (y < RULER_H) {
+    if (y < RULER_H + SECTIONS_H) {
       drag = { mode: "seek" };
       onseek(tickToSeconds(snap(tickAt(x)), project.bpm));
       return;
@@ -742,7 +777,7 @@
       hoverSeg = null;
       const hit = hitTest(x, y);
       hoverCursor = !hit
-        ? y < RULER_H
+        ? y < RULER_H + SECTIONS_H
           ? "text"
           : "default"
         : hit.zone === "body"
@@ -971,6 +1006,27 @@
   }
 
   // ---------- rendering ----------
+  // Canvas colors can't read CSS custom properties directly, so every repaint
+  // takes one snapshot of the tokens it needs via getComputedStyle.
+  type Tokens = ReturnType<typeof readTokens>;
+  function readTokens() {
+    const s = getComputedStyle(document.documentElement);
+    const v = (n: string) => s.getPropertyValue(n).trim();
+    return {
+      canvas: v("--canvas"),
+      panel: v("--panel"),
+      sunken: v("--sunken"),
+      line: v("--line"),
+      line2: v("--line-2"),
+      gridSoft: v("--grid-soft"),
+      gridBar: v("--grid-bar"),
+      fg: v("--fg"),
+      fg3: v("--fg-3"),
+      wave: v("--wave"),
+      accent: v("--accent"),
+    };
+  }
+
   $effect(() => {
     draw();
   });
@@ -986,24 +1042,25 @@
     }
     const ctx = canvas.getContext("2d")!;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const t = readTokens();
 
-    ctx.fillStyle = "#0b0b0d";
+    ctx.fillStyle = t.canvas;
     ctx.fillRect(0, 0, widthPx, heightPx);
 
     // track row backgrounds + lane separators
-    project.tracks.forEach((t, i) => {
+    project.tracks.forEach((track, i) => {
       const y = tops[i];
       const h = layout[i].height;
-      ctx.fillStyle = i % 2 ? "#101013" : "#121215";
+      ctx.fillStyle = i % 2 ? t.panel : t.canvas;
       ctx.fillRect(0, y, widthPx, h - 1);
-      ctx.strokeStyle = "#2a2a31";
+      ctx.strokeStyle = t.line2;
       ctx.beginPath();
       ctx.moveTo(0, y + h - 0.5);
       ctx.lineTo(widthPx, y + h - 0.5);
       ctx.stroke();
-      if (t.type === "midi") {
-        ctx.strokeStyle = "#1a1a1f";
-        for (let l = 1; l < midiLanes(t); l++) {
+      if (track.type === "midi") {
+        ctx.strokeStyle = t.line;
+        for (let l = 1; l < midiLanes(track); l++) {
           ctx.beginPath();
           ctx.moveTo(0, y + 2 + l * LANE_H - 0.5);
           ctx.lineTo(widthPx, y + 2 + l * LANE_H - 0.5);
@@ -1012,10 +1069,10 @@
       }
     });
 
-    drawAutoLanes(ctx);
-    drawGrid(ctx);
+    drawAutoLanes(ctx, t);
+    drawGrid(ctx, t);
     project.tracks.forEach((track, i) => {
-      if (track.type === "audio") drawWaveform(ctx, i);
+      if (track.type === "audio") drawWaveform(ctx, i, t);
       // MIDI events are rendered as a DOM overlay (see template) — keeps canvas for
       // waveform/grid/playhead while clips get the full CSS design + interactions stay on canvas.
     });
@@ -1029,17 +1086,13 @@
       ctx.strokeStyle = color;
       ctx.setLineDash([4, 3]);
       if (dropGhost.kind === "one-shot") {
-        // diamond marker centered on the dispatch tick, like a real one-shot
+        // a dot centered on the dispatch tick, like a real one-shot
         const cx = x;
         const cy = y + h / 2;
-        const s = 8.5;
+        const r = 6;
         ctx.fillStyle = color + "30";
         ctx.beginPath();
-        ctx.moveTo(cx, cy - s);
-        ctx.lineTo(cx + s, cy);
-        ctx.lineTo(cx, cy + s);
-        ctx.lineTo(cx - s, cy);
-        ctx.closePath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
       } else {
@@ -1055,9 +1108,9 @@
       const y = Math.min(marquee.y0, marquee.y1);
       const w = Math.abs(marquee.x1 - marquee.x0);
       const h = Math.abs(marquee.y1 - marquee.y0);
-      ctx.fillStyle = "rgba(255, 46, 136, 0.08)";
+      ctx.fillStyle = t.accent + "14";
       ctx.fillRect(x, y, w, h);
-      ctx.strokeStyle = "rgba(255, 46, 136, 0.7)";
+      ctx.strokeStyle = t.accent + "b3";
       ctx.strokeRect(x + 0.5, y + 0.5, w, h);
     }
 
@@ -1065,13 +1118,13 @@
   }
 
   /** The Automation Lane reads as a recessed display, not as another event lane. */
-  function drawAutoLanes(ctx: CanvasRenderingContext2D) {
-    project.tracks.forEach((t, ti) => {
+  function drawAutoLanes(ctx: CanvasRenderingContext2D, tok: Tokens) {
+    project.tracks.forEach((track, ti) => {
       const lay = layout[ti];
-      if (t.type !== "midi" || lay.autoHeight === 0) return;
-      ctx.fillStyle = "#08080a";
+      if (track.type !== "midi" || lay.autoHeight === 0) return;
+      ctx.fillStyle = tok.sunken;
       ctx.fillRect(0, lay.autoTop, widthPx, lay.autoHeight - 1);
-      ctx.strokeStyle = "#000";
+      ctx.strokeStyle = tok.line;
       ctx.beginPath();
       ctx.moveTo(0, lay.autoTop + 0.5);
       ctx.lineTo(widthPx, lay.autoTop + 0.5);
@@ -1087,7 +1140,7 @@
         lane.stepped && lane.cmd.steps.length <= 12
           ? lane.cmd.steps.map((st) => st.value)
           : [0.25, 0.5, 0.75].map((f) => min + f * (max - min));
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+      ctx.strokeStyle = tok.line;
       for (const v of guides) {
         const gy = Math.round(lane.top + laneY(lane, v)) + 0.5;
         ctx.beginPath();
@@ -1098,12 +1151,12 @@
     });
   }
 
-  function drawGrid(ctx: CanvasRenderingContext2D) {
+  function drawGrid(ctx: CanvasRenderingContext2D, tok: Tokens) {
     ctx.textBaseline = "top";
     ctx.font = "10px 'IBM Plex Mono'";
-    ctx.fillStyle = "#0e0e11";
+    ctx.fillStyle = tok.canvas;
     ctx.fillRect(0, 0, widthPx, RULER_H);
-    ctx.strokeStyle = "#2a2a31";
+    ctx.strokeStyle = tok.line;
     ctx.beginPath();
     ctx.moveTo(0, RULER_H - 0.5);
     ctx.lineTo(widthPx, RULER_H - 0.5);
@@ -1115,7 +1168,7 @@
       const beatPx = spb * pxPerSecond;
       // sub-beat lines from the snap setting, if visible
       if (snapTicks && (snapTicks / PPQN) * beatPx >= 7) {
-        ctx.strokeStyle = "#17171b";
+        ctx.strokeStyle = tok.gridSoft;
         for (let t = 0; t < secondsToTick(duration, project.bpm); t += snapTicks) {
           const x = xOf(t);
           ctx.beginPath();
@@ -1131,13 +1184,13 @@
         const tick = b * PPQN;
         const isBar = tick % bt === 0;
         const x = xOf(tick);
-        ctx.strokeStyle = isBar ? "#34343d" : "#202026";
+        ctx.strokeStyle = isBar ? tok.gridBar : tok.gridSoft;
         ctx.beginPath();
         ctx.moveTo(x + 0.5, isBar ? 0 : RULER_H);
         ctx.lineTo(x + 0.5, heightPx);
         ctx.stroke();
         if (isBar && (beatPx * beatsPerBar > 34 || (tick / bt) % 4 === 0)) {
-          ctx.fillStyle = "#8a8a96";
+          ctx.fillStyle = tok.fg3;
           ctx.fillText(String(Math.round(tick / bt) + 1), x + 4, 5);
         }
       }
@@ -1145,12 +1198,12 @@
       const step = pxPerSecond > 120 ? 0.5 : pxPerSecond > 30 ? 1 : pxPerSecond > 8 ? 5 : 15;
       for (let s = 0; s <= duration; s += step) {
         const x = s * pxPerSecond;
-        ctx.strokeStyle = "#202026";
+        ctx.strokeStyle = tok.gridSoft;
         ctx.beginPath();
         ctx.moveTo(x + 0.5, 0);
         ctx.lineTo(x + 0.5, heightPx);
         ctx.stroke();
-        ctx.fillStyle = "#8a8a96";
+        ctx.fillStyle = tok.fg3;
         const m = Math.floor(s / 60);
         const sec = (s % 60).toFixed(step < 1 ? 1 : 0).padStart(2, "0");
         ctx.fillText(`${m}:${sec}`, x + 4, 5);
@@ -1176,6 +1229,7 @@
     const hit = waveCache.get(ti);
     if (hit && hit.key === key) return hit.canvas;
 
+    const tok = readTokens();
     const cv = document.createElement("canvas");
     cv.width = w;
     cv.height = h;
@@ -1219,10 +1273,10 @@
           const b = Math.min(255, Math.round(((BAND_COLORS[0][2] * wl + BAND_COLORS[1][2] * wm + BAND_COLORS[2][2] * wh) / tot) * bright));
           c.fillStyle = `rgb(${r},${g},${b})`;
         } else {
-          c.fillStyle = "#3a3a44";
+          c.fillStyle = tok.wave;
         }
       } else {
-        c.fillStyle = "#b9b9c4";
+        c.fillStyle = tok.fg3;
       }
       c.fillRect(x, mid + lo, 1, Math.max(1, hi - lo));
     }
@@ -1230,19 +1284,19 @@
     return cv;
   }
 
-  function drawWaveform(ctx: CanvasRenderingContext2D, ti: number) {
+  function drawWaveform(ctx: CanvasRenderingContext2D, ti: number, tok: Tokens) {
     const track = project.tracks[ti];
     if (track.type !== "audio") return;
     const a = audio[ti];
     const y = tops[ti];
     if (!a) {
-      ctx.fillStyle = "#5d5d68";
+      ctx.fillStyle = tok.fg3;
       ctx.fillText("loading audio…", 8, y + (AUDIO_ROW_H - 1) / 2);
       return;
     }
     const startX = tickToSeconds(track.offsetTicks, project.bpm) * pxPerSecond;
     const endX = startX + a.buffer.duration * pxPerSecond;
-    ctx.fillStyle = "rgba(242, 242, 245, 0.05)";
+    ctx.fillStyle = tok.fg + "0d";
     ctx.fillRect(startX, y, endX - startX, AUDIO_ROW_H - 1);
     ctx.drawImage(waveCanvas(ti, a, track.waveformGain || 1), startX, y);
   }
@@ -1284,25 +1338,14 @@
             {@const cmd = commandsById.get(`${track.definitionId}/${ev.commandId}`)}
             {@const label = cmd ? eventLabel(cmd, ev) : ev.commandId}
             {@const sel = isSelected(ti, ei)}
-            {@const tall = r.h >= 50}
             {#if ev.kind === "one-shot"}
-              <div class="clip oneshot" class:sel class:tall style="left:{r.x}px;top:{r.y}px;width:{r.w}px;height:{r.h}px">
-                {#if tall}<div class="os-stem"></div>{/if}
-                <span class="dia"></span>
-                {#if tall}
-                  {#if label}<div class="os-flag"><span class="tdot diamond" style="background:var(--warn)"></span><span class="ch-name">{label}</span></div>{/if}
-                {:else if label}
-                  <span class="os-label">{label}</span>
-                {/if}
+              <div class="shot" class:sel style="left:{r.x}px;top:{r.y}px;width:{r.w}px;height:{r.h}px">
+                <b></b>
+                {#if label}<span class="shot-label">{label}</span>{/if}
               </div>
             {:else if ev.kind === "hold"}
-              <div class="clip hold" class:sel class:tall style="left:{r.x}px;top:{r.y}px;width:{r.w}px;height:{r.h}px">
-                {#if tall}
-                  <div class="clip-head"><span class="tdot square" style="background:var(--accent)"></span><span class="ch-name">{label}</span></div>
-                {:else}
-                  <span class="clip-label">{label}</span>
-                {/if}
-                {#if sel}<i class="grab l"></i><i class="grab r"></i>{/if}
+              <div class="clip hold" class:sel style="left:{r.x}px;top:{r.y}px;width:{r.w}px;height:{r.h}px">
+                <span class="clip-label">{label}</span>
               </div>
             {/if}
           {/each}
@@ -1368,6 +1411,11 @@
         {/if}
       {/each}
     </div>
+    <div class="sections" aria-hidden="true" style="top:{RULER_H}px;height:{SECTIONS_H}px">
+      {#each sectionRects as s}
+        <div class="sec" style="left:{s.x}px;width:{s.w}px"><span>{s.name}</span></div>
+      {/each}
+    </div>
     <div class="playhead" style="left:{playhead * pxPerSecond}px"></div>
   </div>
 </div>
@@ -1381,7 +1429,7 @@
     overflow: auto;
     flex: 1;
     min-width: 0;
-    background: var(--bg0);
+    background: var(--canvas);
   }
   .surface {
     position: relative;
@@ -1400,12 +1448,41 @@
     height: 100%;
     pointer-events: none;
   }
+  /* Named sections. Read-only for now — no add/resize/move yet. */
+  .sections {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    pointer-events: none;
+  }
+  .sec {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    overflow: hidden;
+    border-left: 1px solid var(--line-2);
+  }
+  .sec span {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .playhead {
     position: absolute;
     top: 0;
     bottom: 0;
     width: 1px;
-    background: #f2f2f5;
+    background: var(--fg);
     pointer-events: none;
     z-index: 5;
   }
@@ -1418,7 +1495,7 @@
     height: 0;
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
-    border-top: 7px solid #f2f2f5;
+    border-top: 7px solid var(--fg);
   }
   .events .defs {
     position: absolute;
@@ -1434,119 +1511,48 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  /* hold = liquid-glass block */
+  /* hold = tinted pill. Flat wash, hairline border, label inside. */
   .clip.hold {
     display: flex;
     align-items: center;
-    padding: 0 7px;
-    border: 1px solid var(--accent);
-    border-radius: 4px;
+    padding: 0 8px;
+    border: 1px solid color-mix(in srgb, var(--hold) 42%, transparent);
+    border-radius: var(--clip-r);
     overflow: hidden;
-    background: linear-gradient(180deg, rgba(255, 46, 136, 0.18), rgba(255, 46, 136, 0.11));
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-    box-shadow: var(--rim), inset 0 -9px 11px -8px rgba(0, 0, 0, 0.4);
+    background: color-mix(in srgb, var(--hold) var(--tint), var(--canvas));
   }
   .clip.hold .clip-label {
-    color: #fff;
+    color: color-mix(in srgb, var(--hold) 75%, var(--fg));
     font-weight: 500;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   }
   .clip.hold.sel {
-    box-shadow: 0 0 0 1px var(--accent), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+    border-color: var(--hold);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--hold) 25%, transparent);
   }
-  /* one-shot = diamond marker + label beside */
-  .clip.oneshot {
+  /* one-shot is an instant, so it reads as a point — not a stem across the lane */
+  .shot {
+    position: absolute;
     display: flex;
     align-items: center;
-    justify-content: center;
     overflow: visible;
   }
-  .clip.oneshot .dia {
-    width: 13px;
-    height: 13px;
+  .shot b {
+    width: 9px;
+    height: 9px;
     flex-shrink: 0;
-    transform: rotate(45deg);
-    background: var(--warn);
-    border: 1px solid #8a5e00;
-    border-radius: 2px;
+    border-radius: 50%;
+    background: var(--shot);
   }
-  .clip.oneshot.sel .dia {
-    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.9);
+  .shot.sel b {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--shot) 35%, transparent);
   }
-  .clip.oneshot .os-label {
+  .shot-label {
     position: absolute;
     left: 100%;
     margin-left: 4px;
     white-space: nowrap;
     font-size: 10px;
-    color: var(--fg-dim);
-  }
-  /* tall clip title bar (groove between title and body) */
-  .clip-head {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    height: 18px;
-    flex-shrink: 0;
-    padding: 0 7px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.5);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
-  }
-  .ch-name {
-    font-size: 10px;
-    font-weight: 600;
-    color: #fff;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .clip.hold.tall {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 0;
-  }
-  .clip.hold.tall .clip-head {
-    background: linear-gradient(180deg, rgba(255, 46, 136, 0.42), rgba(255, 46, 136, 0.28));
-    border-radius: 4px 4px 0 0;
-  }
-  .clip.hold.tall .grab {
-    top: 18px;
-  }
-  /* one-shot tall = vertical stem + diamond + flag */
-  .clip.oneshot.tall {
-    overflow: visible;
-  }
-  .os-stem {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 50%;
-    width: 2px;
-    transform: translateX(-50%);
-    background: linear-gradient(180deg, rgba(255, 176, 46, 0.55), rgba(255, 176, 46, 0.18));
-  }
-  .clip.oneshot.tall .dia {
-    position: relative;
-    z-index: 1;
-  }
-  .os-flag {
-    position: absolute;
-    top: 1px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 2px 7px;
-    white-space: nowrap;
-    background: rgba(22, 22, 26, 0.92);
-    border: 1px solid var(--line-strong);
-    border-radius: 4px;
-    box-shadow: var(--rim);
-  }
-  .os-flag .ch-name {
-    color: var(--fg);
+    color: var(--fg-2);
   }
   /* Automation Lane: a recessed display, not a clip — no glass, no grab handles. */
   .autolane {
@@ -1566,18 +1572,18 @@
     vector-effect: non-scaling-stroke;
   }
   .autolane .line {
-    stroke: var(--green);
+    stroke: var(--auto);
     stroke-width: 1.5;
   }
   /* before the first and after the last point the value is held, not drawn */
   .autolane .held {
-    stroke: var(--green);
+    stroke: var(--auto);
     stroke-width: 1.5;
     stroke-dasharray: 3 4;
     opacity: 0.55;
   }
   .autolane .area {
-    fill: color-mix(in srgb, var(--green) 13%, transparent);
+    fill: color-mix(in srgb, var(--auto) 13%, transparent);
     stroke: none;
   }
   .lane-name {
@@ -1588,14 +1594,14 @@
     align-items: center;
     gap: 5px;
     font-size: 10px;
-    color: var(--fg-faint);
+    color: var(--fg-3);
     pointer-events: none;
   }
   .lane-off {
     padding: 0 3px;
     border-radius: 3px;
-    background: var(--bg3);
-    color: var(--fg-dim);
+    background: var(--sunken);
+    color: var(--fg-2);
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -1608,7 +1614,7 @@
   }
   .autoghost path {
     fill: none;
-    stroke: var(--green);
+    stroke: var(--auto);
     stroke-width: 1;
     opacity: 0.3;
     vector-effect: non-scaling-stroke;
@@ -1619,13 +1625,12 @@
     height: 7px;
     border-radius: 50%;
     transform: translate(-50%, -50%);
-    background: var(--bg0);
-    border: 1.5px solid var(--green);
+    background: var(--canvas);
+    border: 1.5px solid var(--auto);
   }
   .node.sel {
-    background: #fff;
-    border-color: #fff;
-    box-shadow: 0 0 6px -1px var(--green);
+    background: var(--fg);
+    border-color: var(--fg);
   }
   .seg-handle {
     position: absolute;
@@ -1634,7 +1639,7 @@
     border-radius: 50%;
     transform: translate(-50%, -50%);
     background: transparent;
-    border: 1.5px solid var(--green);
+    border: 1.5px solid var(--auto);
     opacity: 0.6;
   }
   .node-label {
@@ -1643,28 +1648,10 @@
     padding: 0 3px;
     font-size: 9px;
     line-height: 1.3;
-    color: var(--green);
-    background: color-mix(in srgb, var(--bg0) 70%, transparent);
-    border-radius: var(--radius-sm);
+    color: var(--auto);
+    background: color-mix(in srgb, var(--canvas) 70%, transparent);
+    border-radius: var(--r-sm);
     pointer-events: none;
     white-space: nowrap;
-  }
-  .grab {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .grab.l { left: 0; }
-  .grab.r { right: 0; }
-  .grab::before {
-    content: "";
-    width: 2px;
-    height: 54%;
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 1px;
   }
 </style>

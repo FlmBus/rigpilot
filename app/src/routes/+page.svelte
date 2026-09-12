@@ -14,6 +14,7 @@
     PPQN,
     PROJECT_FORMAT_VERSION,
     RULER_H,
+    SECTIONS_H,
     barTicks,
     clampLaneHeight,
     secondsPerBeat,
@@ -58,6 +59,12 @@
   let gridMode = $state<"musical" | "time">("musical");
   let pxPerSecond = $state(40);
   let coloredWaves = $state(true);
+  let followPlayhead = $state(false);
+  let timelineRef = $state<Timeline | undefined>();
+
+  function zoomBy(factor: number) {
+    pxPerSecond = Math.max(4, Math.min(800, pxPerSecond * factor));
+  }
 
   // selection — at most one of these is ever set (see the select* helpers)
   let selection = $state<EventRef[]>([]);
@@ -1057,33 +1064,6 @@
     </div>
 
     <div class="tb-right">
-      <div class="snapgroup">
-        <div class="cellgroup flat">
-          <div class="cell snap-main" class:on={snapOn} role="button" tabindex="0" title="Toggle snap"
-            onclick={() => (snapOn = !snapOn)} onkeydown={() => {}}>
-            <span class="microlabel">SNAP {gridMode === "musical" ? `1/${snapDivision}` : `${snapSeconds}s`}</span>
-          </div>
-          <div class="cell snap-caret" class:open={gridMenuOpen} role="button" tabindex="0" title="Snap grid size"
-            onclick={() => (gridMenuOpen = !gridMenuOpen)} onkeydown={() => {}}>▾</div>
-        </div>
-        {#if gridMenuOpen}
-          <div class="grid-menu glass" role="listbox">
-            {#if gridMode === "musical"}
-              {#each [1, 2, 4, 8, 16, 32] as d}
-                <button class:on={snapDivision === d} onclick={() => { snapDivision = d; snapOn = true; gridMenuOpen = false; }}>1/{d}</button>
-              {/each}
-            {:else}
-              {#each [5, 1, 0.5, 0.1] as s}
-                <button class:on={snapSeconds === s} onclick={() => { snapSeconds = s; snapOn = true; gridMenuOpen = false; }}>{s} s</button>
-              {/each}
-            {/if}
-          </div>
-        {/if}
-      </div>
-      <div class="seg small">
-        <button class:active={gridMode === "musical"} onclick={() => (gridMode = "musical")}>Bars</button>
-        <button class:active={gridMode === "time"} onclick={() => (gridMode = "time")}>Time</button>
-      </div>
       <button class="toggle" class:active={coloredWaves} title="Spectral waveform coloring"
         onclick={() => (coloredWaves = !coloredWaves)}>Color</button>
       <span class="vsep"></span>
@@ -1130,9 +1110,49 @@
       />
     {/if}
     <div class="center">
+    <div class="tlbar">
+      <div class="snapgroup">
+        <div class="cellgroup flat">
+          <div class="cell snap-main" class:on={snapOn} role="button" tabindex="0" title="Toggle snap"
+            onclick={() => (snapOn = !snapOn)} onkeydown={() => {}}>
+            <span class="microlabel">SNAP {gridMode === "musical" ? `1/${snapDivision}` : `${snapSeconds}s`}</span>
+          </div>
+          <div class="cell snap-caret" class:open={gridMenuOpen} role="button" tabindex="0" title="Snap grid size"
+            onclick={() => (gridMenuOpen = !gridMenuOpen)} onkeydown={() => {}}>▾</div>
+        </div>
+        {#if gridMenuOpen}
+          <div class="grid-menu glass" role="listbox">
+            {#if gridMode === "musical"}
+              {#each [1, 2, 4, 8, 16, 32] as d}
+                <button class:on={snapDivision === d} onclick={() => { snapDivision = d; snapOn = true; gridMenuOpen = false; }}>1/{d}</button>
+              {/each}
+            {:else}
+              {#each [5, 1, 0.5, 0.1] as s}
+                <button class:on={snapSeconds === s} onclick={() => { snapSeconds = s; snapOn = true; gridMenuOpen = false; }}>{s} s</button>
+              {/each}
+            {/if}
+          </div>
+        {/if}
+      </div>
+      <div class="seg small">
+        <button class:active={gridMode === "musical"} onclick={() => (gridMode = "musical")}>Bars</button>
+        <button class:active={gridMode === "time"} onclick={() => (gridMode = "time")}>Time</button>
+      </div>
+      <span class="vsep"></span>
+      <div class="cellgroup flat zoom">
+        <div class="cell" role="button" tabindex="0" title="Zoom out" onclick={() => zoomBy(1 / 1.2)} onkeydown={() => {}}>−</div>
+        <div class="cell" role="button" tabindex="0" title="Zoom in" onclick={() => zoomBy(1.2)} onkeydown={() => {}}>+</div>
+        <div class="cell wide" role="button" tabindex="0" title="Fit the whole song to view" onclick={() => timelineRef?.fitToSong()} onkeydown={() => {}}>Fit</div>
+      </div>
+      <button class="toggle" class:active={followPlayhead} title="Keep the playhead in view during playback"
+        onclick={() => (followPlayhead = !followPlayhead)}>Follow</button>
+      <button class="ghost" disabled title="Select a section to loop it">Loop</button>
+      <span class="sp"></span>
+    </div>
     <div class="arrangement">
       <div class="headers">
         <div class="ruler-spacer" style:height="{RULER_H}px"></div>
+        <div class="sec-pad" style:height="{SECTIONS_H}px"><span class="microlabel">Sections</span></div>
         {#each project.tracks as track, ti}
           {@const lay = layout[ti]}
           <div
@@ -1260,6 +1280,7 @@
         ></div>
       </div>
       <Timeline
+        bind:this={timelineRef}
         {project}
         {definitions}
         {layout}
@@ -1272,6 +1293,9 @@
         {bpSelection}
         {valueClip}
         {coloredWaves}
+        sections={project.sections ?? []}
+        follow={followPlayhead}
+        playing={isPlaying}
         onseek={seek}
         onzoom={(z) => (pxPerSecond = z)}
         {onselectionchange}
@@ -1429,8 +1453,8 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    background: var(--bg0);
-    border: 1px solid #000;
+    background: var(--canvas);
+    border: 1px solid var(--line);
     border-radius: 10px;
     overflow: hidden;
   }
@@ -1441,9 +1465,8 @@
     gap: 12px;
     height: 50px;
     padding: 0 10px;
-    background: var(--bar-bg);
-    border-bottom: 1px solid #000;
-    box-shadow: var(--rim);
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
     z-index: 5;
   }
   .tb-left { display: flex; align-items: center; gap: 10px; }
@@ -1453,7 +1476,7 @@
   .accent { color: var(--accent); }
   .menu { position: relative; }
   .hamb { width: 30px; justify-content: center; font-size: 14px; }
-  .hamb.active { color: var(--accent); border-color: var(--line); background: var(--bg2); }
+  .hamb.active { color: var(--accent); border-color: transparent; background: var(--accent-soft); }
   .dropdown {
     position: absolute; top: calc(100% + 6px); left: 0; min-width: 180px;
     display: flex; flex-direction: column; padding: 5px; z-index: 60;
@@ -1462,57 +1485,70 @@
     border: none; border-radius: 5px; background: transparent;
     justify-content: flex-start; height: 28px; width: 100%; color: var(--fg);
   }
-  .dropdown button:hover { background: var(--accent); color: #fff; }
-  .dropdown button:hover .kbd { color: rgba(255, 255, 255, 0.8); }
-  .dropdown hr { margin: 5px 6px; border-top: 1px solid #000; box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03); }
-  .kbd { margin-left: auto; color: var(--fg-faint); font-size: 10px; font-family: var(--font-mono); }
+  .dropdown button:hover { background: var(--accent); color: var(--accent-fg); }
+  .dropdown button:hover .kbd { color: color-mix(in srgb, var(--accent-fg) 80%, transparent); }
+  .dropdown hr { margin: 5px 6px; border-top: 1px solid var(--line); }
+  .kbd { margin-left: auto; color: var(--fg-3); font-size: 10px; font-family: var(--font-mono); }
   .song {
     width: 150px; height: 26px; font-size: 12px; background: transparent;
-    border-color: transparent; box-shadow: none; color: var(--fg-dim);
+    border-color: transparent; box-shadow: none; color: var(--fg-2);
   }
-  .song:hover { border-color: var(--line); background: #07070a; box-shadow: var(--well-in); }
-  .song:focus-visible { border-color: var(--accent); background: #07070a; box-shadow: var(--well-in); color: var(--fg); }
+  .song:hover { border-color: var(--line); background: var(--raised); }
+  .song:focus-visible { border-color: var(--accent); background: var(--raised); color: var(--fg); }
   .winbtns { display: flex; gap: 2px; margin-left: 4px; }
   .win { width: 28px; justify-content: center; font-size: 12px; }
-  .win.close:hover { background: #c2304a; color: #fff; border-color: #c2304a; }
+  .win.close:hover { background: var(--danger); color: var(--fg-on-warm); border-color: var(--danger); }
 
   .center { display: flex; flex-direction: column; flex: 1; min-width: 0; }
   .cell.wide { min-width: 50px; font-size: 14px; }
   .cell.wide.on { color: var(--accent); }
-  /* LCD display in the topbar */
+  /* Position/BPM/time-sig readout — no fake LCD frame, just borderless mono type */
   .lcd {
     display: flex; align-items: center; gap: 14px; height: 34px; padding: 0 14px;
-    background: #050507; border: 1px solid #000; border-radius: var(--radius-sm); box-shadow: var(--well-in);
   }
   .lc { display: flex; flex-direction: column; line-height: 1.15; align-items: flex-start; }
-  .lcd-main { font-size: 13px; color: var(--green); }
+  .lcd-main { font-size: 13px; color: var(--fg); }
   .lc.pos .lcd-main { display: inline-block; min-width: 96px; } /* fixed width → no layout shift as it counts */
-  .lcd-div { width: 1px; align-self: stretch; background: #000; box-shadow: 1px 0 0 rgba(255, 255, 255, 0.03); margin: 7px 0; }
+  .lcd-div { width: 1px; align-self: stretch; background: var(--line); margin: 7px 0; }
   .sig { display: inline-flex; align-items: center; gap: 1px; }
   .sig :global(.num.flat input) { width: 16px; text-align: center; }
-  .slash { color: var(--fg-faint); font-size: 12px; }
+  .slash { color: var(--fg-3); font-size: 12px; }
   /* snap split control */
   .snapgroup { position: relative; }
   .snap-main { padding: 0 9px 0 12px; }
-  .snap-caret { min-width: 0; padding: 0 8px; font-size: 9px; color: var(--fg-faint); }
-  .snap-caret.open { color: var(--fg); background: rgba(255, 255, 255, 0.05); }
+  .snap-caret { min-width: 0; padding: 0 8px; font-size: 9px; color: var(--fg-3); }
+  .snap-caret.open { color: var(--fg); background: var(--accent-soft); }
   .grid-menu {
     position: absolute; top: calc(100% + 6px); right: 0; z-index: 40; min-width: 84px; padding: 4px;
     display: flex; flex-direction: column; gap: 1px;
   }
   .grid-menu button {
     height: 24px; justify-content: flex-start; background: transparent; border: none; border-radius: 3px;
-    color: var(--fg-dim); font-size: 12.5px; font-family: var(--font-mono);
+    color: var(--fg-2); font-size: 12.5px; font-family: var(--font-mono);
   }
-  .grid-menu button:hover { background: var(--accent); color: #fff; }
+  .grid-menu button:hover { background: var(--accent); color: var(--accent-fg); }
   .grid-menu button.on { color: var(--accent); }
-  .grid-menu button.on:hover { color: #fff; }
+  .grid-menu button.on:hover { color: var(--accent-fg); }
   .seg.small button { height: 19px; padding: 0 9px; font-size: 11px; }
   .pt { min-width: 34px; font-size: 13px; }
-  .vsep { width: 1px; align-self: stretch; background: #000; box-shadow: 1px 0 0 rgba(255, 255, 255, 0.03); margin: 9px 2px; }
+  .vsep { width: 1px; align-self: stretch; background: var(--line); margin: 9px 2px; }
   .midi-live { display: flex; align-items: center; gap: 6px; }
   .midi-live .port { max-width: 190px; text-overflow: ellipsis; }
   .drop-before { box-shadow: inset 0 2px 0 var(--accent); }
+
+  /* timeline toolbar — snap/grid-mode/zoom are timeline-scoped, not app-scoped */
+  .tlbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    height: 34px;
+    padding: 0 10px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  .tlbar .zoom .cell.wide { min-width: 32px; font-size: 11px; }
+  .sp { flex: 1; }
 
   .main { display: flex; flex: 1; min-height: 0; }
   .arrangement {
@@ -1526,8 +1562,8 @@
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    background: var(--bg2);
-    border-right: 1px solid #000;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
   }
   .add-track {
     display: flex;
@@ -1540,8 +1576,8 @@
     justify-content: center;
     height: 30px;
     background: transparent;
-    border: 1px dashed var(--line-strong);
-    color: var(--fg-dim);
+    border: 1px dashed var(--line-2);
+    color: var(--fg-2);
     font-size: 12px;
   }
   .add-track .add:hover:not(:disabled) {
@@ -1551,12 +1587,19 @@
   }
   .header-fill {
     flex: 1;
-    background: var(--bg2);
+    background: var(--panel);
   }
   .ruler-spacer {
-    background: var(--bg1);
-    border-bottom: 1px solid #000;
-    box-shadow: var(--rim);
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  .sec-pad {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 11px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
   }
   .track-block {
     position: relative;
@@ -1573,7 +1616,7 @@
     align-items: flex-start;
     gap: 10px;
     padding: 8px 10px;
-    background: var(--bg2);
+    background: var(--panel);
     cursor: pointer;
   }
   /* Automation Lane header: the Command selector lives in the header column,
@@ -1584,9 +1627,8 @@
     display: flex;
     flex-direction: column;
     padding: 3px 10px 0;
-    background: var(--bg1);
-    border-top: 1px solid #000;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    background: var(--panel);
+    border-top: 1px solid var(--line);
   }
   .auto-row {
     display: flex;
@@ -1606,19 +1648,17 @@
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: var(--fg-faint);
-    background: #07070a;
+    color: var(--fg-3);
+    background: var(--raised);
     border: 1px solid var(--line);
     border-radius: 4px;
-    box-shadow: var(--well-in);
   }
   .auto-on:hover {
     color: var(--fg);
   }
   .auto-on.on {
-    color: var(--green);
-    border-color: color-mix(in srgb, var(--green) 45%, var(--line));
-    box-shadow: var(--well-in), 0 0 6px -2px var(--green);
+    color: var(--auto);
+    border-color: color-mix(in srgb, var(--auto) 45%, var(--line));
   }
   .auto-dots {
     flex-shrink: 0;
@@ -1643,14 +1683,14 @@
     width: 26px;
     height: 2px;
     border-radius: 1px;
-    background: var(--line-strong);
+    background: var(--line-2);
   }
   .auto-grip:hover::before {
     background: var(--accent);
   }
   .track-header:hover,
   .track-header.selected {
-    background: var(--bg3);
+    background: var(--accent-soft);
   }
   .tcolor {
     width: 4px;
@@ -1658,7 +1698,6 @@
     flex-shrink: 0;
     border-radius: 3px;
     background: var(--tc);
-    box-shadow: 0 0 8px -1px var(--tc);
   }
   .tmeta {
     flex: 1;
@@ -1690,25 +1729,23 @@
     justify-content: center;
     font-size: 10px;
     font-weight: 700;
-    color: var(--fg-faint);
-    background: #07070a;
+    color: var(--fg-3);
+    background: var(--raised);
     border: 1px solid var(--line);
     border-radius: 4px;
-    box-shadow: var(--well-in);
   }
   .ms:hover {
     color: var(--fg);
   }
   .ms.on {
-    background: #ff4d4d;
-    border-color: #ff4d4d;
-    color: #2a0000;
-    box-shadow: none;
+    background: var(--danger);
+    border-color: var(--danger);
+    color: var(--fg-on-warm);
   }
   .ms.solo.on {
     background: var(--warn);
     border-color: var(--warn);
-    color: #2a1c00;
+    color: var(--fg-on-warm);
   }
   .gear {
     width: 22px;
@@ -1719,7 +1756,7 @@
   }
 
   footer {
-    color: var(--fg-dim);
+    color: var(--fg-2);
     font-size: 11px;
     min-height: 14px;
     padding: 0 2px;
@@ -1738,7 +1775,7 @@
     color: var(--warn);
   }
   .modal-desc {
-    color: var(--fg-dim);
+    color: var(--fg-2);
     font-size: 12px;
     line-height: 1.45;
     margin: 0;
@@ -1763,7 +1800,7 @@
   .export-target .path {
     font-family: var(--font-mono);
     font-size: 12px;
-    color: var(--fg-dim);
+    color: var(--fg-2);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

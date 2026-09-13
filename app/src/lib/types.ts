@@ -171,6 +171,9 @@ export const RULER_H = 28;
 export const SECTIONS_H = 24;
 export const LANE_H = 72;
 export const AUDIO_ROW_H = 72;
+/** Slim strip under the last used lane — the drop target that grows a track by one lane.
+ *  A full empty lane there used to read as a gap of blank space under the last clip. */
+export const SPARE_LANE_H = 20;
 
 /** Automation Lane: header strip only, when the selector is on "None". */
 export const AUTO_LANE_COLLAPSED_H = 26;
@@ -181,9 +184,15 @@ export const AUTO_LANE_MAX_H = 320;
 export const clampLaneHeight = (h: number) =>
   Math.min(AUTO_LANE_MAX_H, Math.max(AUTO_LANE_MIN_H, Math.round(h)));
 
-/** Visible lanes of a MIDI track: always one empty lane below the deepest event. */
+/** Lanes of a MIDI track that can hold events: up to the deepest event, at least one. */
 export function midiLanes(t: MidiTrack): number {
-  return Math.max(2, ...t.events.map((e) => e.lane + 2));
+  return Math.max(1, ...t.events.map((e) => e.lane + 1));
+}
+
+/** Lane a y offset *inside* a MIDI track points at; the spare strip maps to a new
+ *  lane (index `midiLanes(t)`), which is how dropping below the last lane grows a track. */
+export function laneAt(t: MidiTrack, yInTrack: number): number {
+  return Math.min(Math.max(0, Math.floor((yInTrack - 2) / LANE_H)), midiLanes(t));
 }
 
 export type TrackLayout = {
@@ -221,7 +230,7 @@ export function trackLayout(
       y += AUDIO_ROW_H;
       continue;
     }
-    const eventsH = midiLanes(t) * LANE_H + 6;
+    const eventsH = midiLanes(t) * LANE_H + SPARE_LANE_H + 6;
     const autoHeight = autoLaneHeight(t, defs.get(t.definitionId));
     out.push({ top: y, height: eventsH + autoHeight, autoTop: y + eventsH, autoHeight });
     y += eventsH + autoHeight;

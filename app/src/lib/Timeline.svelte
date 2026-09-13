@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { LoadedAudio } from "./audio";
+  import type { Accent } from "./accents";
   import { dragPayload } from "./Palette.svelte";
   import {
     AUDIO_ROW_H,
@@ -55,6 +56,7 @@
     definitions,
     layout,
     audio,
+    accents = [],
     playhead,
     gridMode,
     pxPerSecond,
@@ -82,6 +84,8 @@
     definitions: DefinitionInfo[];
     layout: TrackLayout[];
     audio: (LoadedAudio | null)[];
+    /** Detected accents per track, in seconds from that file's start. Null = off or not analysed. */
+    accents?: (Accent[] | null)[];
     playhead: number;
     gridMode: "musical" | "time";
     pxPerSecond: number;
@@ -1448,6 +1452,46 @@
     ctx.fillStyle = tok.fg + "0d";
     ctx.fillRect(startX, y, endX - startX, AUDIO_ROW_H - 1);
     ctx.drawImage(waveCanvas(ti, a, track.waveformGain || 1), startX, y);
+    drawAccents(ctx, ti, startX, y, tok);
+  }
+
+  /**
+   * Accent markers sit on top of the waveform: a flag at the row's top edge
+   * plus a tick down the wave, both fading with salience so a glance ranks the
+   * hits without reading numbers.
+   */
+  function drawAccents(
+    ctx: CanvasRenderingContext2D,
+    ti: number,
+    startX: number,
+    y: number,
+    tok: Tokens,
+  ) {
+    const marks = accents[ti];
+    if (!marks?.length) return;
+    const h = AUDIO_ROW_H - 1;
+    ctx.save();
+    for (const m of marks) {
+      const x = Math.round(startX + m.time * pxPerSecond) + 0.5;
+      if (x < -2 || x > widthPx + 2) continue;
+      const strength = 0.35 + 0.65 * Math.min(1, m.salience * 2);
+      ctx.globalAlpha = strength;
+      ctx.strokeStyle = tok.accent;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y + 1);
+      ctx.lineTo(x, y + h - 1);
+      ctx.stroke();
+      const flag = 3 + 3 * strength;
+      ctx.fillStyle = tok.accent;
+      ctx.beginPath();
+      ctx.moveTo(x - flag, y + 1);
+      ctx.lineTo(x + flag, y + 1);
+      ctx.lineTo(x, y + 1 + flag * 1.4);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   function onwheel(e: WheelEvent) {

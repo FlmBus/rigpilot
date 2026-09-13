@@ -47,7 +47,7 @@ classes, all global so every component draws from them.
 ## 3. Layout
 
 ```
-┌ topbar: ⠿ · ☰ · song · ▶⏹ · LCD(POS/BPM/SIG) · SNAP▾ · Bars|Time · Color · Export · ◧◨ · win ┐
+┌ topbar: ⠿ · ☰ · song · ▶⏹ · LCD(POS/BPM/SIG) · SNAP▾ · Bars|Time · Color · Accents(SENS) · Export · ◧◨ · win ┐
 ├──────────┬───────────────────────────────────────────────┬───────────┤
 │ Command  │ Tracks (headers + lanes)                       │ Inspector │
 │ Palette  │  header: ▍colour · name · ch/device · M/S|⚙    │ (faceplate│
@@ -61,7 +61,8 @@ classes, all global so every component draws from them.
 - **Unified topbar** (one ~50px bar, lighter than the rest so it lifts off): traffic-less custom
   titlebar with brand + ☰ file menu + editable song name; centered transport (play/stop cells +
   a recessed **LCD** showing position and editable BPM / time-signature); right side has the
-  **split snap control** (SNAP toggle + ▾ that opens the grid-size menu), Bars/Time, Color, Export,
+  **split snap control** (SNAP toggle + ▾ that opens the grid-size menu), Bars/Time, Color,
+  **Accents** (marks musically significant hits over audio waveforms; reveals a SENS field while on), Export,
   and the **panel toggles** ◧ (Palette) / ◨ (Inspector).
 - **Palette left, Inspector right** (both collapsible via the topbar toggles). The Command Palette
   is a grouped vertical list with per-type dots; it only populates for a selected MIDI track.

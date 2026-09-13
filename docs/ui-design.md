@@ -47,7 +47,7 @@ classes, all global so every component draws from them.
 ## 3. Layout
 
 ```
-┌ topbar: ☰ · song · ▶⏹ · LCD(POS/BPM/SIG) · SNAP▾ · Bars|Time · Color · Export · ◧◨ · win ┐
+┌ topbar: ⠿ · ☰ · song · ▶⏹ · LCD(POS/BPM/SIG) · SNAP▾ · Bars|Time · Color · Export · ◧◨ · win ┐
 ├──────────┬───────────────────────────────────────────────┬───────────┤
 │ Command  │ Tracks (headers + lanes)                       │ Inspector │
 │ Palette  │  header: ▍colour · name · ch/device · M/S|⚙    │ (faceplate│
@@ -122,6 +122,12 @@ green `#2ee08a`** (`COMMAND_TYPE_COLORS` in `types.ts`).
 5. **Automation geometry reserves the title bar.** When a clip is tall it has a title bar, so the
    curve/breakpoint vertical mapping (`autoBounds`) offsets by the title height — keeping canvas
    hit-testing aligned with the DOM-drawn graph.
+6. **The topbar drags the window itself.** The window is frameless, so the topbar *is* the
+   titlebar — but `data-tauri-drag-region` only matches the exact element under the pointer, and
+   the bar is packed edge-to-edge with controls, so it never fired. A `pointerdown` handler on the
+   header instead calls `startDragging()` whenever the target is not interactive (`button`,
+   `input`, `select`, `.num`, `role="button"`/`"menuitem"`), and a double-click on the same
+   surface toggles maximize. A ⠿ grip left of the brand makes the affordance visible.
 
 ## 6. Prototypes (removed)
 

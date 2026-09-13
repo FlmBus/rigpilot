@@ -171,7 +171,22 @@
 
   const appWindow = IS_TAURI
     ? getCurrentWindow()
-    : ({ minimize() {}, toggleMaximize() {}, close() {} } as ReturnType<typeof getCurrentWindow>);
+    : ({ minimize() {}, toggleMaximize() {}, close() {}, startDragging() {} } as ReturnType<
+        typeof getCurrentWindow
+      >);
+
+  // The topbar is the window's titlebar (frameless window), but it is packed with controls, so
+  // `data-tauri-drag-region` — which only matches the exact element under the pointer — never
+  // fires. Instead every part of the bar that is not itself interactive drags the window.
+  const NO_DRAG = "button, input, select, textarea, a, .num, [role='button'], [role='menuitem']";
+  const isDragSurface = (e: PointerEvent | MouseEvent) =>
+    e.button === 0 && !(e.target as HTMLElement)?.closest?.(NO_DRAG);
+  function startWindowDrag(e: PointerEvent) {
+    if (!isDragSurface(e)) return;
+    menuOpen = false;
+    gridMenuOpen = false;
+    appWindow.startDragging();
+  }
   const player = new Player();
   const audioCache = new Map<string, LoadedAudio>();
   let loadedAudio = $state<(LoadedAudio | null)[]>([]);
@@ -1030,8 +1045,13 @@
 />
 
 <div class="app">
-  <header class="topbar" data-tauri-drag-region>
+  <header
+    class="topbar"
+    onpointerdown={startWindowDrag}
+    ondblclick={(e) => isDragSurface(e) && appWindow.toggleMaximize()}
+  >
     <div class="tb-left">
+      <span class="grip" title="Drag to move the window">⠿</span>
       <span class="brand">Rig<span class="accent">Pilot</span></span>
       <div class="menu">
         <button class="hamb ghost" class:active={menuOpen} onclick={() => (menuOpen = !menuOpen)}>☰</button>
@@ -1472,7 +1492,14 @@
   .tb-left { display: flex; align-items: center; gap: 10px; }
   .tb-center { flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px; min-width: 0; }
   .tb-right { display: flex; align-items: center; gap: 8px; }
-  .brand { font-weight: 700; font-size: 15px; letter-spacing: 0.02em; padding-left: 6px; }
+  /* Window move handle — the visible hint that the whole bar drags the frameless window. */
+  .grip {
+    padding: 0 2px 0 4px; font-size: 15px; line-height: 1; color: var(--fg-3);
+    cursor: grab; user-select: none;
+  }
+  .grip:hover { color: var(--fg-2); }
+  .grip:active { cursor: grabbing; }
+  .brand { font-weight: 700; font-size: 15px; letter-spacing: 0.02em; }
   .accent { color: var(--accent); }
   .menu { position: relative; }
   .hamb { width: 30px; justify-content: center; font-size: 14px; }

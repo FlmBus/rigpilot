@@ -1143,7 +1143,7 @@
         {#if gridMenuOpen}
           <div class="grid-menu glass" role="listbox">
             {#if gridMode === "musical"}
-              {#each [1, 2, 4, 8, 16, 32] as d}
+              {#each [1, 2, 4, 8, 16, 32, 64] as d}
                 <button class:on={snapDivision === d} onclick={() => { snapDivision = d; snapOn = true; gridMenuOpen = false; }}>1/{d}</button>
               {/each}
             {:else}

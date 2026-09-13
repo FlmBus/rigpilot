@@ -210,8 +210,11 @@
     };
   }
 
-  const laneBottom = (l: { height: number }) => l.height - AUTO_PAD;
-  const laneSpan = (l: { height: number }) => Math.max(4, l.height - 2 * AUTO_PAD);
+  // The lane body is `height - 1` tall; the last row is the separator under it.
+  // The scale spans all of it bar AUTO_PAD, so 127 reads at the top edge and 0 at
+  // the bottom edge rather than floating inside a band of blank lane.
+  const laneBottom = (l: { height: number }) => l.height - 1 - AUTO_PAD;
+  const laneSpan = (l: { height: number }) => Math.max(4, l.height - 1 - 2 * AUTO_PAD);
 
   /** Value -> y inside the lane (local coordinates, 0 = lane top). */
   function laneY(l: LaneInfo, value: number): number {

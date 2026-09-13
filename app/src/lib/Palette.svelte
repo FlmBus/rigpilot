@@ -11,13 +11,8 @@
 
   let {
     definition,
-    inUse,
-    onshowautomation,
   }: {
     definition: DefinitionInfo | undefined;
-    /** Automation Commands whose curve already has breakpoints on the shown track. */
-    inUse: Set<string>;
-    onshowautomation: (commandId: string) => void;
   } = $props();
 
   let query = $state("");
@@ -33,15 +28,16 @@
     return [...byGroup.entries()]; // insertion order = order of first appearance
   }
 
-  // One-Shot/Hold are dragged onto the timeline; Automation is clicked to open
-  // its curve — two different verbs, so they render as two labelled sections.
+  // Automation Commands are picked from a track's own automation lane selector,
+  // not dragged from here — listing them in the palette too was pure clutter.
   const filtered = $derived.by(() => {
     if (!definition) return [];
     const q = query.toLowerCase();
-    return definition.commands.filter((c) => !q || c.name.toLowerCase().includes(q));
+    return definition.commands.filter(
+      (c) => c.commandType !== "automation" && (!q || c.name.toLowerCase().includes(q)),
+    );
   });
-  const dragGroups = $derived(bucket(filtered.filter((c) => c.commandType !== "automation")));
-  const autoGroups = $derived(bucket(filtered.filter((c) => c.commandType === "automation")));
+  const dragGroups = $derived(bucket(filtered));
 
   function ondragstart(e: DragEvent, cmd: CommandInfo) {
     if (!definition) return;
@@ -73,28 +69,21 @@
           {#if !collapsed[group]}
             <div class="items">
               {#each commands as cmd}
-                {@const auto = cmd.commandType === "automation"}
                 <div
                   class="item"
-                  class:auto
                   role="button"
                   tabindex="0"
-                  draggable={!auto}
+                  draggable={true}
                   ondragstart={(e) => ondragstart(e, cmd)}
                   ondragend={() => (dragPayload.current = null)}
-                  onclick={() => auto && onshowautomation(cmd.id)}
-                  onkeydown={(e) => e.key === "Enter" && auto && onshowautomation(cmd.id)}
-                  title={auto
-                    ? `${cmd.description ?? cmd.name}\nClick to show this curve in the track's automation lane.`
-                    : (cmd.description ?? "") +
-                      (cmd.deterministic ? "" : "\n⚠ Result depends on the device's current state.")}
+                  title={(cmd.description ?? "") +
+                    (cmd.deterministic ? "" : "\n⚠ Result depends on the device's current state.")}
                 >
                   <span
                     class="tdot {cmd.commandType === 'hold' ? 'square' : 'circle'}"
                     style:background={COMMAND_TYPE_COLORS[cmd.commandType]}
                   ></span>
                   <span class="name">{cmd.name}</span>
-                  {#if auto && inUse.has(cmd.id)}<span class="used" title="This curve has breakpoints">●</span>{/if}
                   {#if !cmd.deterministic}<span class="warn">⚠</span>{/if}
                 </div>
               {/each}
@@ -104,14 +93,7 @@
       {/each}
     {/snippet}
     <div class="groups">
-      {#if dragGroups.length}
-        <div class="pal-sect"><span class="microlabel">Drag onto timeline</span></div>
-        {@render groupList(dragGroups)}
-      {/if}
-      {#if autoGroups.length}
-        <div class="pal-sect"><span class="microlabel">Automate — click to open</span></div>
-        {@render groupList(autoGroups)}
-      {/if}
+      {@render groupList(dragGroups)}
     </div>
   {/if}
 </div>
@@ -140,18 +122,6 @@
     padding: 0 12px;
     border-bottom: 1px solid var(--line);
     flex-shrink: 0;
-  }
-  .pal-sect {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    padding: 6px 4px 2px;
-  }
-  .pal-sect::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: var(--line);
   }
   .sub-head {
     display: flex;
@@ -216,18 +186,6 @@
   .item:active {
     cursor: grabbing;
     background: var(--line);
-  }
-  /* Automation has a lane of its own — there is nothing to drag onto the timeline. */
-  .item.auto {
-    cursor: pointer;
-  }
-  .item.auto:active {
-    cursor: pointer;
-  }
-  .used {
-    margin-left: auto;
-    font-size: 8px;
-    color: var(--auto);
   }
   .name {
     overflow: hidden;

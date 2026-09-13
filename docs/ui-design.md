@@ -122,6 +122,12 @@ green `#2ee08a`** (`COMMAND_TYPE_COLORS` in `types.ts`).
 5. **Automation geometry reserves the title bar.** When a clip is tall it has a title bar, so the
    curve/breakpoint vertical mapping (`autoBounds`) offsets by the title height — keeping canvas
    hit-testing aligned with the DOM-drawn graph.
+6. **Curves are drawn at full precision, not at CC resolution.** Export rounds every sampled
+   value to a whole CC value, and sampling the drawn path the same way stair-steps each bent
+   segment by one MIDI value — accurate about what is sent, but it reads as a jagged line
+   instead of a curve. `curvePaths` therefore samples with `lerpExact` while `valueAt` keeps
+   the rounding that mirrors Rust. Genuine steps (`hold` segments, stepped targets) still draw
+   as steps — that is the shape, not an artefact.
 
 ## 6. Prototypes (removed)
 

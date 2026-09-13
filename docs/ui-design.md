@@ -74,16 +74,25 @@ classes, all global so every component draws from them.
 Colour per Command Type: **One-Shot = warn `#ffb02e`, Hold = accent `#ff2e88`, Automation =
 green `#2ee08a`** (`COMMAND_TYPE_COLORS` in `types.ts`).
 
-- **One-Shot:** a marker — vertical stem across the lane with a diamond; a flag (icon + name) on
-  tall lanes.
+- **One-Shot:** a marker — an instant is a point, so it is a dot centred on its dispatch tick
+  (the surrounding 19px box is grab slop only), with a flag (the command name) to its right. The
+  flag is capped at the gap to the next Event on the same Lane and dropped below ~18px, so flags
+  never print over their neighbours.
 - **Hold:** a liquid-glass block (backdrop-blur + subtle gradient + rim).
-- **Automation:** built on the Hold block — a green glass block with the breakpoint **graph** drawn
-  inside; the area under the curve is a **transparent black** fill (Grafana-style, not a loud
-  colour wash). Nodes are round dots.
+- **Automation:** not a clip at all. Each MIDI track has one **Automation Lane** below its
+  anonymous lanes — a recessed well (`--well-in`) rather than a glass block, because a curve is
+  data in a display, not an object you grab. The Command selector sits in the track-header column.
+  Inside: hairline value guides (quarters, or one per named step), a faint command name top-left,
+  the curve as a 1.5px `--green` stroke over a 13 % green area fill, and the stretches before the
+  first and after the last breakpoint drawn **dashed at 55 %** — held, not drawn. Breakpoints are
+  the existing 7px `.node` circles (white when selected); a hollow handle appears at a segment's
+  midpoint on hover for bending it. A collapsed lane still shows 30 %-opacity miniatures of the
+  curves in use. Curve segments are sampled at 32 points, which keeps the chord error under a
+  tenth of a pixel at any zoom (the error scales with the lane's *height*, not its width).
 - **Progressive disclosure by clip height:** at/above ~50px a clip gets a **title bar** (type dot +
   label); below that it falls back to a compact inline label. `LANE_H` is currently fixed at 72px
   so clips render in the tall, title-bar style. Selection = bright ring; resize handles appear on
-  selected hold/automation clips, inside the clip body.
+  selected hold clips, inside the clip body.
 
 ## 5. Key implementation decisions
 
@@ -115,6 +124,12 @@ green `#2ee08a`** (`COMMAND_TYPE_COLORS` in `types.ts`).
 5. **Automation geometry reserves the title bar.** When a clip is tall it has a title bar, so the
    curve/breakpoint vertical mapping (`autoBounds`) offsets by the title height — keeping canvas
    hit-testing aligned with the DOM-drawn graph.
+6. **Curves are drawn at full precision, not at CC resolution.** Export rounds every sampled
+   value to a whole CC value, and sampling the drawn path the same way stair-steps each bent
+   segment by one MIDI value — accurate about what is sent, but it reads as a jagged line
+   instead of a curve. `curvePaths` therefore samples with `lerpExact` while `valueAt` keeps
+   the rounding that mirrors Rust. Genuine steps (`hold` segments, stepped targets) still draw
+   as steps — that is the shape, not an artefact.
 
 ## 6. Prototypes (removed)
 

@@ -1,28 +1,27 @@
 import { describe, expect, it } from "vitest";
 import {
   AUDIO_ROW_H,
+  AUTO_LANE_DEFAULT_H,
   LANE_H,
   RULER_H,
+  SECTIONS_H,
   SPARE_LANE_H,
   laneAt,
   midiLanes,
-  trackHeight,
-  trackTops,
+  trackLayout,
   type AudioTrack,
+  type DefinitionInfo,
   type MidiTrack,
   type RpEvent,
+  type Track,
 } from "./types";
 
 const ev = (lane: number): RpEvent => ({
-  kind: "automation",
+  kind: "hold",
   commandId: "volume",
   tick: 0,
   length: 960,
   lane,
-  breakpoints: [
-    [0, 0],
-    [960, 127],
-  ],
 });
 
 const midi = (...lanes: number[]): MidiTrack => ({
@@ -34,6 +33,8 @@ const midi = (...lanes: number[]): MidiTrack => ({
   mute: false,
   solo: false,
   events: lanes.map(ev),
+  automation: [],
+  automationView: { command: null, height: AUTO_LANE_DEFAULT_H },
 });
 
 const audio: AudioTrack = {
@@ -48,6 +49,11 @@ const audio: AudioTrack = {
   waveformGain: 1,
 };
 
+/** No Device Definitions — no track gets an Automation Lane, so heights are lanes only. */
+const noDefs = new Map<string, DefinitionInfo>();
+
+const heightOf = (t: Track) => trackLayout([t], noDefs)[0].height;
+
 describe("midiLanes", () => {
   it("keeps one lane for an empty track", () => {
     expect(midiLanes(midi())).toBe(1);
@@ -59,20 +65,20 @@ describe("midiLanes", () => {
   });
 });
 
-describe("trackHeight", () => {
+describe("track height", () => {
   it("is the used lanes plus the slim spare strip", () => {
-    expect(trackHeight(midi(0))).toBe(LANE_H + SPARE_LANE_H + 6);
-    expect(trackHeight(midi(0, 1))).toBe(2 * LANE_H + SPARE_LANE_H + 6);
+    expect(heightOf(midi(0))).toBe(LANE_H + SPARE_LANE_H + 6);
+    expect(heightOf(midi(0, 1))).toBe(2 * LANE_H + SPARE_LANE_H + 6);
   });
 
   it("leaves no blank lane under the last clip (issue #39)", () => {
     const t = midi(0);
     const lastClipBottom = 2 + (midiLanes(t) - 1) * LANE_H + (LANE_H - 3);
-    expect(trackHeight(t) - lastClipBottom).toBeLessThan(LANE_H);
+    expect(heightOf(t) - lastClipBottom).toBeLessThan(LANE_H);
   });
 
   it("is unchanged for audio tracks", () => {
-    expect(trackHeight(audio)).toBe(AUDIO_ROW_H);
+    expect(heightOf(audio)).toBe(AUDIO_ROW_H);
   });
 });
 
@@ -87,8 +93,8 @@ describe("laneAt", () => {
 
   it("maps the spare strip to a new lane below the last one", () => {
     const t = midi(0);
-    expect(laneAt(t, trackHeight(t) - 10)).toBe(1);
-    expect(laneAt(t, trackHeight(t) - 1)).toBe(1);
+    expect(laneAt(t, heightOf(t) - 10)).toBe(1);
+    expect(laneAt(t, heightOf(t) - 1)).toBe(1);
   });
 
   it("never returns a lane outside the track", () => {
@@ -96,14 +102,16 @@ describe("laneAt", () => {
     expect(laneAt(t, -50)).toBe(0);
     expect(laneAt(t, 10_000)).toBe(midiLanes(t));
   });
+});
 
-  it("stays inside the rows trackTops lays out", () => {
+describe("trackLayout", () => {
+  it("lays out rows without gaps, starting under the ruler and sections strip", () => {
     const tracks = [audio, midi(0), midi(0, 2)];
-    const tops = trackTops(tracks);
-    expect(tops[0]).toBe(RULER_H);
-    tracks.forEach((t, i) => {
-      const next = i + 1 < tops.length ? tops[i + 1] : tops[i] + trackHeight(t);
-      expect(tops[i] + trackHeight(t)).toBe(next);
+    const rows = trackLayout(tracks, noDefs);
+    expect(rows[0].top).toBe(RULER_H + SECTIONS_H);
+    rows.forEach((row, i) => {
+      const next = i + 1 < rows.length ? rows[i + 1].top : row.top + row.height;
+      expect(row.top + row.height).toBe(next);
     });
   });
 });

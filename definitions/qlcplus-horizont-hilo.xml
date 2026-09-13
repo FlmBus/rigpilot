@@ -31,10 +31,18 @@
     <!-- ============ Songs ============ -->
 
     <!-- Program Change selects the QLC+ song/show. QLC+ is 0-based (PC 0 = Song 1),
-         but the labels are 1-based so the user just picks the song number. -->
-    <OneShot id="select-song" name="Select Song" short="Song" group="Songs"
-             description="Selects the QLC+ song via Program Change. Pick the song by its number (label 1 = Song 1 = PC 0).">
-      <Param id="song" name="Song #" min="0" max="127" default="0">
+         but the labels are 1-based so the user just picks the song number.
+
+         Modelled as an Automation so the song selection is one curve over the
+         whole timeline: you cannot accidentally select two songs at once, and the
+         value standing at the song start is sent at t=0. The Target declares its
+         own Program Change (there is no CC involved) and allows only "hold", so
+         the curve steps between songs instead of sweeping through the ones in
+         between. -->
+    <Automation id="select-song" name="Select Song" short="Song" group="Songs"
+             description="Selects the QLC+ song via Program Change. Pick the song by its number (label 1 = Song 1 = PC 0). The curve jumps between songs; it never sweeps.">
+      <Target min="0" max="127" shapes="hold">
+        <ProgramChange program="$value"/>
         <Label value="0">1</Label>
         <Label value="1">2</Label>
         <Label value="2">3</Label>
@@ -163,9 +171,8 @@
         <Label value="125">126</Label>
         <Label value="126">127</Label>
         <Label value="127">128</Label>
-      </Param>
-      <ProgramChange program="$song"/>
-    </OneShot>
+      </Target>
+    </Automation>
 
     <!-- ============ Transport / Global (octave -1) ============ -->
 

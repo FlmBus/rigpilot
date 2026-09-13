@@ -1,42 +1,59 @@
-/* RigPilot — "Embedded Console" design system.
-   Dark instrument surface, hot-pink accent, abstract depth (one top light, no skeuomorphism).
-   Tokens + base elements + shared utility classes (faceplate / well / cell / seg / tdot). */
+/* RigPilot — "Studio" design system (dark).
+   Flat, de-skeuomorphized: hairline structure and spacing carry the UI, not
+   gradients, glows, recessed wells, or backdrop-blur. Color appears only on
+   the action accent and on the three command-type data hues (hold/shot/auto).
+   Ported from the docs/design/reboot.html "Studio · dark" identity. */
 
 :root {
-  --bg0: #0a0a0c;
-  --bg1: #0f0f12;
-  --bg2: #16161a;
-  --bg3: #1e1e23;
-  --line: #242429;
-  --line-strong: #34343c;
-  --fg: #f4f4f7;
-  --fg-dim: #9a9aa6;
-  --fg-faint: #5d5d68;
-  --accent: #ff2e88;
-  --accent-down: #d11668;
-  --accent-soft: rgba(255, 46, 136, 0.12);
-  --warn: #ffb02e;
-  --green: #2ee08a;
+  /* surfaces */
+  --canvas: #101114;
+  --panel: #15161a;
+  --raised: #1b1d21;
+  --sunken: #121317;
 
-  --radius: 8px;
-  --radius-sm: 5px;
-  --radius-lg: 11px;
-  --ctl-h: 26px;
+  /* lines */
+  --line: #23252a;
+  --line-2: #31343b;
 
-  /* depth = layering under one top light, abstract (no material imitation) */
-  --rim: inset 0 1px 0 rgba(255, 255, 255, 0.07); /* specular top edge — carries most depth */
-  --edge-top: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  --well-in: inset 0 1px 3px rgba(0, 0, 0, 0.6); /* recessed display */
-  --raise: linear-gradient(180deg, #1a1a1f, #151519); /* subtle tonal, lit from top */
-  --raise-hi: linear-gradient(180deg, #212127, #19191f);
-  --lift: 0 1px 2px rgba(0, 0, 0, 0.5); /* tight contact shadow, downward */
-  --float: 0 14px 36px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4); /* overlay shadow */
-  --bar-bg: linear-gradient(180deg, #24242c, #1b1b22); /* unified bar (lifts off the rest) */
+  /* text */
+  --fg: #edeef0;
+  --fg-2: #939aa3;
+  --fg-3: #656a72;
 
-  /* one interaction grammar */
-  --hover-glow: inset 0 -8px 10px -9px rgba(255, 46, 136, 0.4); /* signature pink LED warm-up */
-  --led: inset 0 -3px 0 var(--accent), inset 0 -9px 11px -8px rgba(255, 46, 136, 0.45); /* toggle = lamp on */
-  --clip-depth: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -9px 11px -8px rgba(0, 0, 0, 0.4);
+  /* action — ink, not a hue: the only saturated things on screen are the
+     commands themselves */
+  --accent: #edeef0;
+  --accent-fg: #101114;
+  --accent-soft: #1e2126;
+  --focus: #5b8cff;
+
+  /* data — command-type hues, plus semantic status colors */
+  --hold: #8b85ff;
+  --shot: #e0a44a;
+  --auto: #3fbfa8;
+  --wave: #3a3e45;
+  --warn: #e0a44a;
+  --danger: #f0707f;
+  --tint: 34%;
+
+  /* text set on a saturated fill — theme-independent, the fill supplies the
+     contrast, not the surrounding theme */
+  --fg-on-color: #ffffff;
+  --fg-on-warm: #1c1a14;
+
+  /* canvas-drawn grid (ruler/track rows), read into <canvas> via getComputedStyle */
+  --grid-soft: #191b1f;
+  --grid-bar: #262930;
+
+  /* depth: plain drop shadows for popovers only — no insets, no glow */
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+
+  /* scale */
+  --r: 6px;
+  --r-sm: 4px;
+  --clip-r: 5px;
+  --h: 28px;
 
   --font-ui: "Archivo Variable", "Archivo", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
@@ -67,24 +84,24 @@ body {
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--fg-dim);
+  color: var(--fg-3);
 }
 .mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- buttons (flat / embedded) ---------- */
+/* ---------- buttons (flat) ---------- */
 button,
 input,
 select {
   font-family: var(--font-ui);
   font-size: 13px;
   color: var(--fg);
-  background: var(--bg2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  height: var(--ctl-h);
+  background: var(--raised);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  height: var(--h);
   padding: 0 9px;
 }
 
@@ -94,34 +111,37 @@ button {
   align-items: center;
   gap: 6px;
   white-space: nowrap;
-  transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
+  background: transparent;
+  border-color: var(--line);
+  transition: background 110ms ease, border-color 110ms ease, color 110ms ease;
 }
 button:hover {
-  background: var(--bg3);
-  border-color: var(--line-strong);
+  background: var(--accent-soft);
+  border-color: var(--fg-3);
 }
 button:active {
-  background: var(--bg1);
+  background: var(--line);
 }
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-fg);
   font-weight: 600;
 }
 button.primary:hover {
-  background: var(--accent-down);
-  border-color: var(--accent-down);
+  filter: brightness(1.12);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 button.ghost {
   background: transparent;
   border-color: transparent;
-  color: var(--fg-dim);
+  color: var(--fg-2);
 }
 button.ghost:hover {
   color: var(--fg);
-  border-color: var(--line);
-  background: var(--bg2);
+  border-color: transparent;
+  background: var(--accent-soft);
 }
 button.toggle.active {
   background: var(--accent-soft);
@@ -129,11 +149,12 @@ button.toggle.active {
   color: var(--accent);
 }
 button.danger {
-  color: var(--fg);
+  color: var(--danger);
 }
 button.danger:hover {
-  border-color: #c2304a;
-  color: #ff6e85;
+  border-color: var(--danger);
+  background: transparent;
+  color: var(--danger);
 }
 button:disabled {
   opacity: 0.4;
@@ -141,41 +162,43 @@ button:disabled {
 }
 
 :is(button, input, select):focus-visible {
-  outline: none;
-  border-color: var(--accent);
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
 }
 
-/* ---------- inputs (recessed wells) ---------- */
+/* ---------- inputs (flat fields, no recessed wells) ---------- */
 input[type="text"],
 input:not([type]) {
   width: 100%;
-  background: #07070a;
-  border-color: #000;
-  box-shadow: var(--well-in);
+  background: var(--raised);
+  border-color: var(--line-2);
 }
 input[type="number"] {
   font-family: var(--font-mono);
   width: 64px;
   appearance: textfield;
   -moz-appearance: textfield;
-  background: #07070a;
-  border-color: #000;
-  box-shadow: var(--well-in);
+  background: var(--raised);
+  border-color: var(--line-2);
 }
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+input[type="text"]:focus-visible,
+input:not([type]):focus-visible,
+input[type="number"]:focus-visible {
+  outline-offset: -2px;
+}
 
 select {
   appearance: none;
   -webkit-appearance: none;
   padding-right: 22px;
-  background-color: #07070a;
-  border-color: #000;
-  box-shadow: var(--well-in);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='5'><path d='M0 0l4 5 4-5z' fill='%239a9aa6'/></svg>");
+  background-color: var(--raised);
+  border-color: var(--line-2);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='5'><path d='M0 0l4 5 4-5z' fill='%23656a72'/></svg>");
   background-repeat: no-repeat;
   background-position: right 7px center;
 }
@@ -187,13 +210,12 @@ input[type="checkbox"] {
   height: 15px;
   padding: 0;
   margin: 0;
-  background: #07070a;
-  border: 1px solid var(--line-strong);
-  border-radius: 3px;
+  background: var(--raised);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
   position: relative;
   cursor: pointer;
   flex-shrink: 0;
-  box-shadow: var(--well-in);
 }
 input[type="checkbox"]:checked {
   background: var(--accent);
@@ -206,7 +228,7 @@ input[type="checkbox"]:checked::after {
   top: 2px;
   width: 3px;
   height: 7px;
-  border: solid #fff;
+  border: solid var(--accent-fg);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
@@ -215,45 +237,42 @@ input[type="checkbox"]:checked::after {
 input[type="range"] {
   appearance: none;
   -webkit-appearance: none;
-  height: 16px;
+  height: 14px;
   padding: 0;
   background: transparent;
   border: none;
   cursor: pointer;
 }
 input[type="range"]::-webkit-slider-runnable-track {
-  height: 8px;
-  border-radius: 5px;
-  background: linear-gradient(90deg, var(--fg-dim) 0 var(--fill, 50%), #07070a var(--fill, 50%));
-  box-shadow: var(--well-in);
-}
-input[type="range"]:hover::-webkit-slider-runnable-track {
-  background: linear-gradient(90deg, var(--accent) 0 var(--fill, 50%), #07070a var(--fill, 50%));
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent) 0 var(--fill, 50%), var(--line-2) var(--fill, 50%));
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 3px;
-  height: 16px;
+  width: 11px;
+  height: 11px;
   margin-top: -4px;
-  background: var(--fg);
-  border-radius: 2px;
+  border-radius: 50%;
+  background: var(--raised);
+  border: 1.5px solid var(--fg-2);
 }
 input[type="range"]::-moz-range-track {
-  height: 8px;
-  border-radius: 5px;
-  background: #07070a;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line-2);
 }
 input[type="range"]::-moz-range-progress {
-  height: 8px;
-  border-radius: 5px;
-  background: var(--fg-dim);
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent);
 }
 input[type="range"]::-moz-range-thumb {
-  width: 3px;
-  height: 16px;
-  border: none;
-  background: var(--fg);
-  border-radius: 2px;
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid var(--fg-2);
+  background: var(--raised);
+  border-radius: 50%;
 }
 
 label {
@@ -270,49 +289,24 @@ hr {
 
 /* ---------- surfaces ---------- */
 .panel {
-  background: var(--bg1);
-  border: 1px solid #000;
-  box-shadow: var(--rim);
+  background: var(--panel);
+  border: 1px solid var(--line);
 }
 
-/* raised matte panel (instrument faceplate) */
-.faceplate {
-  position: relative;
-  background: linear-gradient(180deg, #141419, #0e0e12);
-  border: 1px solid #000;
-  border-radius: var(--radius);
-  box-shadow: var(--rim);
-}
-.fp-head {
-  display: flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 12px;
-  border-bottom: 1px solid #000;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-
-/* recessed display well */
-.well {
-  background: #07070a;
-  border: 1px solid #000;
-  border-radius: var(--radius-sm);
-  box-shadow: var(--well-in);
-}
-
-/* carved cell group (transport, toolbars) — buttons embedded into one bar */
+/* carved cell group (transport, toolbar toggle pairs) — flattened to a
+   hairline-bordered row; .flat drops the border for plain adjacent buttons */
 .cellgroup {
   display: inline-flex;
   align-items: stretch;
   height: 34px;
-  border: 1px solid #000;
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
   overflow: hidden;
-  background: var(--raise);
-  box-shadow: var(--rim), var(--lift);
+  background: var(--panel);
 }
 .cellgroup.flat {
-  box-shadow: var(--rim);
+  border-color: transparent;
+  background: transparent;
 }
 .cell {
   display: flex;
@@ -320,7 +314,7 @@ hr {
   justify-content: center;
   min-width: 40px;
   padding: 0 11px;
-  color: var(--fg-dim);
+  color: var(--fg-2);
   cursor: pointer;
   border-left: 1px solid var(--line);
   transition: background 90ms ease, color 90ms ease;
@@ -329,61 +323,53 @@ hr {
   border-left: none;
 }
 .cell:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--accent-soft);
   color: var(--fg);
-  box-shadow: var(--hover-glow);
 }
 .cell:active {
-  background: rgba(0, 0, 0, 0.45);
-  box-shadow: var(--well-in);
+  background: var(--line);
 }
 .cell.on {
   color: var(--accent);
-  box-shadow: var(--led);
+  background: var(--accent-soft);
 }
 
 /* segmented control */
 .seg {
   display: inline-flex;
-  background: #07070a;
-  border: 1px solid #000;
-  border-radius: var(--radius);
+  background: var(--sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
   padding: 2px;
   gap: 2px;
-  box-shadow: var(--well-in);
 }
 .seg button {
   height: 22px;
   padding: 0 12px;
   border: none;
   background: transparent;
-  color: var(--fg-dim);
-  border-radius: 3px;
+  color: var(--fg-2);
+  border-radius: var(--r-sm);
   font-weight: 500;
 }
 .seg button:hover {
   color: var(--fg);
-  background: rgba(255, 255, 255, 0.03);
-  box-shadow: var(--hover-glow);
+  background: transparent;
 }
 .seg button.active {
-  background: var(--bg3);
+  background: var(--raised);
   color: var(--fg);
-  box-shadow: var(--rim);
+  box-shadow: var(--shadow-sm);
 }
 
-/* type marker dot (own classes — never collide with .hold/.auto element classes) */
+/* type marker dot (own classes — never collide with .hold/.auto element classes).
+   One-shot reads as a dot everywhere now, same as automation — hold is the only
+   square. There is no diamond variant in this single-identity build. */
 .tdot {
   width: 8px;
   height: 8px;
   flex-shrink: 0;
   border-radius: 2px;
-}
-.tdot.diamond {
-  width: 7px;
-  height: 7px;
-  border-radius: 1px;
-  transform: rotate(45deg);
 }
 .tdot.square {
   border-radius: 2px;
@@ -392,13 +378,12 @@ hr {
   border-radius: 50%;
 }
 
-/* glass overlay (menus, popovers, tooltips) */
+/* popover / menu surface — solid, no blur, a plain drop shadow for elevation */
 .glass {
-  background: rgba(22, 22, 26, 0.96);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius);
-  box-shadow: var(--rim), var(--float);
+  background: var(--raised);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
 }
 
 /* ---------- scrollbars ---------- */
@@ -407,13 +392,13 @@ hr {
   height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--bg0);
+  background: var(--canvas);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--bg3);
-  border: 2px solid var(--bg0);
+  background: var(--line-2);
+  border: 2px solid var(--canvas);
   border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--line-strong);
+  background: var(--fg-3);
 }

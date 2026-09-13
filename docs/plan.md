@@ -50,7 +50,7 @@ event color on the timeline.
 |---|---|---|---|
 | **One-Shot** | Point event (zero length, rendered as a small block/marker) | one or more MIDI messages sent at the event's time | `Tap-Tempo = OneShot<NoteOn 44>` |
 | **Hold** | Block with start + end | *engage* message(s) at block start, *disengage* message(s) at block end | `Mute = Hold<NoteOn 51, NoteOff 51>` or `Mute = Hold<PC 3, PC 4>` |
-| **Automation** | Block with a value curve inside | a continuous target (CC number; later NRPN) plus value range | `Master-Volume = Automation<CC 5>` |
+| **Automation** | A value curve on its own lane | a target: a CC number, or the messages to send with `$value` in place of the value, plus a value range and the curve types it allows | `Master-Volume = Automation<CC 5>` · `Select-Song = Automation<PC $value, hold>` |
 
 Notes:
 - Hold takes *arbitrary* engage/disengage messages, which also covers the CC-threshold case
@@ -188,14 +188,34 @@ for the design language and the implementation decisions behind it.*
   Empty trailing lanes auto-collapse, so no full blank lane is left under the last clip.
 - Events render as colored blocks (color = Command Type), labeled with the command
   name (+ parameter value, e.g. "Rig #5").
-- One-Shot = narrow fixed-width marker. Hold = resizable block. Automation = resizable
-  block with the curve drawn inside; double-click opens an inline breakpoint editor
-  (click to add a point, drag to move, right-click to delete).
+- One-Shot = narrow fixed-width marker. Hold = resizable block. **Automation is not an
+  event at all** — see §2.2b.
+
+### 2.2b Automation Lanes
+- Automation never lands on an anonymous Lane. Each MIDI Track has **one Automation Lane**
+  beneath its Lanes, with a **selector** in the track header choosing which Automation
+  Command's curve it shows (Studio-One style). *No automation* collapses it to a strip that
+  still shows miniatures of the curves in use, so nothing hides silently.
+- **One curve per Automation Command per track**, always present, spanning the whole song.
+  There is nothing to place, size or duplicate — which is what makes two curves on one knob
+  impossible rather than merely detectable.
+- Curves have a value everywhere once they have a point: the first value is held back to the
+  Song Start, the last held to the end. An empty curve sends nothing at all.
+- Segment shape (Linear / Curve / Hold) is set on the Breakpoint the segment arrives at —
+  FL-Studio's rule — plus a per-curve on/off switch and per-curve export resolution. Discrete
+  targets are always Hold.
 
 ### 2.3 Editing interactions
 - Drag from palette → drop on track (snaps to grid if enabled).
-- Move (drag), resize Hold/Automation (drag edges), duplicate (alt-drag / Ctrl+D),
+- Move (drag), resize Hold (drag edges), duplicate (alt-drag / Ctrl+D),
   delete (Del), multi-select (rubber band, shift-click), cut/copy/paste.
+- In an Automation Lane: double-click adds a point and double-click on a point removes it,
+  drag moves it in time and value, drag the segment's midpoint handle to bend it (which sets
+  the curve type on the point it runs into), rubber-band
+  a stretch and drag it up or down to offset it (boundary points are inserted so the ramps
+  either side stay put), ↑/↓ nudge by one. Right-click gives three menus — point, segment,
+  lane. Events, Breakpoints and single values have **separate clipboards**; pasting
+  breakpoints onto another Command converts values proportionally.
 - Double-click an event → small inspector popover: exact start/end (editable in both
   time formats), parameter value, jump-to controls.
 - Full undo/redo across everything. Non-negotiable for "idiot-safe".
@@ -205,9 +225,12 @@ for the design language and the implementation decisions behind it.*
 Because lanes are anonymous, conflicts are *detected*, not prevented:
 
 - Two Hold events of the **same command** overlapping in time → error.
-- Automation overlap on the **same CC target** → error.
-- A One-Shot/Hold engage landing *inside* an Automation block that writes the same CC →
-  warning.
+- ~~Automation overlap on the same CC target~~ → **structurally impossible** since each
+  Automation Command owns exactly one curve. The one remaining route is a Definition that
+  points two Automation Commands at the same controller, which is reported as a Definition
+  warning in Device settings.
+- A One-Shot/Hold engage landing where an enabled curve writes the same CC (i.e. at or after
+  its first Breakpoint) → warning. A switched-off curve never warns.
 - Two events emitting messages at the **exact same tick** → info (ordering will follow
   lane order top-to-bottom; shown so the user knows it's deterministic).
 

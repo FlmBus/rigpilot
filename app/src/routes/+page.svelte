@@ -15,10 +15,11 @@
     PROJECT_FORMAT_VERSION,
     RULER_H,
     SECTIONS_H,
-    barTicks,
     clampLaneHeight,
     secondsPerBeat,
     secondsToTick,
+    snapGridTicks,
+    snapLabel,
     tickToSeconds,
     trackLayout,
     type BpSelection,
@@ -28,6 +29,7 @@
     type EventRef,
     type Project,
     type RpEvent,
+    type SnapFlavor,
   } from "$lib/types";
   import {
     automationCommands,
@@ -55,12 +57,21 @@
   let isPlaying = $state(false);
   let snapOn = $state(true);
   let snapDivision = $state(4); // grid = bar/N (default 1/4 note)
+  let snapFlavor = $state<SnapFlavor>("straight"); // straight, dotted or triplet steps
   let snapSeconds = $state(1); // raw-time grid step
   let gridMode = $state<"musical" | "time">("musical");
   let pxPerSecond = $state(40);
   let coloredWaves = $state(true);
   let followPlayhead = $state(false);
   let timelineRef = $state<Timeline | undefined>();
+
+  /** Grid-menu rows: the flavor modifies every division, so neither list has to grow. */
+  const SNAP_DIVISIONS = [1, 2, 4, 8, 16, 32, 64];
+  const SNAP_FLAVORS: [SnapFlavor, string, string][] = [
+    ["straight", "1/n", "Straight grid"],
+    ["dotted", "1/n.", "Dotted grid — one and a half steps"],
+    ["triplet", "1/nT", "Triplet grid — two thirds of a step"],
+  ];
 
   function zoomBy(factor: number) {
     pxPerSecond = Math.max(4, Math.min(800, pxPerSecond * factor));
@@ -224,7 +235,7 @@
 
   const snapTicks = $derived.by(() => {
     if (!snapOn) return null;
-    if (gridMode === "musical") return Math.max(1, Math.round(barTicks(project.timeSignature) / snapDivision));
+    if (gridMode === "musical") return snapGridTicks(project.timeSignature, snapDivision, snapFlavor);
     return secondsToTick(snapSeconds, project.bpm);
   });
 
@@ -1135,7 +1146,9 @@
         <div class="cellgroup flat">
           <div class="cell snap-main" class:on={snapOn} role="button" tabindex="0" title="Toggle snap"
             onclick={() => (snapOn = !snapOn)} onkeydown={() => {}}>
-            <span class="microlabel">SNAP {gridMode === "musical" ? `1/${snapDivision}` : `${snapSeconds}s`}</span>
+            <span class="microlabel">SNAP {gridMode === "musical"
+              ? snapLabel(snapDivision, snapFlavor)
+              : `${snapSeconds}s`}</span>
           </div>
           <div class="cell snap-caret" class:open={gridMenuOpen} role="button" tabindex="0" title="Snap grid size"
             onclick={() => (gridMenuOpen = !gridMenuOpen)} onkeydown={() => {}}>▾</div>
@@ -1143,8 +1156,13 @@
         {#if gridMenuOpen}
           <div class="grid-menu glass" role="listbox">
             {#if gridMode === "musical"}
-              {#each [1, 2, 4, 8, 16, 32] as d}
-                <button class:on={snapDivision === d} onclick={() => { snapDivision = d; snapOn = true; gridMenuOpen = false; }}>1/{d}</button>
+              <div class="flavors">
+                {#each SNAP_FLAVORS as [f, label, hint]}
+                  <button class:on={snapFlavor === f} title={hint} onclick={() => (snapFlavor = f)}>{label}</button>
+                {/each}
+              </div>
+              {#each SNAP_DIVISIONS as d}
+                <button class:on={snapDivision === d} onclick={() => { snapDivision = d; snapOn = true; gridMenuOpen = false; }}>{snapLabel(d, snapFlavor)}</button>
               {/each}
             {:else}
               {#each [5, 1, 0.5, 0.1] as s}
@@ -1556,6 +1574,12 @@
   .grid-menu button:hover { background: var(--accent); color: var(--accent-fg); }
   .grid-menu button.on { color: var(--accent); }
   .grid-menu button.on:hover { color: var(--accent-fg); }
+  /* dotted/triplet modify every division, so the menu stays one short list plus this row */
+  .grid-menu .flavors {
+    display: flex; gap: 1px; margin-bottom: 3px; padding-bottom: 3px; border-bottom: 1px solid var(--line);
+  }
+  .grid-menu .flavors button { flex: 1; height: 20px; justify-content: center; font-size: 11px; }
+  .grid-menu .flavors button.on { background: var(--accent-soft); }
   .seg.small button { height: 19px; padding: 0 9px; font-size: 11px; }
   .pt { min-width: 34px; font-size: 13px; }
   .vsep { width: 1px; align-self: stretch; background: var(--line); margin: 9px 2px; }

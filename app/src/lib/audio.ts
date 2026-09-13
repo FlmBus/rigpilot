@@ -13,12 +13,25 @@ export type LoadedAudio = {
 
 export const PEAK_BUCKETS_PER_SECOND = 1000;
 
-const ctx = new AudioContext();
+/**
+ * The playback context is created on first use, never at module load.
+ *
+ * Constructing an `AudioContext` synchronously spins up the platform audio
+ * stack (GStreamer + ALSA/PulseAudio on Linux), which can block the main
+ * thread for seconds. Doing that while this module is evaluated delays the
+ * app's first paint and leaves the window blank (issue #38) — and it is wasted
+ * work for every session that never plays anything. Nothing needs audio until
+ * a file is imported or the transport rolls.
+ */
+let ctxInstance: AudioContext | null = null;
+function ctx(): AudioContext {
+  return (ctxInstance ??= new AudioContext());
+}
 
 export async function loadAudio(absPath: string): Promise<LoadedAudio> {
   const res = await fetch(convertFileSrc(absPath));
   if (!res.ok) throw new Error(`could not read audio file: ${res.status}`);
-  const buffer = await ctx.decodeAudioData(await res.arrayBuffer());
+  const buffer = await ctx().decodeAudioData(await res.arrayBuffer());
   return {
     buffer,
     peaks: computePeaks(buffer),
@@ -108,7 +121,7 @@ export type TrackPlayback = {
 
 export class Player {
   private playing: PlayingSource[] = [];
-  private startedAt = 0; // ctx.currentTime when playback started
+  private startedAt = 0; // ctx().currentTime when playback started (audio clock)
   private startPos = 0; // timeline seconds at start
   private _isPlaying = false;
 
@@ -118,22 +131,22 @@ export class Player {
 
   /** Current playhead position in timeline seconds. */
   position(whenStopped: number): number {
-    return this._isPlaying ? this.startPos + (ctx.currentTime - this.startedAt) : whenStopped;
+    return this._isPlaying ? this.startPos + (ctx().currentTime - this.startedAt) : whenStopped;
   }
 
   async play(tracks: TrackPlayback[], fromSeconds: number, leadSeconds = 0.05) {
     this.stop();
-    await ctx.resume();
-    this.startedAt = ctx.currentTime + leadSeconds; // scheduling headroom (shared with live MIDI lead)
+    await ctx().resume();
+    this.startedAt = ctx().currentTime + leadSeconds; // scheduling headroom (shared with live MIDI lead)
     this.startPos = fromSeconds;
     for (const t of tracks) {
-      const source = ctx.createBufferSource();
+      const source = ctx().createBufferSource();
       source.buffer = t.audio.buffer;
-      const gain = ctx.createGain();
+      const gain = ctx().createGain();
       gain.gain.value = t.audible ? t.volume : 0;
-      const pan = ctx.createStereoPanner();
+      const pan = ctx().createStereoPanner();
       pan.pan.value = t.pan;
-      source.connect(pan).connect(gain).connect(ctx.destination);
+      source.connect(pan).connect(gain).connect(ctx().destination);
 
       const intoBuffer = fromSeconds - t.offsetSeconds;
       if (intoBuffer >= t.audio.buffer.duration) continue;

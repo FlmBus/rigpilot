@@ -1,7 +1,8 @@
 //! Device Definition loading (XML, see definitions/device-definition-1.xsd).
 
+use crate::project::Shape;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 #[derive(Debug, Deserialize)]
 pub struct DeviceDefinition {
@@ -163,25 +164,87 @@ pub struct AutomationCommand {
 
 #[derive(Debug, Deserialize)]
 pub struct Target {
+    /// The controller to write. Optional: a Target may instead declare the
+    /// messages it sends, for devices that are not driven by a plain CC.
     #[serde(rename = "@controller")]
-    pub controller: u8,
-    #[allow(dead_code)] // used by automation range validation (M4)
+    pub controller: Option<u8>,
     #[serde(rename = "@min", default)]
     pub min: u8,
-    #[allow(dead_code)]
     #[serde(rename = "@max", default = "default_max")]
     pub max: u8,
-    /// Optional discrete value set. When non-empty the automation is "stepped":
-    /// breakpoints snap to these values and export emits a sample-and-hold step
-    /// function instead of interpolating.
-    #[serde(rename = "Label", default)]
-    pub labels: Vec<Label>,
+    /// Curve types this target allows, e.g. "hold" for something that can only
+    /// jump between values. Absent = all three.
+    #[serde(rename = "@shapes")]
+    pub shapes: Option<String>,
+    #[serde(rename = "$value", default)]
+    pub children: Vec<TargetChild>,
+}
+
+/// A Target holds an optional discrete value set plus, optionally, the messages
+/// to send for a value (with `$value` standing in for it).
+#[derive(Debug, Deserialize)]
+pub enum TargetChild {
+    Label(Label),
+    NoteOn(NoteMsg),
+    NoteOff(NoteMsg),
+    ControlChange(CcMsg),
+    ProgramChange(PcMsg),
 }
 
 impl Target {
+    pub fn labels(&self) -> impl Iterator<Item = &Label> {
+        self.children.iter().filter_map(|c| match c {
+            TargetChild::Label(l) => Some(l),
+            _ => None,
+        })
+    }
+
+    /// Messages declared on the target; empty means "a plain CC on `controller`".
+    pub fn declared_messages(&self) -> impl Iterator<Item = Message> + '_ {
+        self.children.iter().filter_map(|c| match c {
+            TargetChild::Label(_) => None,
+            TargetChild::NoteOn(m) => Some(Message::NoteOn(m.clone())),
+            TargetChild::NoteOff(m) => Some(Message::NoteOff(m.clone())),
+            TargetChild::ControlChange(m) => Some(Message::ControlChange(m.clone())),
+            TargetChild::ProgramChange(m) => Some(Message::ProgramChange(m.clone())),
+        })
+    }
+
+    /// Curve types the editor may offer, in menu order.
+    pub fn allowed_shapes(&self) -> Vec<Shape> {
+        let all = vec![Shape::Linear, Shape::Curve, Shape::Hold];
+        let Some(raw) = &self.shapes else { return all };
+        let picked: Vec<Shape> = raw
+            .split_whitespace()
+            .filter_map(|w| match w {
+                "linear" => Some(Shape::Linear),
+                "curve" => Some(Shape::Curve),
+                "hold" => Some(Shape::Hold),
+                _ => None,
+            })
+            .collect();
+        if picked.is_empty() {
+            all
+        } else {
+            picked
+        }
+    }
+
+    /// The shape every segment must take, when there is no choice to make: a
+    /// discrete value set can only jump, and a definition may allow just one type.
+    pub fn forced_shape(&self) -> Option<Shape> {
+        if !self.step_values().is_empty() {
+            return Some(Shape::Hold);
+        }
+        match self.allowed_shapes().as_slice() {
+            [only] => Some(*only),
+            _ => None,
+        }
+    }
+
     /// Allowed values for a stepped automation, ascending. Empty = continuous.
     pub fn step_values(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = self.labels.iter().map(|l| l.value).collect();
+        let mut v: Vec<u8> = self.labels().map(|l| l.value).collect();
         v.sort_unstable();
         v.dedup();
         v
@@ -407,6 +470,10 @@ pub struct DefinitionInfo {
     pub description: Option<String>,
     pub default_latency: u32,
     pub commands: Vec<CommandInfo>,
+    /// Problems with the definition itself, shown in Device settings. Currently
+    /// only: several Automation Commands writing the same controller, which is
+    /// the one remaining way two curves can fight over one CC.
+    pub warnings: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -424,6 +491,11 @@ pub struct CommandInfo {
     /// Discrete value set for a stepped Automation (empty for continuous
     /// automations and all other command types).
     pub steps: Vec<LabelInfo>,
+    /// Value range of an Automation target, `None` for other command types.
+    pub range: Option<(u8, u8)>,
+    /// Curve types this Automation allows ("linear"/"curve"/"hold"); empty for
+    /// other command types. One entry = the editor offers no choice.
+    pub shapes: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -481,6 +553,8 @@ pub fn info(def: &DeviceDefinition) -> DefinitionInfo {
                 deterministic: c.deterministic,
                 params: c.params().map(param_info).collect(),
                 steps: vec![],
+                range: None,
+                shapes: vec![],
             },
             Command::Hold(c) => CommandInfo {
                 id: c.id.clone(),
@@ -493,6 +567,8 @@ pub fn info(def: &DeviceDefinition) -> DefinitionInfo {
                 deterministic: true,
                 params: c.params.iter().map(param_info).collect(),
                 steps: vec![],
+                range: None,
+                shapes: vec![],
             },
             Command::Automation(c) => CommandInfo {
                 id: c.id.clone(),
@@ -504,7 +580,21 @@ pub fn info(def: &DeviceDefinition) -> DefinitionInfo {
                 description: c.description.clone(),
                 deterministic: true,
                 params: vec![],
-                steps: c.target.labels.iter().map(label_info).collect(),
+                steps: c.target.labels().map(label_info).collect(),
+                range: Some((c.target.min, c.target.max)),
+                shapes: c
+                    .target
+                    .allowed_shapes()
+                    .iter()
+                    .map(|s| {
+                        match s {
+                            Shape::Linear => "linear",
+                            Shape::Curve => "curve",
+                            Shape::Hold => "hold",
+                        }
+                        .to_string()
+                    })
+                    .collect(),
             },
         })
         .collect();
@@ -516,7 +606,32 @@ pub fn info(def: &DeviceDefinition) -> DefinitionInfo {
         description: def.meta.description.clone(),
         default_latency: def.defaults.as_ref().map(|d| d.latency).unwrap_or(0),
         commands,
+        warnings: warnings(def),
     }
+}
+
+/// Each Automation Command owns its own curve, so one knob can never be
+/// automated twice — unless the definition points two of them at the same
+/// controller. That is the author's call, so it is a warning, not an error.
+fn warnings(def: &DeviceDefinition) -> Vec<String> {
+    let mut by_controller: BTreeMap<u8, Vec<&str>> = BTreeMap::new();
+    for command in &def.commands.items {
+        if let Command::Automation(c) = command {
+            if let Some(controller) = c.target.controller {
+                by_controller.entry(controller).or_default().push(&c.name);
+            }
+        }
+    }
+    by_controller
+        .into_iter()
+        .filter(|(_, names)| names.len() > 1)
+        .map(|(controller, names)| {
+            format!(
+                "CC {controller} is targeted by more than one Automation Command ({}) — their curves can conflict.",
+                names.join(", ")
+            )
+        })
+        .collect()
 }
 
 #[cfg(test)]

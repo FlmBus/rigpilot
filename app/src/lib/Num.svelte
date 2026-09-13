@@ -71,11 +71,10 @@
   .num {
     display: inline-flex;
     align-items: stretch;
-    border: 1px solid #000;
-    border-radius: var(--radius-sm);
-    background: #07070a;
-    box-shadow: var(--well-in);
-    height: var(--ctl-h);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-sm);
+    background: var(--raised);
+    height: var(--h);
     overflow: hidden;
     cursor: ns-resize;
     touch-action: none;
@@ -94,7 +93,7 @@
     font-family: var(--font-mono);
     cursor: inherit;
   }
-  /* flat = embedded in an LCD / readout: no chrome, green mono, no steppers */
+  /* flat = a borderless scrub field in the transport readout: no chrome, no steppers */
   .num.flat {
     border: none;
     background: transparent;
@@ -104,7 +103,7 @@
   .num.flat input {
     width: 46px;
     padding: 0;
-    color: var(--green);
+    color: var(--fg);
     font-size: 13px;
   }
   .num.flat .btns {
@@ -125,7 +124,7 @@
     border: none;
     border-radius: 0;
     background: transparent;
-    color: var(--fg-faint);
+    color: var(--fg-3);
     font-size: 7px;
     line-height: 1;
     padding: 0;
@@ -138,7 +137,7 @@
   }
   button:hover {
     color: var(--accent);
-    background: var(--bg3);
+    background: var(--accent-soft);
   }
   button:first-child {
     border-bottom: 1px solid var(--line);

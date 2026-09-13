@@ -33,8 +33,7 @@
   .backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(5, 5, 7, 0.6);
-    backdrop-filter: blur(2px);
+    background: color-mix(in srgb, var(--canvas) 60%, transparent);
     display: grid;
     place-items: center;
     z-index: 50;
@@ -42,10 +41,10 @@
   .dialog {
     min-width: 380px;
     max-width: 520px;
-    background: linear-gradient(180deg, #141419, #0e0e12);
-    border: 1px solid #000;
-    border-radius: var(--radius);
-    box-shadow: var(--rim), var(--float);
+    background: var(--panel);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r);
+    box-shadow: var(--shadow);
   }
   header {
     display: flex;
@@ -53,8 +52,7 @@
     justify-content: space-between;
     height: 30px;
     padding: 0 6px 0 14px;
-    border-bottom: 1px solid #000;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid var(--line);
   }
   .body {
     padding: 16px;

@@ -72,6 +72,20 @@
     </xs:choice>
   </xs:group>
 
+  <!-- Curve types an Automation Target allows, e.g. "hold" for a control that can
+       only jump between values. Absent = all three. -->
+  <xs:simpleType name="shapeName">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="linear"/>
+      <xs:enumeration value="curve"/>
+      <xs:enumeration value="hold"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="shapeList">
+    <xs:list itemType="rp:shapeName"/>
+  </xs:simpleType>
+
   <xs:complexType name="messageList">
     <xs:group ref="rp:message" minOccurs="1" maxOccurs="unbounded"/>
   </xs:complexType>
@@ -141,13 +155,20 @@
             automation is "stepped": breakpoint values snap to these values, each
             node shows its label, and export emits a sample-and-hold step function
             (no interpolation). Typical use: a CC that is only meaningful at 0/127.
+
+            Optionally the Target declares the messages it sends, with $value
+            standing in for the curve's value. Without them the target is a plain
+            Control Change on @controller, which is then required.
           -->
           <xs:sequence>
+            <xs:group ref="rp:message" minOccurs="0" maxOccurs="unbounded"/>
             <xs:element name="Label" type="rp:valueLabel" minOccurs="0" maxOccurs="unbounded"/>
           </xs:sequence>
-          <xs:attribute name="controller" type="rp:midiByte" use="required"/>
+          <xs:attribute name="controller" type="rp:midiByte"/>
           <xs:attribute name="min" type="rp:midiByte" default="0"/>
           <xs:attribute name="max" type="rp:midiByte" default="127"/>
+          <!-- Curve types the editor may offer for this target. -->
+          <xs:attribute name="shapes" type="rp:shapeList"/>
         </xs:complexType>
       </xs:element>
     </xs:sequence>

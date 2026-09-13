@@ -23,14 +23,15 @@ all use these terms. If a word isn't in here, it shouldn't appear in the UI.
 | **Command Type** | One of the three app-defined behaviors a Command can have: **One-Shot**, **Hold**, or **Automation**. Fixed by RigPilot, never extended by Definitions. Drives the **event color** on the timeline. |
 | **One-Shot** | Command Type: fires its Messages once at a point in time. Rendered as a marker. |
 | **Hold** | Command Type: sends Engage Messages at block start and Disengage Messages at block end. Rendered as a resizable block. |
-| **Automation** | Command Type: a value curve over a block, targeting a MIDI CC — for volume fades, pre-programmed wah/whammy, etc. Like an automation clip in a DAW. Edited via Breakpoints, rendered to a CC stream on export. |
+| **Automation** | Command Type: a value curve targeting a MIDI control — for volume fades, pre-programmed wah/whammy, etc. Unlike the other two Command Types it is never placed as an Event: every Automation Command of a Device owns one curve per MIDI Track, edited in that track's Automation Lane and rendered to MIDI on export. A Target is normally a CC, but may instead declare the messages it sends (with `$value` standing in for the value) — that is how a Program Change can be automated. |
 | **Group** | A free-form string on each Command, purely organizational. The Command Palette derives its groups from the distinct values found in the Definition — groups are not declared anywhere. No semantic meaning beyond the UI. |
 | **Parameter** | A per-Event value a Command may require (e.g. "Rig #" 0–127 on "Select Rig"), declared in the Definition with range, default, and optional value labels. |
-| **Event** | A placed instance of a Command on a MIDI Track's timeline, with a start time, a Lane, optionally a length (Hold/Automation), and Parameter values. |
+| **Event** | A placed instance of a **One-Shot or Hold** Command on a MIDI Track's timeline, with a start time, a Lane, optionally a length (Hold), and Parameter values. Automation produces no Events. |
 | **Message** | A single raw MIDI message (`NoteOn`, `NoteOff`, `ControlChange`, `ProgramChange`) inside a Definition. Carries no channel — it is sent on the Device's configured MIDI Channel. |
 | **Init Messages** | Optional Definition-declared Messages that put the device into a known clean state. Used by the Reset Block. |
 | **Latency** (per Command) | Optional per-Command execution time in ms declared in the Definition (preset loads are slow, stomp toggles are not), added on top of the track's Latency Compensation when shifting messages early. |
-| **Breakpoint** | A time/value point inside an Automation Event; consecutive Breakpoints are connected (linear in v1). |
+| **Breakpoint** | A time/value point on an Automation curve, positioned in absolute song time. It also carries the **shape** of the Segment *arriving at* it (FL-Studio style, so the first Breakpoint has none). A curve with at least one Breakpoint has a value everywhere: the first value is held back to the Song Start and the last one to the end. A curve with none sends nothing, leaving the knob wherever the player set it. |
+| **Segment** | The piece of curve between two neighbouring Breakpoints. Its shape — **Linear**, **Curve** (a single adjustable bend) or **Hold** (jump at the next Breakpoint) — is owned by the Breakpoint it ends at, so you set it by right-clicking that point. A Definition can restrict which shapes a Target allows (`shapes="hold"`), and a Target with named steps is always Hold — interpolating between "Clean" and "Lead" is meaningless. When only one shape is possible the editor offers no choice at all. |
 
 ## Editor
 
@@ -38,7 +39,8 @@ all use these terms. If a word isn't in here, it shouldn't appear in the UI.
 |---|---|
 | **Arrangement** | The main view: track headers left, Timeline right, Command Palette bottom. |
 | **Timeline** | The time area where Events and audio waveforms live. |
-| **Lane** | One anonymous horizontal row inside a MIDI Track. Y-position carries no meaning; Lanes exist only so Events can overlap in time (FL-Studio-Playlist semantics). |
+| **Lane** | One anonymous horizontal row inside a MIDI Track, holding One-Shot and Hold Events. Y-position carries no meaning; Lanes exist only so Events can overlap in time (FL-Studio-Playlist semantics). Not to be confused with the Automation Lane. |
+| **Automation Lane** | The single row beneath a MIDI Track's Lanes that shows one Automation Command's curve at a time, picked with the **selector** in the track header (Studio-One style). Because each Automation Command owns exactly one curve, the same knob can never be automated twice. The selector's *No automation* entry collapses the lane; the lane's bottom edge is draggable. |
 | **Command Palette** | The panel showing the selected MIDI Track's Commands — organized by Group, colored by Command Type — as the drag source for placing Events. |
 | **Grid** | The snapping raster, toggleable between **Musical** (bars/beats, from BPM + time signature) and **Raw Time** (seconds). |
 | **Snap** | Toggle: whether dragging/placing aligns to the Grid (Alt bypasses temporarily). |

@@ -1,0 +1,1062 @@
+<!doctype html>
+<html lang="en" data-id="studio" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RigPilot — visual reboot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================================
+   RigPilot — VISUAL REBOOT.  Same layout you have today; three complete,
+   committed visual languages built on it. One markup tree, three identities.
+
+     STUDIO    light · neutral · utilitarian. Paper canvas, ink type, colour
+               only where it carries data. The credible "professional tool".
+     GRAPHITE  dark · cool · quiet. Soft greys, hairline structure, one
+               desaturated accent. Native to a DAW workflow, zero decoration.
+     SIGNAL    dark · high-contrast · technical. Zero radius, mono structural
+               type, thick rules, pink kept as the one signal colour. Keeps
+               RigPilot's brand energy but disciplined instead of glossy.
+
+   Nothing below the token layer contains a colour, shadow or gradient literal.
+   An identity IS its token block — which is exactly what theme.css must become.
+   ========================================================================= */
+
+/* ------------------------------- shared geometry defaults --------------- */
+:root {
+  --beat: 56px;
+  --bars: 8;
+  --song-w: calc(var(--beat) * 4 * var(--bars));
+  /* AUTO_LANE_COLLAPSED_H. Lengths here must never reuse a colour token name.
+     --auto is the automation colour; a length of the same name loses the
+     cascade to the theme block and silently resolves to a colour. */
+  --lane-auto-c: 26px;
+  /* Text that sits on a saturated fill. Theme-independent by definition: the
+     fill supplies the contrast, not the surrounding theme. */
+  --fg-on-color: #ffffff;
+  --fg-on-warm: #1c1a14;
+  --ui: "Inter", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* =========================== IDENTITY · STUDIO =========================== */
+[data-id="studio"] {
+  --r: 6px; --r-sm: 4px; --clip-r: 5px;
+  --h: 28px; --bar-h: 52px; --lane: 60px; --lane-auto: 100px; --pal-w: 214px; --head-w: 186px; --insp-w: 268px;
+  --fs: 13px; --fs-micro: 10px;
+  --micro-ls: .05em; --micro-tt: uppercase; --micro-w: 500; --micro-f: var(--ui);
+  --title-w: 600; --title-ls: -.015em; --name-w: 500;
+  --border-key: 1px;
+}
+[data-id="studio"][data-theme="light"] {
+  --canvas: #ffffff; --panel: #fcfcfd; --raised: #ffffff; --sunken: #f6f7f8;
+  --line: #ececef; --line-2: #d9dbe0;
+  --fg: #101114; --fg-2: #6a6e76; --fg-3: #9ca0a8;
+  --accent: #18191c; --accent-fg: #ffffff; --accent-soft: #f1f2f4; --focus: #2f6fed;
+  --hold: #4f46e5; --shot: #b45309; --auto: #0f766e;
+  --wave: #d6d9de; --warn: #b45309; --danger: #c02434;
+  --shadow: 0 1px 2px rgba(16,18,24,.05), 0 10px 28px rgba(16,18,24,.08);
+  --shadow-sm: 0 1px 2px rgba(16,18,24,.06);
+  --tint: 24%; --grid-soft: #f2f3f5; --grid-bar: #e2e4e8;
+}
+[data-id="studio"][data-theme="dark"] {
+  --canvas: #101114; --panel: #15161a; --raised: #1b1d21; --sunken: #121317;
+  --line: #23252a; --line-2: #31343b;
+  --fg: #edeef0; --fg-2: #939aa3; --fg-3: #656a72;
+  --accent: #edeef0; --accent-fg: #101114; --accent-soft: #1e2126; --focus: #5b8cff;
+  --hold: #8b85ff; --shot: #e0a44a; --auto: #3fbfa8;
+  --wave: #3a3e45; --warn: #e0a44a; --danger: #f0707f;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.5);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+  --tint: 34%; --grid-soft: #191b1f; --grid-bar: #262930;
+}
+
+/* =========================== IDENTITY · GRAPHITE ========================= */
+[data-id="graphite"] {
+  --r: 5px; --r-sm: 4px; --clip-r: 3px;
+  --h: 26px; --bar-h: 46px; --lane: 52px; --lane-auto: 88px; --pal-w: 204px; --head-w: 178px; --insp-w: 252px;
+  --fs: 12.5px; --fs-micro: 9.5px;
+  --micro-ls: .04em; --micro-tt: none; --micro-w: 500; --micro-f: var(--ui);
+  --title-w: 600; --title-ls: -.012em; --name-w: 500;
+  --border-key: 1px;
+}
+[data-id="graphite"][data-theme="dark"] {
+  --canvas: #0e1013; --panel: #15181c; --raised: #1c2027; --sunken: #111418;
+  --line: #22262c; --line-2: #323841;
+  --fg: #e2e6ea; --fg-2: #8a929c; --fg-3: #5d646d;
+  --accent: #5b93f5; --accent-fg: #0b0d10; --accent-soft: rgba(91,147,245,.14); --focus: #5b93f5;
+  --hold: #5b93f5; --shot: #d89b3c; --auto: #34b88f;
+  --wave: #4a525c; --warn: #d89b3c; --danger: #dd5c6b;
+  --shadow: 0 10px 28px rgba(0,0,0,.5); --shadow-sm: 0 1px 2px rgba(0,0,0,.45);
+  --tint: 36%; --grid-soft: #16191e; --grid-bar: #262b32;
+}
+[data-id="graphite"][data-theme="light"] {
+  --canvas: #eceef1; --panel: #f8f9fb; --raised: #ffffff; --sunken: #f1f2f5;
+  --line: #e2e5ea; --line-2: #c8ccd4;
+  --fg: #16191e; --fg-2: #5a6169; --fg-3: #888f98;
+  --accent: #2563c9; --accent-fg: #ffffff; --accent-soft: rgba(37,99,201,.1); --focus: #2563c9;
+  --hold: #2563c9; --shot: #a86a00; --auto: #0d8f6b;
+  --wave: #a9b0ba; --warn: #a86a00; --danger: #c62f3f;
+  --shadow: 0 10px 26px rgba(15,20,30,.13); --shadow-sm: 0 1px 2px rgba(15,20,30,.08);
+  --tint: 28%; --grid-soft: #e6e9ee; --grid-bar: #d3d8e0;
+}
+
+/* =========================== IDENTITY · SIGNAL =========================== */
+[data-id="signal"] {
+  --r: 0px; --r-sm: 0px; --clip-r: 0px;
+  --h: 26px; --bar-h: 48px; --lane: 56px; --lane-auto: 92px; --pal-w: 210px; --head-w: 182px; --insp-w: 258px;
+  --fs: 12.5px; --fs-micro: 9px;
+  --micro-ls: .13em; --micro-tt: uppercase; --micro-w: 500; --micro-f: var(--mono);
+  --title-w: 600; --title-ls: .01em; --name-w: 500;
+  --border-key: 2px;
+}
+[data-id="signal"][data-theme="dark"] {
+  --canvas: #08090a; --panel: #0e0f11; --raised: #16181b; --sunken: #0b0c0d;
+  --line: #1e2023; --line-2: #3a3d42;
+  --fg: #fafafa; --fg-2: #9b9fa5; --fg-3: #676b71;
+  --accent: #ff2e88; --accent-fg: #ffffff; --accent-soft: rgba(255,46,136,.13); --focus: #ff2e88;
+  --hold: #ff2e88; --shot: #ffb800; --auto: #00e3a0;
+  --wave: #565b61; --warn: #ffb800; --danger: #ff4d5e;
+  --shadow: 0 12px 30px rgba(0,0,0,.7); --shadow-sm: none;
+  --tint: 32%; --grid-soft: #131517; --grid-bar: #2a2d31;
+}
+[data-id="signal"][data-theme="light"] {
+  --canvas: #ffffff; --panel: #fafafa; --raised: #ffffff; --sunken: #f4f4f5;
+  --line: #e6e6e8; --line-2: #18191b;
+  --fg: #08090a; --fg-2: #55585d; --fg-3: #878a8f;
+  --accent: #e5006e; --accent-fg: #ffffff; --accent-soft: rgba(229,0,110,.09); --focus: #e5006e;
+  --hold: #e5006e; --shot: #9a6a00; --auto: #00795a;
+  --wave: #b4b7bb; --warn: #9a6a00; --danger: #d81d33;
+  --shadow: 0 12px 28px rgba(0,0,0,.12); --shadow-sm: none;
+  --tint: 22%; --grid-soft: #f2f2f3; --grid-bar: #dcdcde;
+}
+
+/* ======================================================================= */
+/* =================  STRUCTURE — reads tokens only  ====================== */
+/* ======================================================================= */
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  background: var(--canvas); color: var(--fg);
+  font: var(--fs)/1.45 var(--ui);
+  -webkit-font-smoothing: antialiased; user-select: none;
+}
+.micro {
+  font-family: var(--micro-f); font-size: var(--fs-micro); font-weight: var(--micro-w);
+  letter-spacing: var(--micro-ls); text-transform: var(--micro-tt); color: var(--fg-3);
+}
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------- controls -- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: var(--h); padding: 0 10px; cursor: pointer; white-space: nowrap;
+  font: 500 12.5px/1 var(--ui); color: var(--fg);
+  background: var(--raised); border: 1px solid var(--line-2); border-radius: var(--r);
+  box-shadow: var(--shadow-sm);
+  transition: background 110ms ease, border-color 110ms ease, color 110ms ease;
+}
+.btn:hover { background: var(--accent-soft); border-color: var(--fg-3); }
+.btn.solid { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.btn.solid:hover { filter: brightness(1.1); }
+.btn.quiet { background: transparent; border-color: transparent; box-shadow: none; color: var(--fg-2); }
+.btn.quiet:hover { background: var(--accent-soft); color: var(--fg); border-color: transparent; }
+.btn.on { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.btn.ico { width: var(--h); padding: 0; }
+.btn.danger { color: var(--danger); }
+.btn.danger:hover { border-color: var(--danger); background: transparent; }
+.btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.btn:disabled { opacity: .4; cursor: default; }
+
+.fld {
+  height: var(--h); padding: 0 8px; min-width: 0; color: var(--fg); font: 450 12.5px/1 var(--ui);
+  background: var(--raised); border: 1px solid var(--line-2); border-radius: var(--r-sm);
+}
+.fld.mono { font-family: var(--mono); text-align: right; font-weight: 500; }
+.fld:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+select.fld { appearance: none; padding-right: 20px; background-image: none; }
+.selwrap { position: relative; display: inline-flex; }
+.selwrap::after {
+  content: "▾"; position: absolute; right: 7px; top: 50%; transform: translateY(-50%);
+  font-size: 8px; color: var(--fg-3); pointer-events: none;
+}
+.naked { background: transparent; border: 0; color: inherit; font: inherit; padding: 0; min-width: 0; }
+.naked:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.seg {
+  display: inline-flex; gap: 2px; padding: 2px;
+  background: var(--sunken); border: 1px solid var(--line); border-radius: var(--r);
+}
+.seg button {
+  height: calc(var(--h) - 6px); padding: 0 9px; border: 0; cursor: pointer;
+  background: transparent; color: var(--fg-2); border-radius: var(--r-sm);
+  font: 500 11.5px/1 var(--ui);
+}
+.seg button:hover { color: var(--fg); }
+.seg button.on { background: var(--raised); color: var(--fg); box-shadow: var(--shadow-sm); }
+[data-id="signal"] .seg button.on { background: var(--accent); color: var(--accent-fg); }
+
+.split { display: inline-flex; }
+.split > * { border-radius: 0; }
+.split > :first-child { border-radius: var(--r) 0 0 var(--r); }
+.split > :last-child { border-radius: 0 var(--r) var(--r) 0; margin-left: -1px; }
+
+.chk { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.chk input { appearance: none; width: 15px; height: 15px; margin: 0; flex: 0 0 auto; position: relative;
+  background: var(--raised); border: 1px solid var(--line-2); border-radius: var(--r-sm); cursor: pointer; }
+.chk input:checked { background: var(--accent); border-color: var(--accent); }
+.chk input:checked::after {
+  content: ""; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px;
+  border: solid var(--accent-fg); border-width: 0 2px 2px 0; transform: rotate(42deg);
+}
+input[type=range] { appearance: none; height: 14px; width: 100%; background: transparent; }
+input[type=range]::-webkit-slider-runnable-track {
+  height: 3px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent) 0 var(--fill,50%), var(--line-2) var(--fill,50%));
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 11px; height: 11px; margin-top: -4px; border-radius: 50%;
+  background: var(--raised); border: 1.5px solid var(--fg-2);
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+.dot.sq { border-radius: 2px; }
+[data-id="signal"] .dot, [data-id="signal"] .dot.sq { border-radius: 0; }
+/* One-shot swatch mirrors the timeline point: a dot everywhere, and — since
+   Signal already flattens every dot to a square above — just rotated to a
+   diamond there to match .shot b's signal treatment. */
+[data-id="signal"] .dot.os { transform: rotate(45deg); }
+.kbd { font: 500 10px/1 var(--mono); color: var(--fg-3); padding: 3px 5px;
+  border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--sunken); }
+.vr { width: 1px; align-self: stretch; background: var(--line); margin: 10px 3px; }
+
+.wc { display: flex; gap: 1px; margin-left: 6px; }
+.wc button { width: 26px; height: 26px; display: grid; place-items: center; cursor: pointer;
+  background: transparent; border: 0; border-radius: var(--r-sm); color: var(--fg-3); font-size: 11px; }
+.wc button:hover { background: var(--accent-soft); color: var(--fg); }
+.wc button.x:hover { background: var(--danger); color: var(--fg-on-color); }
+
+/* ------------------------------------------------------------ app shell -- */
+.app { display: flex; flex-direction: column; height: calc(100vh - 42px); }
+.bar {
+  display: flex; align-items: center; gap: 12px; flex: 0 0 auto;
+  height: var(--bar-h); padding: 0 10px 0 14px;
+  background: var(--panel); border-bottom: var(--border-key) solid var(--line);
+}
+.bar-l { display: flex; align-items: center; gap: 10px; }
+.bar-c { flex: 1; display: flex; align-items: center; justify-content: center; gap: 16px; min-width: 0; }
+.bar-r { display: flex; align-items: center; gap: 7px; }
+
+.brand { display: flex; align-items: center; gap: 8px; }
+.mark {
+  width: 22px; height: 22px; border-radius: var(--r-sm); display: grid; place-items: center;
+  background: var(--accent); color: var(--accent-fg); font: 700 11px/1 var(--ui); letter-spacing: -.04em;
+}
+[data-id="signal"] .mark { font-family: var(--mono); font-weight: 600; letter-spacing: 0; }
+.wordmark { font: 600 14px/1 var(--ui); letter-spacing: -.02em; }
+[data-id="signal"] .wordmark { font-family: var(--mono); letter-spacing: .06em; text-transform: uppercase; font-size: 12px; }
+.wordmark i { font-style: normal; color: var(--accent); }
+[data-id="studio"] .wordmark i { color: var(--fg-3); }
+
+.song {
+  width: 180px; height: var(--h); padding: 0 8px; border-radius: var(--r-sm);
+  font: 450 13px/1 var(--ui); color: var(--fg-2);
+  background: transparent; border: 1px solid transparent;
+}
+.song:hover { background: var(--sunken); color: var(--fg); }
+.song:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; color: var(--fg); }
+
+/* transport + position readout — no fake LCD; weight and rhythm do the work */
+.transport { display: flex; align-items: center; gap: 8px; }
+.play {
+  width: 30px; height: 30px; border: 0; cursor: pointer; border-radius: 50%;
+  background: var(--accent); color: var(--accent-fg); display: grid; place-items: center;
+  font-size: 10px; padding-left: 2px; box-shadow: var(--shadow-sm);
+}
+[data-id="signal"] .play { border-radius: 0; }
+.play:hover { filter: brightness(1.12); }
+.readout { display: flex; align-items: baseline; gap: 2px; font-family: var(--mono); }
+.readout b { font: 500 18px/1 var(--mono); letter-spacing: -.01em; }
+.readout s { text-decoration: none; color: var(--line-2); padding: 0 1px; }
+[data-id="signal"] .readout b { color: var(--accent); font-weight: 600; }
+.tempo { display: flex; align-items: center; gap: 12px; }
+.tempo .f { display: flex; align-items: baseline; gap: 5px; }
+.tempo .v { font: 500 13px/1 var(--mono); color: var(--fg); }
+.tempo .naked.v { width: 26px; }
+.tempo .sig { display: flex; align-items: baseline; }
+.tempo .sig .naked.v { width: 14px; text-align: center; }
+.tempo .sl { color: var(--fg-3); }
+
+/* ------------------------------------------------------------ main split - */
+.main { flex: 1; display: flex; min-height: 0; }
+.pane { display: flex; flex-direction: column; flex: 0 0 auto; background: var(--panel); overflow: hidden; }
+.pal { width: var(--pal-w); border-right: var(--border-key) solid var(--line); }
+.insp { width: var(--insp-w); border-left: var(--border-key) solid var(--line); overflow-y: auto; }
+.pane-hd {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  height: 30px; padding: 0 12px; flex: 0 0 auto; border-bottom: 1px solid var(--line);
+}
+
+/* palette */
+.pal-sub { padding: 10px 10px 6px; display: flex; flex-direction: column; gap: 7px; }
+.pal-dev { color: var(--fg-2); font-weight: 500; }
+.pal-dev b { color: var(--accent); font-weight: 500; }
+.pal-groups { flex: 1; overflow-y: auto; padding: 4px 8px 12px; display: flex; flex-direction: column; gap: 10px; }
+/* One-Shot/Hold are dragged onto the timeline; Automation is clicked to open its
+   curve. Two different verbs, so they get two labelled sections instead of one
+   mixed list where a type dot is the only hint. */
+.pal-sect { display: flex; align-items: center; gap: 7px; padding: 6px 4px 2px; }
+.pal-sect::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.grp-hd { display: flex; align-items: center; gap: 6px; height: 22px; padding: 0 4px; cursor: pointer;
+  background: transparent; border: 0; color: inherit; }
+.grp-hd .cv { font-size: 8px; color: var(--fg-3); }
+.cmd {
+  display: flex; align-items: center; gap: 9px; height: 28px; padding: 0 8px;
+  border-radius: var(--r-sm); color: var(--fg-2); cursor: grab; font-size: 12.5px; font-weight: 450;
+  white-space: nowrap; overflow: hidden;
+}
+.cmd:hover { background: var(--accent-soft); color: var(--fg); }
+.cmd .nm { overflow: hidden; text-overflow: ellipsis; }
+.cmd .wn { margin-left: auto; color: var(--warn); font-size: 10px; }
+/* Automation has a lane of its own, so there is nothing to drag: clicking shows
+   that curve in the track's Automation Lane instead. */
+.cmd.auto { cursor: pointer; }
+.cmd.auto.on { color: var(--fg); background: var(--accent-soft); }
+.cmd .used { margin-left: auto; font-size: 7px; color: var(--auto); }
+
+/* track headers */
+.mid { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.arr { flex: 1; display: flex; min-width: 0; overflow: hidden; }
+.heads { width: var(--head-w); flex: 0 0 auto; display: flex; flex-direction: column;
+  background: var(--panel); border-right: var(--border-key) solid var(--line); }
+.rul-pad { height: 34px; flex: 0 0 auto; border-bottom: 1px solid var(--line); }
+/* Every horizontal separator is a border-TOP on the box beneath it — in the
+   header column and in the timeline alike. That is the only way the two stay
+   pixel-locked once tracks have both event lanes and an automation lane. */
+.thead {
+  position: relative; display: flex; align-items: center; gap: 10px; padding: 0 11px;
+  cursor: pointer; flex: 0 0 auto;
+}
+.thead + .thead, .autohd + .thead, .thead + .autohd { border-top: 1px solid var(--line); }
+.thead:hover { background: var(--sunken); }
+.thead.sel { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.tbar { width: 3px; height: 24px; border-radius: 2px; background: var(--tc); flex: 0 0 auto; }
+[data-id="signal"] .tbar { border-radius: 0; width: 4px; }
+.tmeta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tmeta .nm { font: var(--name-w) 12.5px/1.2 var(--ui); letter-spacing: -.008em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tmeta .sb { font: 400 10px/1 var(--mono); color: var(--fg-3); }
+.tacts { display: flex; gap: 3px; }
+.ms {
+  width: 20px; height: 20px; display: grid; place-items: center; cursor: pointer;
+  font: 600 9.5px/1 var(--mono); color: var(--fg-3);
+  background: transparent; border: 1px solid var(--line-2); border-radius: var(--r-sm);
+}
+.ms:hover { color: var(--fg); }
+.ms.on { background: var(--danger); border-color: var(--danger); color: var(--fg-on-color); }
+.ms.solo.on { background: var(--warn); border-color: var(--warn); color: var(--fg-on-warm); }
+.addrow { display: flex; gap: 6px; padding: 9px 11px; border-top: 1px solid var(--line); }
+.addrow .btn { flex: 1; height: 28px; background: transparent; border-style: dashed;
+  border-color: var(--line-2); color: var(--fg-3); box-shadow: none; font-weight: 450; }
+.addrow .btn:hover { color: var(--accent); border-color: var(--accent); }
+.head-fill { flex: 1; }
+
+/* ------------------------------------------------- timeline toolbar ------ */
+/* Snap, grid mode and zoom are TIMELINE-scoped, not app-scoped. Parking them in
+   the far top-right corner put them 900px from the thing they affect and helped
+   overload that bar with ~15 controls. They live above the ruler now. */
+.tlbar {
+  display: flex; align-items: center; gap: 8px; flex: 0 0 auto;
+  height: 34px; padding: 0 10px; background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.tlbar .sp { flex: 1; }
+.tlbar .rd { font: 400 10.5px/1 var(--mono); color: var(--fg-3); }
+.zoom { display: inline-flex; align-items: center; gap: 1px; }
+.zoom button {
+  width: 22px; height: 22px; display: grid; place-items: center; cursor: pointer;
+  background: transparent; border: 1px solid var(--line-2); border-radius: var(--r-sm);
+  color: var(--fg-2); font-size: 11px;
+}
+.zoom button:hover { color: var(--fg); background: var(--accent-soft); }
+.zoom button:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); }
+.zoom button:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.zoom button + button { margin-left: -1px; }
+
+/* ------------------------------------------------------ section strip ---- */
+/* Bands do not say "bar 33", they say "second chorus". Named sections give the
+   timeline the vocabulary the users already have — and become the unit for
+   navigation, looping and copying a chorus's worth of commands. */
+.sec-pad {
+  height: 24px; flex: 0 0 auto; display: flex; align-items: center; padding: 0 11px;
+  border-bottom: 1px solid var(--line); background: var(--panel);
+}
+.sections {
+  position: sticky; top: 34px; z-index: 4; height: 24px;
+  background: var(--panel); border-bottom: 1px solid var(--line);
+}
+.sec {
+  position: absolute; top: 0; bottom: 0; display: flex; align-items: center;
+  padding: 0 8px; overflow: hidden; cursor: pointer;
+  border-left: 1px solid var(--line-2);
+  background: color-mix(in srgb, var(--sc) 9%, transparent);
+}
+.sec:hover { background: color-mix(in srgb, var(--sc) 18%, transparent); }
+.sec span {
+  font: 500 10px/1 var(--ui); letter-spacing: .04em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--sc) 65%, var(--fg));
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+[data-id="signal"] .sec span { font-family: var(--mono); letter-spacing: .12em; }
+.sec::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--sc);
+}
+
+/* ---------------------------------------------------------- timeline ----- */
+.tl { flex: 1; min-width: 0; overflow: auto; background: var(--canvas); }
+.surf { position: relative; width: var(--song-w); min-height: 100%; }
+.rul { position: sticky; top: 0; z-index: 4; height: 34px; background: var(--canvas);
+  border-bottom: 1px solid var(--line); }
+.rul .b { position: absolute; top: 0; bottom: 0; width: calc(var(--beat) * 4); }
+.rul .b::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 0; width: 1px; background: var(--grid-bar); }
+.rul .b em { position: absolute; left: 7px; bottom: 6px; font: 500 10.5px/1 var(--mono); font-style: normal; color: var(--fg-3); }
+.rul .b i { position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
+  background: repeating-linear-gradient(90deg, var(--grid-soft) 0 1px, transparent 1px var(--beat)); }
+.trk { position: relative; }
+.lane {
+  position: relative; height: var(--lane);
+  background:
+    repeating-linear-gradient(90deg, var(--grid-bar) 0 1px, transparent 1px calc(var(--beat) * 4)),
+    repeating-linear-gradient(90deg, var(--grid-soft) 0 1px, transparent 1px var(--beat));
+}
+.lane + .lane { border-top: 1px solid var(--grid-soft); }
+/* Separator lives inside the lane box (border-box), so N lanes are exactly
+   N * --lane tall and the header column never drifts against the timeline. */
+.trk + .trk > .lane:first-child { border-top: 1px solid var(--line); }
+.trk.audio { height: 76px; display: flex; align-items: center; }
+.trk.audio svg { width: 100%; height: 60px; display: block; }
+.trk.audio path { fill: var(--wave); }
+.ph { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--fg); z-index: 6; }
+.ph::before { content: ""; position: absolute; top: 0; left: -3.5px; width: 8px; height: 8px;
+  border-radius: 50%; background: var(--fg); }
+[data-id="signal"] .ph { background: var(--accent); }
+[data-id="signal"] .ph::before { background: var(--accent); border-radius: 0; width: 9px; height: 4px; left: -4px; }
+
+/* --------------------------------------------------- automation lane ----- */
+/* Automation is not a clip. Each MIDI track owns ONE lane showing ONE curve at
+   a time, chosen by the selector in the header column. So it is styled as a
+   recessed *display* — something you read and adjust — never as an object with
+   a grab-handle. That distinction is the whole point of the new model. */
+.autohd {
+  position: relative; flex: 0 0 auto; height: var(--lane-auto);
+  display: flex; flex-direction: column; padding: 4px 10px 0;
+  background: var(--sunken);
+}
+.autohd.collapsed { height: var(--lane-auto-c); padding: 2px 10px 0; }
+.autohd-row { display: flex; align-items: center; gap: 4px; height: 20px; flex: 0 0 auto; }
+.autosel {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
+  height: 20px; padding: 0 5px; cursor: pointer;
+  font: 450 11px/1 var(--ui); color: var(--fg-2);
+  background: var(--raised); border: 1px solid var(--line-2); border-radius: var(--r-sm);
+}
+.autosel:hover { color: var(--fg); border-color: var(--fg-3); }
+.autosel .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.autosel .nm.none { color: var(--fg-3); }
+.autosel .cv { font-size: 7px; color: var(--fg-3); }
+.autosel .used { font-size: 7px; color: var(--auto); }
+.autosel .badge {
+  font: 500 9px/1 var(--mono); color: var(--fg-3);
+  padding: 2px 4px; border-radius: 3px; background: var(--accent-soft);
+}
+.auto-on {
+  width: 30px; height: 20px; flex: 0 0 auto; display: grid; place-items: center; cursor: pointer;
+  font: 600 8px/1 var(--mono); letter-spacing: .07em; color: var(--fg-3);
+  background: transparent; border: 1px solid var(--line-2); border-radius: var(--r-sm);
+}
+.auto-on:hover { color: var(--fg); }
+.auto-on.on { color: var(--auto); border-color: color-mix(in srgb, var(--auto) 55%, var(--line-2)); }
+.auto-dots {
+  width: 18px; height: 20px; flex: 0 0 auto; display: grid; place-items: center; cursor: pointer;
+  background: transparent; border: 0; border-radius: var(--r-sm); color: var(--fg-3); font-size: 13px;
+}
+.auto-dots:hover { background: var(--accent-soft); color: var(--fg); }
+.grip { margin-top: auto; height: 7px; flex: 0 0 auto; display: grid; place-items: center; cursor: ns-resize; }
+.grip::before { content: ""; width: 26px; height: 2px; border-radius: 1px; background: var(--line-2); }
+.grip:hover::before { background: var(--accent); }
+
+.autolane {
+  position: relative; height: var(--lane-auto); border-top: 1px solid var(--line);
+  background-color: var(--sunken);
+  /* horizontal value guides (quarters of the range) over the same beat/bar grid
+     the event lanes use — you align breakpoints to the grid too. */
+  background-image:
+    repeating-linear-gradient(180deg, var(--line) 0 1px, transparent 1px 25%),
+    repeating-linear-gradient(90deg, var(--grid-bar) 0 1px, transparent 1px calc(var(--beat) * 4)),
+    repeating-linear-gradient(90deg, var(--grid-soft) 0 1px, transparent 1px var(--beat));
+}
+/* collapsed strip is 26px — guides would just be noise at that height */
+.autolane.collapsed {
+  height: var(--lane-auto-c);
+  background-image: repeating-linear-gradient(90deg, var(--grid-bar) 0 1px, transparent 1px calc(var(--beat) * 4));
+}
+.autolane svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.autolane .area { fill: color-mix(in srgb, var(--auto) 12%, transparent); stroke: none; }
+.autolane .line { fill: none; stroke: var(--auto); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+/* before the first and after the last breakpoint the value is held, not drawn */
+.autolane .held {
+  fill: none; stroke: var(--auto); stroke-width: 1.5; opacity: .55;
+  stroke-dasharray: 3 4; vector-effect: non-scaling-stroke;
+}
+.autolane .lnm {
+  position: absolute; left: 8px; top: 5px; display: flex; align-items: center; gap: 6px;
+  pointer-events: none;
+}
+.autolane .lnm .t { font: 450 10.5px/1 var(--ui); color: var(--fg-3); }
+[data-id="signal"] .autolane .lnm .t {
+  font: 500 9px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase;
+}
+.autolane .off {
+  font: 600 8px/1 var(--mono); letter-spacing: .06em; color: var(--fg-2);
+  padding: 2px 4px; border-radius: 3px; background: var(--raised);
+}
+.autolane .bp {
+  position: absolute; width: 7px; height: 7px; border-radius: 50%; z-index: 2;
+  transform: translate(-50%, -50%); background: var(--canvas); border: 1.5px solid var(--auto);
+}
+[data-id="signal"] .autolane .bp { border-radius: 0; }
+.autolane .bp.sel { background: var(--fg); border-color: var(--fg); }
+/* hollow handle at a segment's midpoint — drag to bend that segment */
+.autolane .sh {
+  position: absolute; width: 9px; height: 9px; border-radius: 50%; z-index: 2;
+  transform: translate(-50%, -50%); background: transparent;
+  border: 1.5px solid var(--auto); opacity: .6; cursor: ns-resize;
+}
+.autolane .vlb {
+  position: absolute; transform: translate(-50%, -160%); padding: 1px 4px; z-index: 3;
+  font: 500 9.5px/1.2 var(--mono); color: var(--auto); white-space: nowrap;
+  background: var(--canvas); border-radius: var(--r-sm);
+}
+/* collapsed strip: "there is automation here that you cannot see" */
+/* Ghosts answer "what else on this track is automated?" without leaving the
+   lane — the selector shows one curve at a time, so otherwise it is invisible. */
+.autoghost { position: absolute; inset: 0; pointer-events: none; }
+.autoghost path { fill: none; stroke: var(--auto); stroke-width: 1; opacity: .3; vector-effect: non-scaling-stroke; }
+.autolane:not(.collapsed) .autoghost path { opacity: .16; stroke-dasharray: 2 3; }
+
+/* -------------------------------------------------------------- clips ---- */
+/* Base: geometry only. Each identity gives clips its own construction below —
+   this is where the three languages read most differently. */
+.clip { position: absolute; top: 7px; bottom: 7px; overflow: hidden; cursor: grab;
+  border-radius: var(--clip-r); display: flex; flex-direction: column; }
+.clip .lb { font: 500 11.5px/1 var(--ui); letter-spacing: -.004em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Resize is an invisible affordance: the edge hit-zone only changes the cursor.
+   No drawn grips — they put chrome on every selected clip and said nothing the
+   ew-resize cursor doesn't already say. */
+.clip .hd { position: absolute; top: 0; bottom: 0; width: 7px; cursor: ew-resize; z-index: 3; }
+/* The hit-zone is positioned against the clip's padding box, which sits
+   inside the border — so left:0/right:0 alone leaves the border pixels
+   uncovered and grab (not resize) wins right at the visual edge. Pull the
+   zone out by the side's own border-width so it starts flush with the
+   true edge instead. */
+.clip .hd.l { left: -1px; } .clip .hd.r { right: -1px; }
+/* One-shot is an instant, so it reads as a point — not a stem across the lane */
+.shot { position: absolute; top: 50%; transform: translate(-4.5px, -50%); display: flex;
+  align-items: center; gap: 7px; cursor: grab; z-index: 2; }
+.shot b { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: 0 0 auto;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 15%, transparent); }
+.shot span { font: 500 11.5px/1 var(--ui); white-space: nowrap;
+  color: color-mix(in srgb, var(--c) 60%, var(--fg)); }
+.shot.sel b { box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 35%, transparent); }
+
+/* STUDIO — a tinted pill. Flat wash, hairline border, label inside. Quiet. */
+[data-id="studio"] .clip {
+  justify-content: center; padding: 0 9px;
+  background: color-mix(in srgb, var(--c) var(--tint), var(--canvas));
+  border: 1px solid color-mix(in srgb, var(--c) 42%, transparent);
+}
+[data-id="studio"] .clip .lb { color: color-mix(in srgb, var(--c) 72%, var(--fg)); }
+[data-id="studio"] .clip.sel { border-color: var(--c);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 25%, transparent); }
+
+/* GRAPHITE — a solid block with a 3px colour spine and a label row. DAW-native:
+   the block is the object, the spine is the type, nothing glows. */
+[data-id="graphite"] .clip {
+  background: color-mix(in srgb, var(--c) var(--tint), var(--panel));
+  border: 1px solid color-mix(in srgb, var(--c) 34%, transparent);
+  border-left: 3px solid var(--c); padding: 5px 8px 0;
+}
+[data-id="graphite"] .clip .lb { color: var(--fg); }
+/* Left border is 3px here (the type spine), not the 1px every other side
+   uses — the resize hit-zone has to reach past it too. */
+[data-id="graphite"] .clip .hd.l { left: -3px; }
+[data-id="graphite"] .clip.sel { border-color: var(--c);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 40%, transparent); }
+
+/* SIGNAL — a measurement block. Zero radius, 2px colour rule on top, mono
+   uppercase label, body a flat dark wash. Reads like instrumentation. */
+[data-id="signal"] .clip {
+  background: color-mix(in srgb, var(--c) var(--tint), var(--canvas));
+  border: 1px solid color-mix(in srgb, var(--c) 55%, transparent);
+  border-top: 2px solid var(--c); padding: 4px 7px 0;
+}
+[data-id="signal"] .clip .lb {
+  font-family: var(--mono); font-size: 9.5px; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--c);
+}
+[data-id="signal"] .clip.sel { box-shadow: inset 0 0 0 1px var(--fg); }
+[data-id="signal"] .shot b { border-radius: 0; transform: rotate(45deg); width: 8px; height: 8px; }
+[data-id="signal"] .shot span { font-family: var(--mono); font-size: 9.5px; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--c); }
+
+/* -------------------------------------------------------- inspector ------ */
+.insp-b { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+.insp-t { font: var(--title-w) 15px/1.25 var(--ui); letter-spacing: var(--title-ls); }
+[data-id="signal"] .insp-t { font-family: var(--mono); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
+.insp-k { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.insp-k .t { color: var(--fg-2); font-size: 11px; }
+.insp-d { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--fg-2); user-select: text; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.f { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.f.wide { grid-column: 1 / -1; }
+.f .fld, .f .selwrap { width: 100%; }
+.f .selwrap .fld { width: 100%; }
+.rule { height: 1px; background: var(--line); }
+.insp .btn { width: 100%; }
+
+.status {
+  flex: 0 0 auto; height: 24px; display: flex; align-items: center; gap: 16px; padding: 0 14px;
+  border-top: 1px solid var(--line); background: var(--panel);
+  font: 400 10.5px/1 var(--mono); color: var(--fg-3);
+}
+.status .ok { color: var(--auto); }
+
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line-2); border: 3px solid var(--canvas); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: var(--fg-3); }
+
+/* ------------------------------------------------------------ the lab ---- */
+#lab {
+  position: fixed; left: 0; right: 0; bottom: 0; height: 42px; z-index: 90;
+  display: flex; align-items: center; gap: 14px; padding: 0 14px;
+  background: var(--panel); border-top: 1px solid var(--line-2);
+  font: 11px/1 var(--ui); color: var(--fg-2);
+}
+#lab .ttl { font: 600 10px/1 var(--ui); letter-spacing: .07em; text-transform: uppercase; color: var(--fg-3); }
+#lab .g { display: flex; align-items: center; gap: 6px; }
+#lab .g > label { font-size: 10.5px; color: var(--fg-3); }
+#lab input[type=range] { width: 74px; }
+#lab input[type=color] { width: 30px; height: 22px; padding: 1px; background: var(--raised);
+  border: 1px solid var(--line-2); border-radius: var(--r-sm); }
+#lab .sp { flex: 1; }
+#lab .out { font: 10px/1 var(--mono); color: var(--fg-3); }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============================= top bar ============================= -->
+  <header class="bar">
+    <div class="bar-l">
+      <div class="brand">
+        <div class="mark">RP</div>
+        <span class="wordmark">Rig<i>Pilot</i></span>
+      </div>
+      <button class="btn quiet ico" title="File">☰</button>
+      <input class="song" value="Bleed It Out — live set" />
+    </div>
+
+    <div class="bar-c">
+      <div class="transport">
+        <button class="play" title="Play / pause">▶</button>
+        <button class="btn quiet ico" title="Stop">■</button>
+      </div>
+      <div class="readout"><b>002</b><s>:</s><b>3</b><s>:</s><b>000</b></div>
+      <div class="tempo">
+        <span class="vr"></span>
+        <span class="f"><input class="naked v" value="120" /><span class="micro">bpm</span></span>
+        <span class="f"><span class="sig"><input class="naked v" value="4" /><span class="sl">/</span><input class="naked v" value="4" /></span><span class="micro">sig</span></span>
+      </div>
+    </div>
+
+    <div class="bar-r">
+      <button class="btn on" title="Live MIDI out">● MIDI</button>
+      <span class="selwrap"><select class="fld" style="max-width:132px"><option>Helix Floor — USB 1</option></select></span>
+      <span class="vr"></span>
+      <button class="btn solid">Export MIDI</button>
+      <span class="vr"></span>
+      <button class="btn quiet ico on" title="Command palette">◧</button>
+      <button class="btn quiet ico on" title="Inspector">◨</button>
+      <div class="wc">
+        <button>–</button><button>□</button><button class="x">✕</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="main">
+    <!-- =========================== palette =========================== -->
+    <aside class="pane pal">
+      <div class="pane-hd">
+        <span class="micro">Commands</span>
+        <button class="btn quiet ico" style="width:20px;height:20px;font-size:10px">⌕</button>
+      </div>
+      <div class="pal-sub">
+        <span class="pal-dev">Line 6 <b>Helix Floor</b></span>
+        <input class="fld" placeholder="Filter…" style="width:100%" />
+      </div>
+      <div class="pal-groups">
+        <div class="pal-sect"><span class="micro">Drag onto timeline</span></div>
+        <div>
+          <button class="grp-hd"><span class="cv">▾</span><span class="micro">Stomps</span></button>
+          <div class="cmd"><span class="dot sq" style="background:var(--hold)"></span><span class="nm">Stomp A</span></div>
+          <div class="cmd"><span class="dot sq" style="background:var(--hold)"></span><span class="nm">Stomp B</span></div>
+          <div class="cmd"><span class="dot sq" style="background:var(--hold)"></span><span class="nm">Boost</span></div>
+          <div class="cmd"><span class="dot sq" style="background:var(--hold)"></span><span class="nm">Drive</span><span class="wn">⚠</span></div>
+        </div>
+        <div>
+          <button class="grp-hd"><span class="cv">▾</span><span class="micro">Snapshots</span></button>
+          <div class="cmd"><span class="dot os" style="background:var(--shot)"></span><span class="nm">Snap 1</span></div>
+          <div class="cmd"><span class="dot os" style="background:var(--shot)"></span><span class="nm">Snap 2</span></div>
+          <div class="cmd"><span class="dot os" style="background:var(--shot)"></span><span class="nm">Snap 3</span></div>
+        </div>
+        <div class="pal-sect"><span class="micro">Automate — click to open</span></div>
+        <div>
+          <button class="grp-hd"><span class="cv">▾</span><span class="micro">Expression</span></button>
+          <div class="cmd auto on"><span class="dot" style="background:var(--auto)"></span><span class="nm">Volume</span><span class="used" title="This curve has breakpoints">●</span></div>
+          <div class="cmd auto"><span class="dot" style="background:var(--auto)"></span><span class="nm">Wah</span></div>
+          <div class="cmd auto"><span class="dot" style="background:var(--auto)"></span><span class="nm">Pitch</span></div>
+          <div class="cmd auto"><span class="dot" style="background:var(--auto)"></span><span class="nm">FX Loop</span><span class="used" title="This curve has breakpoints">●</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ========================== arrangement ========================= -->
+    <div class="mid">
+      <div class="tlbar">
+        <div class="split">
+          <button class="btn on" title="Toggle snap"><span class="mono">1/4</span></button>
+          <button class="btn on" style="width:20px;padding:0;font-size:8px">▾</button>
+        </div>
+        <div class="seg">
+          <button class="on">Bars</button>
+          <button>Time</button>
+        </div>
+        <span class="vr"></span>
+        <div class="zoom">
+          <button title="Zoom out">−</button>
+          <button title="Zoom in">+</button>
+          <button title="Fit song" style="width:auto;padding:0 7px;font-size:10px">Fit</button>
+        </div>
+        <span class="vr"></span>
+        <button class="btn quiet on" title="Keep the playhead in view during playback">Follow</button>
+        <button class="btn quiet" title="Loop the selected section">Loop</button>
+        <span class="sp"></span>
+        <span class="rd">8 bars · 00:16 · 47 events</span>
+      </div>
+      <div class="arr">
+        <div class="heads">
+          <div class="rul-pad"></div>
+          <div class="sec-pad"><span class="micro">Sections</span></div>
+
+          <div class="thead" style="--tc:var(--fg-3);height:76px">
+            <div class="tbar"></div>
+            <div class="tmeta">
+              <div class="nm">Reference Mix</div>
+              <div class="sb">song.wav</div>
+            </div>
+            <div class="tacts"><button class="ms">M</button><button class="ms solo">S</button></div>
+          </div>
+
+          <div class="thead sel" style="--tc:var(--hold);height:calc(var(--lane)*3)">
+            <div class="tbar"></div>
+            <div class="tmeta">
+              <div class="nm">Helix Floor</div>
+              <div class="sb">ch 1 · 10 ms</div>
+            </div>
+            <div class="tacts"><button class="ms">⚙</button></div>
+          </div>
+          <!-- Automation Lane header: the selector lives in the header column,
+               the curve is drawn in the timeline to the right. -->
+          <div class="autohd">
+            <div class="autohd-row">
+              <button class="autosel" title="Which curve this lane shows">
+                <span class="dot" style="background:var(--auto)"></span>
+                <span class="nm">Volume</span>
+                <span class="used" title="This curve has breakpoints">●</span>
+                <span class="cv">▾</span>
+              </button>
+              <button class="auto-on on" title="Curve is on — click to switch it off">ON</button>
+              <button class="auto-dots" title="Curve actions">⋯</button>
+            </div>
+            <div class="grip" title="Drag to resize the automation lane"></div>
+          </div>
+
+          <div class="thead" style="--tc:var(--auto);height:calc(var(--lane)*2)">
+            <div class="tbar"></div>
+            <div class="tmeta">
+              <div class="nm">Quad Cortex</div>
+              <div class="sb">ch 2 · 8 ms</div>
+            </div>
+            <div class="tacts"><button class="ms">⚙</button></div>
+          </div>
+          <!-- collapsed: selector on "No automation", badge counts the curves
+               that still have points, miniatures show in the strip -->
+          <div class="autohd collapsed">
+            <div class="autohd-row">
+              <button class="autosel" title="Which curve this lane shows">
+                <span class="nm none">No automation</span>
+                <span class="badge">2</span>
+                <span class="cv">▾</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="addrow">
+            <button class="btn">＋ Audio</button>
+            <button class="btn">＋ MIDI</button>
+          </div>
+          <div class="head-fill"></div>
+        </div>
+
+        <!-- timeline -->
+        <div class="tl">
+          <div class="surf">
+            <div class="rul" id="rul"></div>
+            <div class="sections">
+              <div class="sec" style="--sc:var(--fg-3);left:0;width:calc(var(--beat)*8)"><span>Intro</span></div>
+              <div class="sec" style="--sc:var(--hold);left:calc(var(--beat)*8);width:calc(var(--beat)*8)"><span>Verse 1</span></div>
+              <div class="sec" style="--sc:var(--shot);left:calc(var(--beat)*16);width:calc(var(--beat)*8)"><span>Chorus 1</span></div>
+              <div class="sec" style="--sc:var(--auto);left:calc(var(--beat)*24);width:calc(var(--beat)*4)"><span>Bridge</span></div>
+              <div class="sec" style="--sc:var(--fg-3);left:calc(var(--beat)*28);width:calc(var(--beat)*4)"><span>Outro</span></div>
+            </div>
+
+            <div class="trk audio">
+              <svg viewBox="0 0 1000 60" preserveAspectRatio="none"><path class="wp" d=""></path></svg>
+            </div>
+
+            <!-- Helix Floor: 3 event lanes + one automation lane -->
+            <div class="trk">
+              <div class="lane">
+                <div class="clip sel" style="--c:var(--hold);left:calc(var(--beat)*2);width:calc(var(--beat)*4)">
+                  <span class="lb">Stomp A</span>
+                  <i class="hd l"></i><i class="hd r"></i>
+                </div>
+                <div class="shot" style="--c:var(--shot);left:calc(var(--beat)*8)">
+                  <b></b><span>Snap 1</span>
+                </div>
+                <div class="clip" style="--c:var(--hold);left:calc(var(--beat)*13);width:calc(var(--beat)*6)">
+                  <span class="lb">Stomp B</span>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="clip" style="--c:var(--hold);left:calc(var(--beat)*4);width:calc(var(--beat)*2)">
+                  <span class="lb">Boost</span>
+                </div>
+                <div class="shot" style="--c:var(--shot);left:calc(var(--beat)*11)">
+                  <b></b><span>Snap 2</span>
+                </div>
+                <div class="clip" style="--c:var(--hold);left:calc(var(--beat)*16);width:calc(var(--beat)*3)">
+                  <span class="lb">Drive</span>
+                </div>
+              </div>
+              <div class="lane"></div>
+
+              <!-- Automation Lane: a recessed display, not a clip. Dashed
+                   stretches at both ends are held, not drawn. -->
+              <div class="autolane">
+                <svg class="autoghost" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <path d="M0,62 L30,66 L30,20 L68,20 L68,68 L100,68"></path>
+                </svg>
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <polygon class="area" points="0,70 8,70 26,24 48,40 66,18 86,58 100,58 100,100 0,100"></polygon>
+                  <path class="held" d="M0,70 L8,70"></path>
+                  <path class="line" d="M8,70 L26,24 L48,40 L66,18 L86,58"></path>
+                  <path class="held" d="M86,58 L100,58"></path>
+                </svg>
+                <div class="lnm"><span class="dot" style="background:var(--auto)"></span><span class="t">Volume</span></div>
+                <div class="bp" style="left:8%;top:70%"></div>
+                <div class="bp" style="left:26%;top:24%"></div>
+                <div class="bp sel" style="left:48%;top:40%"></div>
+                <div class="vlb" style="left:48%;top:40%">78</div>
+                <div class="sh" title="Drag to bend this segment" style="left:37%;top:32%"></div>
+                <div class="bp" style="left:66%;top:18%"></div>
+                <div class="bp" style="left:86%;top:58%"></div>
+              </div>
+            </div>
+
+            <!-- Quad Cortex: 2 event lanes + a collapsed automation strip -->
+            <div class="trk">
+              <div class="lane">
+                <div class="clip" style="--c:var(--hold);left:var(--beat);width:calc(var(--beat)*6)">
+                  <span class="lb">Scene A</span>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="shot" style="--c:var(--shot);left:calc(var(--beat)*14)">
+                  <b></b><span>Preset 14</span>
+                </div>
+              </div>
+              <div class="autolane collapsed">
+                <svg class="autoghost" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <path d="M0,78 L18,30 L46,52 L72,20 L100,44"></path>
+                  <path d="M0,60 L30,64 L30,18 L68,18 L68,66 L100,66"></path>
+                </svg>
+              </div>
+            </div>
+
+            <div class="ph" style="left:calc(var(--beat)*18.5)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================== inspector ========================== -->
+    <aside class="pane insp">
+      <div class="pane-hd"><span class="micro">Inspector</span></div>
+      <div class="insp-b">
+        <div>
+          <div class="insp-t">Volume</div>
+          <div class="insp-k">
+            <span class="dot" style="background:var(--auto)"></span>
+            <span class="t">Breakpoint 3 of 5 · Helix Floor</span>
+          </div>
+        </div>
+        <div class="rule"></div>
+        <div class="fields">
+          <div class="f"><span class="micro">Bar</span><input class="fld mono" value="3" /></div>
+          <div class="f"><span class="micro">Beat</span><input class="fld mono" value="2.50" /></div>
+          <div class="f"><span class="micro">Value</span><input class="fld mono" value="78" /></div>
+          <div class="f"><span class="micro">Curve type</span>
+            <span class="selwrap"><select class="fld"><option>Curve</option><option>Linear</option><option>Hold</option></select></span>
+          </div>
+          <div class="f wide"><span class="micro">Bend</span><input type="range" value="66" style="--fill:66%" /></div>
+        </div>
+        <p class="insp-d">The shape belongs to the segment <em>arriving at</em> this point, so the first breakpoint has none.</p>
+        <div class="rule"></div>
+        <div class="fields">
+          <div class="f wide"><span class="micro">Resolution</span>
+            <span class="selwrap"><select class="fld"><option>20 ms · 50 CC updates/s</option></select></span>
+          </div>
+        </div>
+        <div class="rule"></div>
+        <button class="btn danger">Delete point</button>
+      </div>
+    </aside>
+  </section>
+
+  <footer class="status">
+    <span class="ok">● MIDI out · Helix Floor USB 1</span>
+    <span>3 tracks · 47 events</span>
+    <span>bleed-it-out.mid · exported 14:02</span>
+  </footer>
+</div>
+
+<!-- ================================ lab ================================ -->
+<div id="lab">
+  <span class="ttl">Identity</span>
+  <div class="seg" data-k="id">
+    <button data-v="studio" class="on">Studio</button>
+    <button data-v="graphite">Graphite</button>
+    <button data-v="signal">Signal</button>
+  </div>
+  <div class="seg" data-k="theme">
+    <button data-v="light">Light</button>
+    <button data-v="dark" class="on">Dark</button>
+  </div>
+  <span class="vr"></span>
+  <div class="g"><label>Accent</label><input type="color" id="accent" value="#edeef0" /></div>
+  <div class="g"><label>Radius</label><input type="range" id="r" min="0" max="14" step="1" value="6" /></div>
+  <div class="g"><label>Row h</label><input type="range" id="lane" min="36" max="88" step="2" value="60" /></div>
+  <div class="g"><label>Auto h</label><input type="range" id="auto" min="48" max="200" step="4" value="100" /></div>
+  <div class="g"><label>Ctl h</label><input type="range" id="h" min="22" max="34" step="1" value="28" /></div>
+  <div class="g"><label>Zoom</label><input type="range" id="beat" min="26" max="110" step="2" value="56" /></div>
+  <div class="g"><label>Text</label><input type="range" id="fs" min="11" max="15" step=".5" value="13" /></div>
+  <span class="sp"></span>
+  <span class="out" id="out"></span>
+  <button class="btn" id="dump">Copy tokens</button>
+</div>
+
+<script>
+// Mock waveform + ruler. Data only — every pixel of appearance is CSS.
+(() => {
+  const W = 1000, H = 60, N = 420;
+  const env = (i) => {
+    const t = i / N;
+    const s = t < .1 ? .22 : t < .3 ? .5 : t < .6 ? .95 : t < .68 ? .28 : t < .92 ? .88 : .35;
+    let x = Math.sin(i * 12.9898) * 43758.5453;
+    return s * (.55 + .45 * (x - Math.floor(x)));
+  };
+  let up = "", dn = "";
+  for (let i = 0; i <= N; i++) {
+    const x = (i / N * W).toFixed(1), a = env(i) * H / 2;
+    up += `${i ? "L" : "M"}${x},${(H / 2 - a).toFixed(1)}`;
+  }
+  for (let i = N; i >= 0; i--) {
+    const x = (i / N * W).toFixed(1), a = env(i) * H / 2;
+    dn += `L${x},${(H / 2 + a).toFixed(1)}`;
+  }
+  document.querySelectorAll(".wp").forEach((p) => p.setAttribute("d", up + dn + "Z"));
+
+  const r = document.getElementById("rul");
+  for (let b = 0; b < 8; b++) {
+    const d = document.createElement("div");
+    d.className = "b";
+    d.style.left = `calc(var(--beat) * ${b * 4})`;
+    d.innerHTML = `<em>${b + 1}</em><i></i>`;
+    r.appendChild(d);
+  }
+})();
+
+const root = document.documentElement;
+const ov = {};
+const set = (k, v) => { root.style.setProperty(k, v); ov[k] = v; out(); };
+const DEF = {
+  studio:   { r: 6, lane: 60, auto: 100, h: 28, fs: 13,   accent: "#18191c", accentDark: "#edeef0" },
+  graphite: { r: 5, lane: 52, auto: 88,  h: 26, fs: 12.5, accent: "#2563c9", accentDark: "#5b93f5" },
+  signal:   { r: 0, lane: 56, auto: 92,  h: 26, fs: 12.5, accent: "#e5006e", accentDark: "#ff2e88" },
+};
+const $ = (id) => document.getElementById(id);
+
+document.querySelectorAll("#lab .seg").forEach((seg) => seg.addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  seg.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+  root.dataset[seg.dataset.k] = b.dataset.v;
+  // reset the numeric scale so each identity shows its own committed defaults
+  ["--r", "--r-sm", "--clip-r", "--lane", "--lane-auto", "--h", "--fs", "--accent"].forEach((k) => {
+    root.style.removeProperty(k); delete ov[k];
+  });
+  const d = DEF[root.dataset.id];
+  $("r").value = d.r; $("lane").value = d.lane; $("auto").value = d.auto;
+  $("h").value = d.h; $("fs").value = d.fs;
+  $("accent").value = root.dataset.theme === "dark" ? d.accentDark : d.accent;
+  out();
+}));
+
+$("accent").oninput = (e) => { set("--accent", e.target.value); set("--focus", e.target.value); };
+$("r").oninput = (e) => {
+  const v = +e.target.value;
+  set("--r", v + "px"); set("--r-sm", Math.max(0, v - 2) + "px"); set("--clip-r", Math.max(0, v - 1) + "px");
+};
+$("lane").oninput = (e) => set("--lane", e.target.value + "px");
+$("auto").oninput = (e) => set("--lane-auto", e.target.value + "px");
+$("h").oninput = (e) => set("--h", e.target.value + "px");
+$("beat").oninput = (e) => set("--beat", e.target.value + "px");
+$("fs").oninput = (e) => set("--fs", e.target.value + "px");
+out();
+
+function out() {
+  const n = Object.keys(ov).length;
+  $("out").textContent = `${root.dataset.id} · ${root.dataset.theme}` + (n ? ` · ${n} overrides` : "");
+}
+$("dump").onclick = () => {
+  const css = `/* ${root.dataset.id} / ${root.dataset.theme} */\n:root {\n`
+    + Object.entries(ov).map(([k, v]) => `  ${k}: ${v};`).join("\n") + "\n}";
+  navigator.clipboard?.writeText(css);
+  $("out").textContent = "copied";
+};
+out();
+</script>
+</body>
+</html>

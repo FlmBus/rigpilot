@@ -1,0 +1,992 @@
+<!doctype html>
+<html lang="en" data-skin="flat" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RigPilot — design mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================================
+   RigPilot design mockup — single file, no build.
+
+   HOW TO USE
+   - Open in a browser. The panel bottom-right switches skin / theme / tokens.
+   - "console" skin  = the design that ships today (skeuomorphic-ish depth).
+   - "flat" skin     = the proposed minimal/modern one.
+   - Structural CSS below is skin-agnostic: it only ever reads tokens. So a design
+     change = changing token values, which maps 1:1 onto app/src/lib/theme.css.
+   ========================================================================= */
+
+/* ---------------------------------------------------------------- geometry */
+:root {
+  --radius: 8px;
+  --radius-sm: 5px;
+  --radius-lg: 11px;
+  --ctl-h: 26px;
+  --bar-h: 50px;
+  --lane-h: 60px;
+  --beat: 60px;          /* timeline zoom: px per beat */
+  --ruler-h: 28px;
+  --w-palette: 230px;
+  --w-headers: 210px;
+  --w-inspector: 250px;
+  --fs: 13px;
+  --fs-micro: 8px;
+  --micro-tracking: 0.09em;
+  --micro-weight: 600;
+  --font-ui: "Archivo", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+/* ============================ SKIN: console (what ships today) ============ */
+[data-skin="console"] {
+  --bg-app: #0a0a0c;
+  --bg-sunken: #0b0b0d;
+  --bg-panel: #0f0f12;
+  --bg-panel-grad: linear-gradient(180deg, #141419, #0e0e12);
+  --bg-bar: linear-gradient(180deg, #24242c, #1b1b22);
+  --bg-head: #0e0e11;
+  --bg-row: #16161a;
+  --bg-row-hover: #1e1e23;
+  --bg-lane: #121215;
+  --bg-lane-alt: #101013;
+  --bg-control: #16161a;
+  --bg-control-hover: #1e1e23;
+  --bg-control-down: #0f0f12;
+  --bg-input: #07070a;
+  --bg-overlay: rgba(22, 22, 26, 0.96);
+  --blur-overlay: blur(16px);
+
+  --line: #242429;
+  --line-strong: #34343c;
+  --line-panel: #000;
+  --line-input: #000;
+  --line-grid: #17171b;
+  --line-grid-bar: #34343d;
+
+  --fg: #f4f4f7;
+  --fg-dim: #9a9aa6;
+  --fg-faint: #5d5d68;
+  --fg-on-accent: #fff;
+  --readout: #2ee08a;
+
+  --accent: #ff2e88;
+  --accent-hover: #d11668;
+  --accent-soft: rgba(255, 46, 136, 0.12);
+  --hold: #ff2e88;
+  --oneshot: #ffb02e;
+  --automation: #2ee08a;
+  --warn: #ffb02e;
+  --danger: #c2304a;
+  --wave: #b9b9c4;
+
+  /* effects */
+  --rim: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --inset: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+  --sh-control: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --sh-overlay: 0 14px 36px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --hover-fx: inset 0 -8px 10px -9px rgba(255, 46, 136, 0.4);
+  --on-fx: inset 0 -3px 0 var(--accent), inset 0 -9px 11px -8px rgba(255, 46, 136, 0.45);
+  --clip-fill-strength: 15%;
+  --clip-grad: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.06));
+  --clip-blur: blur(5px);
+  --clip-sh: var(--rim), inset 0 -9px 11px -8px rgba(0, 0, 0, 0.4);
+  --clip-radius: 4px;
+  --app-radius: 10px;
+  --font-ui: "Archivo", system-ui, sans-serif;
+}
+
+/* ============================ SKIN: flat (proposed) ====================== */
+[data-skin="flat"] {
+  --radius: 6px;
+  --radius-sm: 4px;
+  --radius-lg: 8px;
+  --bar-h: 46px;
+  --micro-tracking: 0.07em;
+  --micro-weight: 500;
+  --fs-micro: 9px;
+  --font-ui: "Inter", system-ui, sans-serif;
+
+  --bg-panel-grad: var(--bg-panel);
+  --bg-bar: var(--bg-panel);
+  --blur-overlay: none;
+
+  --rim: none;
+  --inset: none;
+  --sh-control: none;
+  --hover-fx: none;
+  --on-fx: none;
+  --clip-grad: none;
+  --clip-blur: none;
+  --clip-sh: none;
+  --clip-radius: 4px;
+  --clip-fill-strength: 16%;
+  --app-radius: 0px;
+
+  --accent: #ff2e88;
+  --hold: #ff2e88;
+  --oneshot: #f5a524;
+  --automation: #16c47f;
+  --warn: #f5a524;
+}
+
+[data-skin="flat"][data-theme="dark"] {
+  --bg-app: #0d0e11;
+  --bg-sunken: #0a0b0d;
+  --bg-panel: #121317;
+  --bg-head: #121317;
+  --bg-row: #14161a;
+  --bg-row-hover: #1b1e23;
+  --bg-lane: #0f1013;
+  --bg-lane-alt: #0c0d10;
+  --bg-control: #1a1d22;
+  --bg-control-hover: #22262c;
+  --bg-control-down: #14161a;
+  --bg-input: #0c0d10;
+  --bg-overlay: #191c21;
+
+  --line: #23262c;
+  --line-strong: #343941;
+  --line-panel: #1e2126;
+  --line-input: #2b2f36;
+  --line-grid: #17191d;
+  --line-grid-bar: #2b2f36;
+
+  --fg: #e7e9ec;
+  --fg-dim: #8b909a;
+  --fg-faint: #5b606a;
+  --fg-on-accent: #fff;
+  --readout: #e7e9ec;
+  --accent-hover: #ff56a0;
+  --accent-soft: rgba(255, 46, 136, 0.14);
+  --danger: #e25563;
+  --wave: #6f7682;
+  --sh-overlay: 0 12px 28px rgba(0, 0, 0, 0.5);
+}
+
+[data-skin="flat"][data-theme="light"] {
+  --bg-app: #eef0f3;
+  --bg-sunken: #e8eaee;
+  --bg-panel: #fbfcfd;
+  --bg-head: #fbfcfd;
+  --bg-row: #fff;
+  --bg-row-hover: #f1f3f6;
+  --bg-lane: #fff;
+  --bg-lane-alt: #f7f8fa;
+  --bg-control: #fff;
+  --bg-control-hover: #f1f3f6;
+  --bg-control-down: #e8eaee;
+  --bg-input: #fff;
+  --bg-overlay: #fff;
+
+  --line: #e4e7eb;
+  --line-strong: #c9ced6;
+  --line-panel: #dfe3e8;
+  --line-input: #d4d9e0;
+  --line-grid: #edeff2;
+  --line-grid-bar: #d4d9e0;
+
+  --fg: #14171c;
+  --fg-dim: #5e646e;
+  --fg-faint: #8c939d;
+  --fg-on-accent: #fff;
+  --readout: #14171c;
+  --accent: #e11d74;
+  --accent-hover: #c4155f;
+  --accent-soft: rgba(225, 29, 116, 0.1);
+  --hold: #e11d74;
+  --oneshot: #c77700;
+  --automation: #0e9f6e;
+  --warn: #c77700;
+  --danger: #d02b3f;
+  --wave: #9aa1ac;
+  --sh-overlay: 0 12px 28px rgba(16, 20, 28, 0.14);
+  --clip-fill-strength: 13%;
+}
+
+/* ======================================================================= */
+/* ==================  STRUCTURE — tokens only, no literals  ============== */
+/* ======================================================================= */
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; height: 100%;
+  background: var(--bg-app);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: var(--fs);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  overflow: hidden;
+}
+
+.microlabel {
+  font-size: var(--fs-micro);
+  font-weight: var(--micro-weight);
+  letter-spacing: var(--micro-tracking);
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------- controls -- */
+button, input, select {
+  font-family: inherit; font-size: var(--fs); color: var(--fg);
+  background: var(--bg-control);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  height: var(--ctl-h); padding: 0 9px;
+}
+button {
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
+}
+button:hover { background: var(--bg-control-hover); border-color: var(--line-strong); }
+button:active { background: var(--bg-control-down); }
+button.primary {
+  background: var(--accent); border-color: var(--accent);
+  color: var(--fg-on-accent); font-weight: 600;
+}
+button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+button.ghost { background: transparent; border-color: transparent; color: var(--fg-dim); }
+button.ghost:hover { color: var(--fg); border-color: var(--line); background: var(--bg-control); }
+button.toggle.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+button.danger:hover { border-color: var(--danger); color: var(--danger); }
+button:disabled { opacity: 0.4; cursor: default; }
+:is(button, input, select):focus-visible { outline: none; border-color: var(--accent); }
+
+input[type="text"] {
+  width: 100%; background: var(--bg-input);
+  border-color: var(--line-input); box-shadow: var(--inset);
+}
+select {
+  appearance: none; padding-right: 22px;
+  background-color: var(--bg-input); border-color: var(--line-input); box-shadow: var(--inset);
+}
+.num { display: inline-flex; align-items: center; }
+.num input {
+  font-family: var(--font-mono); width: 58px; text-align: right;
+  background: var(--bg-input); border-color: var(--line-input); box-shadow: var(--inset);
+}
+.num.flat input {
+  width: 42px; height: 18px; padding: 0 2px; text-align: left;
+  background: transparent; border-color: transparent; box-shadow: none;
+  font-size: 13px; color: var(--readout);
+}
+input[type="range"] {
+  appearance: none; height: 16px; padding: 0; background: transparent; border: none; width: 100%;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent) 0 var(--fill, 50%), var(--line-strong) var(--fill, 50%));
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 12px; height: 12px; margin-top: -4px;
+  background: var(--fg); border-radius: 50%;
+}
+input[type="checkbox"] {
+  appearance: none; width: 15px; height: 15px; padding: 0; margin: 0; flex-shrink: 0;
+  background: var(--bg-input); border: 1px solid var(--line-strong);
+  border-radius: 3px; position: relative; cursor: pointer; box-shadow: var(--inset);
+}
+input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
+input[type="checkbox"]:checked::after {
+  content: ""; position: absolute; left: 5px; top: 2px; width: 3px; height: 7px;
+  border: solid var(--fg-on-accent); border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+hr { border: none; border-top: 1px solid var(--line); margin: 10px 0; width: 100%; }
+
+/* carved cell group / segmented / overlay --------------------------------- */
+.cellgroup {
+  display: inline-flex; align-items: stretch; height: 34px;
+  border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden;
+  background: var(--bg-control); box-shadow: var(--rim), var(--sh-control);
+}
+.cell {
+  display: flex; align-items: center; justify-content: center;
+  min-width: 40px; padding: 0 11px; color: var(--fg-dim); cursor: pointer;
+  border-left: 1px solid var(--line);
+  transition: background 90ms ease, color 90ms ease;
+}
+.cellgroup .cell:first-child { border-left: none; }
+.cell:hover { background: var(--bg-control-hover); color: var(--fg); box-shadow: var(--hover-fx); }
+.cell.on { color: var(--accent); box-shadow: var(--on-fx); }
+[data-skin="flat"] .cell.on { background: var(--accent-soft); }
+
+.seg {
+  display: inline-flex; background: var(--bg-input);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 2px; gap: 2px; box-shadow: var(--inset);
+}
+.seg button {
+  height: 20px; padding: 0 10px; border: none; background: transparent;
+  color: var(--fg-dim); border-radius: calc(var(--radius) - 3px); font-size: 11px; font-weight: 500;
+}
+.seg button:hover { color: var(--fg); }
+.seg button.on { background: var(--bg-control-hover); color: var(--fg); box-shadow: var(--rim); }
+[data-skin="flat"] .seg button.on { background: var(--bg-control); color: var(--fg); border: 1px solid var(--line); }
+
+.overlay {
+  background: var(--bg-overlay); backdrop-filter: var(--blur-overlay);
+  border: 1px solid var(--line-strong); border-radius: var(--radius);
+  box-shadow: var(--rim), var(--sh-overlay);
+}
+.tdot { width: 8px; height: 8px; flex-shrink: 0; border-radius: 2px; }
+.tdot.diamond { width: 7px; height: 7px; border-radius: 1px; transform: rotate(45deg); }
+.tdot.circle { border-radius: 50%; }
+
+/* ------------------------------------------------------------- app shell - */
+.app {
+  display: flex; flex-direction: column; height: 100vh;
+  background: var(--bg-app);
+  border: 1px solid var(--line-panel); border-radius: var(--app-radius); overflow: hidden;
+}
+.topbar {
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  height: var(--bar-h); padding: 0 10px;
+  background: var(--bg-bar);
+  border-bottom: 1px solid var(--line-panel);
+  box-shadow: var(--rim); z-index: 5;
+}
+.tb-left { display: flex; align-items: center; gap: 10px; }
+.tb-center { flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px; min-width: 0; }
+.tb-right { display: flex; align-items: center; gap: 8px; }
+.brand { font-weight: 700; font-size: 15px; letter-spacing: 0.02em; padding-left: 6px; }
+[data-skin="flat"] .brand { font-weight: 600; font-size: 14px; letter-spacing: -0.01em; }
+.brand .accent { color: var(--accent); }
+.hamb { width: 30px; justify-content: center; }
+.song {
+  width: 160px; height: 26px; font-size: 12px;
+  background: transparent; border-color: transparent; box-shadow: none; color: var(--fg-dim);
+}
+.song:hover { border-color: var(--line); background: var(--bg-input); box-shadow: var(--inset); }
+.vsep { width: 1px; align-self: stretch; background: var(--line); margin: 11px 2px; }
+.winbtns { display: flex; gap: 2px; margin-left: 4px; }
+.win { width: 28px; justify-content: center; font-size: 12px; }
+.win.close:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+/* readout (position / bpm / sig) ----------------------------------------- */
+.lcd {
+  display: flex; align-items: center; gap: 14px; height: 34px; padding: 0 14px;
+  background: var(--bg-input); border: 1px solid var(--line-input);
+  border-radius: var(--radius-sm); box-shadow: var(--inset);
+}
+.lc { display: flex; flex-direction: column; line-height: 1.15; align-items: flex-start; }
+.lcd-main { font-size: 13px; color: var(--readout); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.lc.pos .lcd-main { min-width: 96px; }
+.lcd-div { width: 1px; align-self: stretch; background: var(--line); margin: 7px 0; }
+.sig { display: inline-flex; align-items: center; gap: 1px; }
+.sig .num.flat input { width: 18px; text-align: center; }
+.slash { color: var(--fg-faint); font-size: 12px; }
+.snap-caret { min-width: 0; padding: 0 8px; font-size: 9px; color: var(--fg-faint); }
+
+/* ------------------------------------------------------------ main split - */
+.main { display: flex; flex: 1; min-height: 0; }
+.panel {
+  display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
+  background: var(--bg-panel-grad);
+  box-shadow: var(--rim);
+}
+.palette { width: var(--w-palette); border-right: 1px solid var(--line-panel); }
+.inspector { width: var(--w-inspector); border-left: 1px solid var(--line-panel); overflow-y: auto; }
+.phead {
+  display: flex; align-items: center; height: 26px; padding: 0 12px; flex-shrink: 0;
+  border-bottom: 1px solid var(--line-panel);
+}
+[data-skin="console"] .phead { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04); }
+
+/* palette ---------------------------------------------------------------- */
+.sub-head { display: flex; flex-direction: column; gap: 6px; padding: 10px 10px 4px; }
+.device { color: var(--accent); }
+.search { height: 24px; }
+.groups { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding: 8px; }
+.group-toggle { height: 18px; padding: 0 4px; gap: 5px; }
+.caret { font-size: 9px; color: var(--fg-faint); }
+.items { display: flex; flex-direction: column; gap: 1px; margin-top: 3px; }
+.item {
+  display: flex; align-items: center; gap: 8px; height: 27px; padding: 0 8px;
+  border-radius: var(--radius-sm); color: var(--fg-dim); cursor: grab;
+  font-size: 12.5px; white-space: nowrap; overflow: hidden;
+  transition: background 90ms ease, color 90ms ease;
+}
+.item:hover { background: var(--bg-row-hover); color: var(--fg); }
+.item .name { overflow: hidden; text-overflow: ellipsis; }
+.item .warn { color: var(--warn); font-size: 10px; margin-left: auto; }
+
+/* track headers ---------------------------------------------------------- */
+.center { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.arrangement { display: flex; flex: 1; min-width: 0; overflow: hidden; }
+.headers {
+  width: var(--w-headers); flex-shrink: 0; display: flex; flex-direction: column;
+  background: var(--bg-row); border-right: 1px solid var(--line-panel);
+}
+.ruler-spacer {
+  height: var(--ruler-h); flex-shrink: 0;
+  background: var(--bg-head); border-bottom: 1px solid var(--line-panel); box-shadow: var(--rim);
+}
+.track-header {
+  position: relative; display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 10px; background: var(--bg-row);
+  border-bottom: 1px solid var(--line); cursor: pointer; flex-shrink: 0;
+}
+.track-header:hover, .track-header.selected { background: var(--bg-row-hover); }
+[data-skin="flat"] .track-header.selected { box-shadow: inset 2px 0 0 var(--accent); }
+.tcolor { width: 4px; height: 30px; flex-shrink: 0; border-radius: 3px; background: var(--tc); }
+[data-skin="console"] .tcolor { box-shadow: 0 0 8px -1px var(--tc); }
+[data-skin="flat"] .tcolor { width: 3px; height: 26px; border-radius: 2px; }
+.tmeta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.track-header .name {
+  font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+[data-skin="flat"] .track-header .name { font-weight: 500; }
+.tsub { font-size: 9px; }
+.trow { display: flex; gap: 3px; }
+.ms {
+  width: 20px; height: 20px; padding: 0; justify-content: center; font-size: 10px; font-weight: 700;
+  color: var(--fg-faint); background: var(--bg-input); border: 1px solid var(--line);
+  border-radius: 4px; box-shadow: var(--inset);
+}
+.ms.on { background: var(--danger); border-color: var(--danger); color: #fff; box-shadow: none; }
+.ms.solo.on { background: var(--warn); border-color: var(--warn); color: #231a00; }
+.gear { width: 22px; height: 22px; padding: 0; justify-content: center; font-size: 12px; }
+.add-track { display: flex; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.add-track .add {
+  flex: 1; justify-content: center; height: 30px; background: transparent;
+  border: 1px dashed var(--line-strong); color: var(--fg-dim); font-size: 12px;
+}
+.add-track .add:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.header-fill { flex: 1; background: var(--bg-row); }
+
+/* timeline --------------------------------------------------------------- */
+.tl { flex: 1; min-width: 0; overflow: auto; background: var(--bg-sunken); }
+.surface { position: relative; width: calc(var(--beat) * 32); }
+.ruler {
+  position: sticky; top: 0; z-index: 4; height: var(--ruler-h);
+  background: var(--bg-head); border-bottom: 1px solid var(--line-panel); box-shadow: var(--rim);
+}
+.ruler .bar {
+  position: absolute; top: 0; bottom: 0; width: calc(var(--beat) * 4);
+  border-left: 1px solid var(--line-grid-bar);
+  font-family: var(--font-mono); font-size: 10px; color: var(--fg-dim);
+  padding: 4px 0 0 5px;
+}
+.ruler .bar .beats {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 6px;
+  background: repeating-linear-gradient(90deg,
+    var(--line-grid-bar) 0 1px, transparent 1px var(--beat));
+}
+/* Track rows: the row's total height is the sum of its lanes (box-sizing:border-box
+   means a lane's 1px separator lives *inside* its --lane-h), so the header column
+   lines up with `calc(var(--lane-h) * n)` and nothing drifts. */
+.trk { position: relative; background: var(--bg-lane); }
+.trk .lane {
+  position: relative; height: var(--lane-h);
+  border-bottom: 1px solid var(--line-grid);
+  background:
+    repeating-linear-gradient(90deg, var(--line-grid) 0 1px, transparent 1px var(--beat)),
+    var(--bg-lane);
+}
+.trk .lane:nth-child(even) { background:
+    repeating-linear-gradient(90deg, var(--line-grid) 0 1px, transparent 1px var(--beat)),
+    var(--bg-lane-alt); }
+.trk .lane::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(90deg,
+    var(--line-grid-bar) 0 1px, transparent 1px calc(var(--beat) * 4));
+}
+.trk.audio { height: 72px; display: flex; align-items: center; overflow: hidden; border-bottom: 1px solid var(--line); }
+.trk.audio svg { width: 100%; height: 64px; display: block; }
+.trk.audio path { fill: var(--wave); }
+.playhead {
+  position: absolute; top: 0; bottom: 0; width: 1px; z-index: 6;
+  background: var(--fg); pointer-events: none;
+}
+.playhead::before {
+  content: ""; position: absolute; top: 0; left: -4px;
+  border-left: 5px solid transparent; border-right: 5px solid transparent;
+  border-top: 7px solid var(--fg);
+}
+
+/* clips ------------------------------------------------------------------ */
+.clip { position: absolute; box-sizing: border-box; top: 4px; bottom: 4px; }
+.clip .ch-name {
+  font-size: 10px; font-weight: 600; color: var(--clip-fg);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.clip-head {
+  display: flex; align-items: center; gap: 6px; height: 18px; flex-shrink: 0; padding: 0 7px;
+  background: color-mix(in srgb, var(--c) 32%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
+  border-radius: var(--clip-radius) var(--clip-radius) 0 0;
+}
+.clip.block {
+  --clip-fg: var(--fg);
+  display: flex; flex-direction: column; overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--c) 70%, transparent);
+  border-radius: var(--clip-radius);
+  background:
+    var(--clip-grad),
+    color-mix(in srgb, var(--c) var(--clip-fill-strength), var(--bg-lane));
+  backdrop-filter: var(--clip-blur);
+  box-shadow: var(--clip-sh);
+}
+[data-skin="console"] .clip.block { --clip-fg: #fff; }
+.clip.block.sel { box-shadow: 0 0 0 1px var(--c), inset 0 0 0 1px color-mix(in srgb, var(--fg) 45%, transparent); }
+.clip.auto svg { position: absolute; inset: 18px 0 0; width: 100%; height: calc(100% - 18px); }
+.clip.auto polyline { fill: none; stroke: var(--c); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.clip.auto polygon { fill: color-mix(in srgb, var(--c) 16%, transparent); stroke: none; }
+.clip.auto .node {
+  position: absolute; width: 7px; height: 7px; border-radius: 50%;
+  transform: translate(-50%, -50%); background: var(--bg-lane); border: 1.5px solid var(--c);
+}
+.clip.oneshot { display: flex; align-items: center; justify-content: center; overflow: visible; width: 14px; }
+.clip.oneshot .stem {
+  position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; transform: translateX(-50%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 55%, transparent), color-mix(in srgb, var(--c) 12%, transparent));
+}
+.clip.oneshot .dia {
+  width: 12px; height: 12px; transform: rotate(45deg); background: var(--c);
+  border-radius: 2px; position: relative; z-index: 1;
+}
+[data-skin="flat"] .clip.oneshot .dia { border-radius: 1px; }
+.clip.oneshot .flag {
+  position: absolute; top: 1px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 5px; padding: 2px 7px; white-space: nowrap;
+  background: var(--bg-overlay); border: 1px solid var(--line-strong);
+  border-radius: var(--clip-radius); box-shadow: var(--rim);
+}
+.clip.oneshot .flag .ch-name { color: var(--fg); }
+.grab { position: absolute; top: 18px; bottom: 0; width: 6px; display: flex; align-items: center; justify-content: center; }
+.grab.l { left: 0; } .grab.r { right: 0; }
+.grab::before { content: ""; width: 2px; height: 40%; background: color-mix(in srgb, var(--fg) 85%, transparent); border-radius: 1px; }
+
+/* inspector -------------------------------------------------------------- */
+.ibody { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.ititle { font-weight: 700; font-size: 15px; }
+[data-skin="flat"] .ititle { font-weight: 600; font-size: 14px; letter-spacing: -0.01em; }
+.kind { color: var(--accent); margin-top: 3px; }
+.desc { color: var(--fg-dim); font-size: 12px; margin: 4px 0 0; line-height: 1.5; }
+.igrid { display: grid; grid-template-columns: auto 1fr; gap: 8px 10px; align-items: center; }
+
+footer {
+  color: var(--fg-dim); font-size: 11px; min-height: 20px; padding: 3px 10px;
+  border-top: 1px solid var(--line-panel); background: var(--bg-panel);
+  font-family: var(--font-mono); flex-shrink: 0;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg-sunken); }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border: 2px solid var(--bg-sunken); border-radius: 5px; }
+
+/* ---------------------------------------------------- the fiddle panel --- */
+#lab {
+  position: fixed; right: 14px; bottom: 14px; z-index: 999; width: 250px;
+  font-family: "Inter", system-ui, sans-serif; font-size: 11px;
+  background: var(--bg-overlay); color: var(--fg);
+  border: 1px solid var(--line-strong); border-radius: 10px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45); overflow: hidden;
+}
+#lab h4 {
+  margin: 0; padding: 8px 10px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--fg-dim); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between;
+  cursor: pointer;
+}
+#lab .rows { padding: 10px; display: grid; grid-template-columns: 74px 1fr; gap: 8px; align-items: center; }
+#lab.closed .rows { display: none; }
+#lab label { color: var(--fg-dim); }
+#lab .seg { width: 100%; }
+#lab .seg button { flex: 1; justify-content: center; }
+#lab input[type="color"] { width: 100%; height: 22px; padding: 1px; }
+#lab input[type="range"] { width: 100%; }
+#lab .val { font-family: var(--font-mono); color: var(--fg-dim); }
+#lab .full { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============================ topbar ============================ -->
+  <header class="topbar">
+    <div class="tb-left">
+      <span class="brand">Rig<span class="accent">Pilot</span></span>
+      <button class="hamb ghost">☰</button>
+      <input class="song" type="text" value="Bleed It Out — live set" />
+    </div>
+
+    <div class="tb-center">
+      <div class="cellgroup">
+        <div class="cell on" style="min-width:50px;font-size:14px">▶</div>
+        <div class="cell">⏹</div>
+      </div>
+      <div class="lcd">
+        <div class="lc pos"><span class="microlabel">Position</span><span class="lcd-main">005 | 3 | 000</span></div>
+        <div class="lcd-div"></div>
+        <div class="lc"><span class="microlabel">BPM</span><span class="num flat"><input value="120" /></span></div>
+        <div class="lcd-div"></div>
+        <div class="lc"><span class="microlabel">Sig</span><span class="sig"><span class="num flat"><input value="4" /></span><span class="slash mono">/</span><span class="num flat"><input value="4" /></span></span></div>
+      </div>
+    </div>
+
+    <div class="tb-right">
+      <div class="cellgroup" style="height:var(--ctl-h)">
+        <div class="cell on" style="padding:0 9px 0 12px"><span class="microlabel">Snap 1/4</span></div>
+        <div class="cell snap-caret">▾</div>
+      </div>
+      <div class="seg">
+        <button class="on">Bars</button>
+        <button>Time</button>
+      </div>
+      <button class="toggle on">Color</button>
+      <span class="vsep"></span>
+      <button class="toggle on">◉ MIDI</button>
+      <select style="max-width:150px"><option>Helix Floor — USB 1</option></select>
+      <span class="vsep"></span>
+      <button class="primary">Export</button>
+      <span class="vsep"></span>
+      <div class="cellgroup" style="height:var(--ctl-h)">
+        <div class="cell on" style="min-width:32px">◧</div>
+        <div class="cell on" style="min-width:32px">◨</div>
+      </div>
+      <div class="winbtns">
+        <button class="ghost win">–</button>
+        <button class="ghost win">□</button>
+        <button class="ghost win close">✕</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================= main ============================= -->
+  <section class="main">
+    <!-- palette -->
+    <div class="panel palette">
+      <div class="phead microlabel">Command Palette</div>
+      <div class="sub-head">
+        <span class="microlabel device">Line 6 Helix Floor</span>
+        <input class="search" type="text" placeholder="Filter…" />
+      </div>
+      <div class="groups">
+        <div class="group">
+          <button class="ghost group-toggle"><span class="caret">▾</span><span class="microlabel">Stomps</span></button>
+          <div class="items">
+            <div class="item"><span class="tdot" style="background:var(--hold)"></span><span class="name">Stomp A</span></div>
+            <div class="item"><span class="tdot" style="background:var(--hold)"></span><span class="name">Stomp B</span></div>
+            <div class="item"><span class="tdot" style="background:var(--hold)"></span><span class="name">Boost</span></div>
+            <div class="item"><span class="tdot" style="background:var(--hold)"></span><span class="name">Drive</span><span class="warn">⚠</span></div>
+          </div>
+        </div>
+        <div class="group">
+          <button class="ghost group-toggle"><span class="caret">▾</span><span class="microlabel">Snapshots</span></button>
+          <div class="items">
+            <div class="item"><span class="tdot diamond" style="background:var(--oneshot)"></span><span class="name">Snap 1</span></div>
+            <div class="item"><span class="tdot diamond" style="background:var(--oneshot)"></span><span class="name">Snap 2</span></div>
+            <div class="item"><span class="tdot diamond" style="background:var(--oneshot)"></span><span class="name">Snap 3</span></div>
+          </div>
+        </div>
+        <div class="group">
+          <button class="ghost group-toggle"><span class="caret">▾</span><span class="microlabel">Expression</span></button>
+          <div class="items">
+            <div class="item"><span class="tdot circle" style="background:var(--automation)"></span><span class="name">Volume</span></div>
+            <div class="item"><span class="tdot circle" style="background:var(--automation)"></span><span class="name">Wah</span></div>
+            <div class="item"><span class="tdot circle" style="background:var(--automation)"></span><span class="name">Pitch</span></div>
+            <div class="item"><span class="tdot circle" style="background:var(--automation)"></span><span class="name">FX Loop</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- arrangement -->
+    <div class="center">
+      <div class="arrangement">
+        <div class="headers">
+          <div class="ruler-spacer"></div>
+
+          <div class="track-header" style="--tc:#6b6b78;height:72px">
+            <div class="tcolor"></div>
+            <div class="tmeta">
+              <div class="name">Reference Mix</div>
+              <div class="tsub microlabel mono">audio reference</div>
+            </div>
+            <div class="trow">
+              <button class="ms">M</button>
+              <button class="ms solo">S</button>
+            </div>
+          </div>
+
+          <div class="track-header selected" style="--tc:var(--accent);height:calc(var(--lane-h) * 4)">
+            <div class="tcolor"></div>
+            <div class="tmeta">
+              <div class="name">Helix Floor</div>
+              <div class="tsub microlabel mono">ch 1 · Helix Floor</div>
+            </div>
+            <div class="trow"><button class="gear ghost">⚙</button></div>
+          </div>
+
+          <div class="track-header" style="--tc:#16c47f;height:calc(var(--lane-h) * 2)">
+            <div class="tcolor"></div>
+            <div class="tmeta">
+              <div class="name">Quad Cortex</div>
+              <div class="tsub microlabel mono">ch 2 · Quad Cortex</div>
+            </div>
+            <div class="trow"><button class="gear ghost">⚙</button></div>
+          </div>
+
+          <div class="add-track">
+            <button class="add">＋ Audio</button>
+            <button class="add">＋ MIDI</button>
+          </div>
+          <div class="header-fill"></div>
+        </div>
+
+        <!-- timeline -->
+        <div class="tl">
+          <div class="surface">
+            <div class="ruler" id="ruler"></div>
+
+            <div class="trk audio">
+              <svg id="wave" viewBox="0 0 1000 64" preserveAspectRatio="none"><path id="wavepath" d=""></path></svg>
+            </div>
+
+            <!-- Helix Floor: 4 lanes -->
+            <div class="trk">
+              <div class="lane">
+                <div class="clip block auto" style="--c:var(--automation);left:0;width:calc(var(--beat)*8)">
+                  <div class="clip-head"><span class="tdot circle" style="background:var(--automation)"></span><span class="ch-name">Volume</span></div>
+                  <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <polygon points="0,72 25,20 60,45 100,30 100,100 0,100"></polygon>
+                    <polyline points="0,72 25,20 60,45 100,30"></polyline>
+                  </svg>
+                  <div class="node" style="left:0;top:calc(18px + (100% - 18px) * 0.72)"></div>
+                  <div class="node" style="left:25%;top:calc(18px + (100% - 18px) * 0.20)"></div>
+                  <div class="node" style="left:60%;top:calc(18px + (100% - 18px) * 0.45)"></div>
+                  <div class="node" style="left:100%;top:calc(18px + (100% - 18px) * 0.30)"></div>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="clip block sel" style="--c:var(--hold);left:calc(var(--beat)*2);width:calc(var(--beat)*4)">
+                  <div class="clip-head"><span class="tdot" style="background:var(--hold)"></span><span class="ch-name">Stomp A</span></div>
+                  <i class="grab l"></i><i class="grab r"></i>
+                </div>
+                <div class="clip oneshot" style="--c:var(--oneshot);left:calc(var(--beat)*8 - 7px)">
+                  <div class="stem"></div><span class="dia"></span>
+                  <div class="flag"><span class="tdot diamond" style="background:var(--oneshot)"></span><span class="ch-name">Snap 1</span></div>
+                </div>
+                <div class="clip block" style="--c:var(--hold);left:calc(var(--beat)*13);width:calc(var(--beat)*6)">
+                  <div class="clip-head"><span class="tdot" style="background:var(--hold)"></span><span class="ch-name">Stomp B</span></div>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="clip block" style="--c:var(--hold);left:calc(var(--beat)*4);width:calc(var(--beat)*2)">
+                  <div class="clip-head"><span class="tdot" style="background:var(--hold)"></span><span class="ch-name">Boost</span></div>
+                </div>
+                <div class="clip oneshot" style="--c:var(--oneshot);left:calc(var(--beat)*11 - 7px)">
+                  <div class="stem"></div><span class="dia"></span>
+                  <div class="flag"><span class="tdot diamond" style="background:var(--oneshot)"></span><span class="ch-name">Snap 2</span></div>
+                </div>
+                <div class="clip block" style="--c:var(--hold);left:calc(var(--beat)*16);width:calc(var(--beat)*3)">
+                  <div class="clip-head"><span class="tdot" style="background:var(--hold)"></span><span class="ch-name">Drive</span></div>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="clip block auto" style="--c:var(--automation);left:calc(var(--beat)*9);width:calc(var(--beat)*10)">
+                  <div class="clip-head"><span class="tdot circle" style="background:var(--automation)"></span><span class="ch-name">FX Loop (stepped)</span></div>
+                  <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <polygon points="0,95 30,95 30,10 70,10 70,95 100,95 100,100 0,100"></polygon>
+                    <polyline points="0,95 30,95 30,10 70,10 70,95 100,95"></polyline>
+                  </svg>
+                  <div class="node" style="left:0;top:calc(18px + (100% - 18px) * 0.95)"></div>
+                  <div class="node" style="left:30%;top:calc(18px + (100% - 18px) * 0.10)"></div>
+                  <div class="node" style="left:70%;top:calc(18px + (100% - 18px) * 0.10)"></div>
+                  <div class="node" style="left:100%;top:calc(18px + (100% - 18px) * 0.95)"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quad Cortex: 2 lanes -->
+            <div class="trk">
+              <div class="lane">
+                <div class="clip block auto" style="--c:var(--automation);left:var(--beat);width:calc(var(--beat)*6)">
+                  <div class="clip-head"><span class="tdot circle" style="background:var(--automation)"></span><span class="ch-name">Gain</span></div>
+                  <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <polygon points="0,84 50,12 100,52 100,100 0,100"></polygon>
+                    <polyline points="0,84 50,12 100,52"></polyline>
+                  </svg>
+                  <div class="node" style="left:0;top:calc(18px + (100% - 18px) * 0.84)"></div>
+                  <div class="node" style="left:50%;top:calc(18px + (100% - 18px) * 0.12)"></div>
+                  <div class="node" style="left:100%;top:calc(18px + (100% - 18px) * 0.52)"></div>
+                </div>
+              </div>
+              <div class="lane">
+                <div class="clip oneshot" style="--c:var(--oneshot);left:calc(var(--beat)*14 - 7px)">
+                  <div class="stem"></div><span class="dia"></span>
+                  <div class="flag"><span class="tdot diamond" style="background:var(--oneshot)"></span><span class="ch-name">Select Preset 14</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="playhead" style="left:calc(var(--beat)*18.5)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- inspector -->
+    <aside class="panel inspector">
+      <div class="phead microlabel">Inspector</div>
+      <div class="ibody">
+        <div>
+          <div class="ititle">Stomp A</div>
+          <div class="microlabel kind">hold</div>
+          <p class="desc">Engages the Stomp A footswitch for the duration of the clip; released at the clip end.</p>
+        </div>
+        <hr />
+        <div class="igrid">
+          <span class="microlabel">Bar</span><span class="num"><input value="2" /></span>
+          <span class="microlabel">Beat</span><span class="num"><input value="1.00" /></span>
+          <span class="microlabel">Length ♩</span><span class="num"><input value="4.00" /></span>
+          <span class="microlabel">Lane</span><span class="num"><input value="1" /></span>
+        </div>
+        <hr />
+        <div class="igrid">
+          <span class="microlabel">Volume</span><input type="range" value="70" style="--fill:70%" />
+          <span class="microlabel">Pan</span><input type="range" value="50" style="--fill:50%" />
+        </div>
+        <hr />
+        <label style="display:flex;gap:8px;align-items:flex-start">
+          <input type="checkbox" checked />
+          <span class="desc" style="margin:0">Reset block on export</span>
+        </label>
+        <hr />
+        <button class="danger">Delete event</button>
+      </div>
+    </aside>
+  </section>
+
+  <footer>Exported 3 tracks · 47 events → bleed-it-out.mid</footer>
+</div>
+
+<!-- ======================== the fiddle panel ======================== -->
+<div id="lab">
+  <h4><span>Design lab</span><span id="labToggle">–</span></h4>
+  <div class="rows">
+    <label>Skin</label>
+    <div class="seg" data-var="skin">
+      <button data-v="flat" class="on">Flat</button>
+      <button data-v="console">Console</button>
+    </div>
+
+    <label>Theme</label>
+    <div class="seg" data-var="theme">
+      <button data-v="dark" class="on">Dark</button>
+      <button data-v="light">Light</button>
+    </div>
+
+    <label>Accent</label>
+    <input type="color" id="accent" value="#ff2e88" />
+
+    <label>Radius</label>
+    <input type="range" id="radius" min="0" max="14" step="1" value="6" />
+
+    <label>Control h</label>
+    <input type="range" id="ctlh" min="20" max="34" step="1" value="26" />
+
+    <label>Lane h</label>
+    <input type="range" id="laneh" min="40" max="96" step="2" value="60" />
+
+    <label>Zoom</label>
+    <input type="range" id="beat" min="24" max="120" step="2" value="60" />
+
+    <label>Base size</label>
+    <input type="range" id="fs" min="11" max="15" step="0.5" value="13" />
+
+    <div class="full"><button id="dump" style="width:100%;justify-content:center">Copy token overrides</button></div>
+    <div class="full val" id="out"></div>
+  </div>
+</div>
+
+<script>
+// ---- mock waveform (appearance is CSS; this is only data) ----------------
+(() => {
+  const W = 1000, H = 64, N = 400;
+  let top = "", bot = "";
+  let seed = 7;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const env = (i) => {
+    const t = i / N;
+    // fake song dynamics: intro, build, chorus, drop
+    const sect = t < 0.12 ? 0.25 : t < 0.32 ? 0.55 : t < 0.62 ? 0.95 : t < 0.7 ? 0.3 : 0.85;
+    return sect * (0.55 + 0.45 * rnd());
+  };
+  for (let i = 0; i <= N; i++) {
+    const x = (i / N) * W, a = env(i) * (H / 2);
+    top += `${i ? "L" : "M"}${x.toFixed(1)},${(H / 2 - a).toFixed(1)}`;
+  }
+  for (let i = N; i >= 0; i--) {
+    const x = (i / N) * W;
+    seed = 7; for (let k = 0; k <= i; k++) rnd();
+    const a = env(i) * (H / 2);
+    bot += `L${x.toFixed(1)},${(H / 2 + a).toFixed(1)}`;
+  }
+  document.getElementById("wavepath").setAttribute("d", top + bot + "Z");
+})();
+
+// ---- ruler bars ----------------------------------------------------------
+(() => {
+  const r = document.getElementById("ruler");
+  for (let b = 0; b < 8; b++) {
+    const d = document.createElement("div");
+    d.className = "bar";
+    d.style.left = `calc(var(--beat) * ${b * 4})`;
+    d.innerHTML = `${b + 1}<div class="beats"></div>`;
+    r.appendChild(d);
+  }
+})();
+
+// ---- lab ----------------------------------------------------------------
+const root = document.documentElement;
+const overrides = {};
+const setVar = (k, v) => { root.style.setProperty(k, v); overrides[k] = v; render(); };
+
+document.querySelectorAll("#lab .seg").forEach((seg) => {
+  seg.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    seg.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    root.dataset[seg.dataset.var] = b.dataset.v;
+    if (seg.dataset.var === "skin") {
+      // reset per-skin numbers so each skin shows its own defaults
+      ["--radius", "--ctl-h", "--lane-h", "--fs"].forEach((k) => { root.style.removeProperty(k); delete overrides[k]; });
+      const flat = b.dataset.v === "flat";
+      radius.value = flat ? 6 : 8; ctlh.value = 26; laneh.value = 60; fs.value = 13;
+    }
+    render();
+  });
+});
+
+accent.oninput = (e) => {
+  setVar("--accent", e.target.value);
+  setVar("--hold", e.target.value);
+  setVar("--accent-soft", e.target.value + "22");
+};
+radius.oninput = (e) => { setVar("--radius", e.target.value + "px"); setVar("--radius-sm", Math.max(2, e.target.value - 2) + "px"); };
+ctlh.oninput = (e) => setVar("--ctl-h", e.target.value + "px");
+laneh.oninput = (e) => setVar("--lane-h", e.target.value + "px");
+beat.oninput = (e) => setVar("--beat", e.target.value + "px");
+fs.oninput = (e) => setVar("--fs", e.target.value + "px");
+
+function render() {
+  const parts = Object.entries(overrides).map(([k, v]) => `  ${k}: ${v};`);
+  out.textContent = parts.length ? `skin=${root.dataset.skin} theme=${root.dataset.theme} · ${parts.length} overrides` : `skin=${root.dataset.skin} theme=${root.dataset.theme}`;
+}
+dump.onclick = () => {
+  const css = `:root {\n${Object.entries(overrides).map(([k, v]) => `  ${k}: ${v};`).join("\n")}\n}`;
+  navigator.clipboard?.writeText(css);
+  out.textContent = "copied to clipboard";
+};
+labToggle.parentElement.onclick = () => {
+  const lab = document.getElementById("lab");
+  lab.classList.toggle("closed");
+  labToggle.textContent = lab.classList.contains("closed") ? "+" : "–";
+};
+render();
+</script>
+</body>
+</html>

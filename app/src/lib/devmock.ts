@@ -2,7 +2,16 @@
 // file dialogs, audio import). In a plain browser there is no backend, so we detect
 // that and feed mock data — this lets the UI be developed & screenshotted without
 // building/launching the native shell. No effect inside the real Tauri app.
-import type { CommandInfo, DefinitionInfo, Project } from "./types";
+import {
+  DEFAULT_AUTOMATION_RESOLUTION_MS,
+  PROJECT_FORMAT_VERSION,
+  type AutomationCurve,
+  type Breakpoint,
+  type CommandInfo,
+  type DefinitionInfo,
+  type Project,
+  type Shape,
+} from "./types";
 
 export const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -24,12 +33,29 @@ const cmd = (
   deterministic: true,
   params,
   steps,
+  range: commandType === "automation" ? [0, 127] : null,
+  shapes: commandType === "automation" ? (["linear", "curve", "hold"] as Shape[]) : [],
 });
 
 const ON_OFF: CommandInfo["steps"] = [
   { value: 0, text: "Off", short: "Off" },
   { value: 127, text: "On", short: "On" },
 ];
+
+const bp = (tick: number, value: number, shape: Shape = "linear", tension = 0): Breakpoint => ({
+  tick,
+  value,
+  shape,
+  tension,
+});
+
+const curve = (commandId: string, breakpoints: Breakpoint[]): AutomationCurve => ({
+  commandId,
+  enabled: true,
+  resolutionMs: DEFAULT_AUTOMATION_RESOLUTION_MS,
+  resendMs: 0,
+  breakpoints,
+});
 
 export const mockDefinitions: DefinitionInfo[] = [
   {
@@ -38,6 +64,7 @@ export const mockDefinitions: DefinitionInfo[] = [
     model: "Helix Floor",
     description: "Demo device definition (browser dev mode).",
     defaultLatency: 10,
+    warnings: [],
     commands: [
       cmd("stomp-a", "Stomp A", "hold", "Stomps"),
       cmd("stomp-b", "Stomp B", "hold", "Stomps"),
@@ -58,6 +85,7 @@ export const mockDefinitions: DefinitionInfo[] = [
     model: "Quad Cortex",
     description: "Demo device definition (browser dev mode).",
     defaultLatency: 8,
+    warnings: [],
     commands: [
       cmd("scene-a", "Scene A", "hold", "Scenes"),
       cmd("scene-b", "Scene B", "hold", "Scenes"),
@@ -68,6 +96,7 @@ export const mockDefinitions: DefinitionInfo[] = [
 ];
 
 export const mockProject: Project = {
+  formatVersion: PROJECT_FORMAT_VERSION,
   name: "Demo Song",
   bpm: 120,
   timeSignature: [4, 4],
@@ -92,13 +121,20 @@ export const mockProject: Project = {
       mute: false,
       solo: false,
       events: [
-        { kind: "automation", commandId: "volume", tick: 0, length: 3840, lane: 0, breakpoints: [[0, 40], [1920, 110], [3840, 70]], params: {} },
-        { kind: "hold", commandId: "stomp-a", tick: 960, length: 1920, lane: 1, params: {} },
-        { kind: "one-shot", commandId: "snap-1", tick: 2880, lane: 1, params: {} },
-        { kind: "hold", commandId: "boost", tick: 1920, length: 960, lane: 2, params: {} },
-        { kind: "one-shot", commandId: "snap-2", tick: 3360, lane: 2, params: {} },
-        { kind: "automation", commandId: "fx-loop", tick: 0, length: 3840, lane: 3, breakpoints: [[0, 0], [1920, 127], [3840, 0]], params: {} },
+        { kind: "hold", commandId: "stomp-a", tick: 960, length: 1920, lane: 0, params: {} },
+        { kind: "one-shot", commandId: "snap-1", tick: 2880, lane: 0, params: {} },
+        { kind: "hold", commandId: "boost", tick: 1920, length: 960, lane: 1, params: {} },
+        { kind: "one-shot", commandId: "snap-2", tick: 3360, lane: 1, params: {} },
       ],
+      automation: [
+        curve("volume", [
+          bp(0, 40),
+          bp(1920, 110, "curve", 0.6),
+          bp(3840, 70),
+        ]),
+        curve("fx-loop", [bp(0, 0, "hold"), bp(1920, 127, "hold"), bp(3840, 0, "hold")]),
+      ],
+      automationView: { command: "volume", height: 96 },
     },
     {
       type: "midi",
@@ -108,9 +144,9 @@ export const mockProject: Project = {
       latencyMs: 8,
       mute: true,
       solo: false,
-      events: [
-        { kind: "automation", commandId: "gain", tick: 480, length: 2880, lane: 0, breakpoints: [[0, 20], [1440, 120], [2880, 60]], params: {} },
-      ],
+      events: [],
+      automation: [curve("gain", [bp(480, 20), bp(1920, 120), bp(3360, 60)])],
+      automationView: { command: null, height: 96 },
     },
   ],
 };

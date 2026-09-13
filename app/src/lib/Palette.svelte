@@ -9,23 +9,39 @@
 <script lang="ts">
   import { COMMAND_TYPE_COLORS, type CommandInfo, type DefinitionInfo } from "./types";
 
-  let { definition }: { definition: DefinitionInfo | undefined } = $props();
+  let {
+    definition,
+    inUse,
+    onshowautomation,
+  }: {
+    definition: DefinitionInfo | undefined;
+    /** Automation Commands whose curve already has breakpoints on the shown track. */
+    inUse: Set<string>;
+    onshowautomation: (commandId: string) => void;
+  } = $props();
 
   let query = $state("");
   let collapsed = $state<Record<string, boolean>>({});
 
-  const groups = $derived.by(() => {
-    if (!definition) return [];
-    const q = query.toLowerCase();
+  function bucket(commands: CommandInfo[]) {
     const byGroup = new Map<string, CommandInfo[]>();
-    for (const c of definition.commands) {
-      if (q && !c.name.toLowerCase().includes(q)) continue;
+    for (const c of commands) {
       const g = c.group ?? "Ungrouped";
       if (!byGroup.has(g)) byGroup.set(g, []);
       byGroup.get(g)!.push(c);
     }
     return [...byGroup.entries()]; // insertion order = order of first appearance
+  }
+
+  // One-Shot/Hold are dragged onto the timeline; Automation is clicked to open
+  // its curve — two different verbs, so they render as two labelled sections.
+  const filtered = $derived.by(() => {
+    if (!definition) return [];
+    const q = query.toLowerCase();
+    return definition.commands.filter((c) => !q || c.name.toLowerCase().includes(q));
   });
+  const dragGroups = $derived(bucket(filtered.filter((c) => c.commandType !== "automation")));
+  const autoGroups = $derived(bucket(filtered.filter((c) => c.commandType === "automation")));
 
   function ondragstart(e: DragEvent, cmd: CommandInfo) {
     if (!definition) return;
@@ -47,8 +63,8 @@
       <span class="microlabel device">{definition.manufacturer} {definition.model}</span>
       <input class="search" type="text" placeholder="Filter…" bind:value={query} />
     </div>
-    <div class="groups">
-      {#each groups as [group, commands]}
+    {#snippet groupList(list: [string, CommandInfo[]][])}
+      {#each list as [group, commands]}
         <div class="group">
           <button class="ghost group-toggle" onclick={() => (collapsed[group] = !collapsed[group])}>
             <span class="caret">{collapsed[group] ? "▸" : "▾"}</span>
@@ -57,21 +73,28 @@
           {#if !collapsed[group]}
             <div class="items">
               {#each commands as cmd}
+                {@const auto = cmd.commandType === "automation"}
                 <div
                   class="item"
+                  class:auto
                   role="button"
                   tabindex="0"
-                  draggable="true"
+                  draggable={!auto}
                   ondragstart={(e) => ondragstart(e, cmd)}
                   ondragend={() => (dragPayload.current = null)}
-                  title={(cmd.description ?? "") +
-                    (cmd.deterministic ? "" : "\n⚠ Result depends on the device's current state.")}
+                  onclick={() => auto && onshowautomation(cmd.id)}
+                  onkeydown={(e) => e.key === "Enter" && auto && onshowautomation(cmd.id)}
+                  title={auto
+                    ? `${cmd.description ?? cmd.name}\nClick to show this curve in the track's automation lane.`
+                    : (cmd.description ?? "") +
+                      (cmd.deterministic ? "" : "\n⚠ Result depends on the device's current state.")}
                 >
                   <span
-                    class="tdot {cmd.commandType === 'hold' ? 'square' : cmd.commandType === 'automation' ? 'circle' : 'diamond'}"
+                    class="tdot {cmd.commandType === 'hold' ? 'square' : 'circle'}"
                     style:background={COMMAND_TYPE_COLORS[cmd.commandType]}
                   ></span>
                   <span class="name">{cmd.name}</span>
+                  {#if auto && inUse.has(cmd.id)}<span class="used" title="This curve has breakpoints">●</span>{/if}
                   {#if !cmd.deterministic}<span class="warn">⚠</span>{/if}
                 </div>
               {/each}
@@ -79,6 +102,16 @@
           {/if}
         </div>
       {/each}
+    {/snippet}
+    <div class="groups">
+      {#if dragGroups.length}
+        <div class="pal-sect"><span class="microlabel">Drag onto timeline</span></div>
+        {@render groupList(dragGroups)}
+      {/if}
+      {#if autoGroups.length}
+        <div class="pal-sect"><span class="microlabel">Automate — click to open</span></div>
+        {@render groupList(autoGroups)}
+      {/if}
     </div>
   {/if}
 </div>
@@ -90,12 +123,11 @@
     width: 230px;
     flex-shrink: 0;
     overflow: hidden;
-    background: linear-gradient(180deg, #141419, #0e0e12);
-    border-right: 1px solid #000;
-    box-shadow: var(--rim);
+    background: var(--panel);
+    border-right: 1px solid var(--line);
   }
   .empty {
-    color: var(--fg-faint);
+    color: var(--fg-3);
     font-size: 12px;
     margin: 0;
     padding: 14px;
@@ -106,9 +138,20 @@
     align-items: center;
     height: 24px;
     padding: 0 12px;
-    border-bottom: 1px solid #000;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid var(--line);
     flex-shrink: 0;
+  }
+  .pal-sect {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 4px 2px;
+  }
+  .pal-sect::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
   }
   .sub-head {
     display: flex;
@@ -141,7 +184,7 @@
   }
   .caret {
     font-size: 9px;
-    color: var(--fg-faint);
+    color: var(--fg-3);
   }
   .items {
     display: flex;
@@ -159,7 +202,7 @@
     border: none;
     border-radius: 5px;
     background: transparent;
-    color: var(--fg-dim);
+    color: var(--fg-2);
     cursor: grab;
     font-size: 12.5px;
     white-space: nowrap;
@@ -167,12 +210,24 @@
     transition: background 90ms ease, color 90ms ease;
   }
   .item:hover {
-    background: var(--bg3);
+    background: var(--accent-soft);
     color: var(--fg);
   }
   .item:active {
     cursor: grabbing;
-    background: var(--bg2);
+    background: var(--line);
+  }
+  /* Automation has a lane of its own — there is nothing to drag onto the timeline. */
+  .item.auto {
+    cursor: pointer;
+  }
+  .item.auto:active {
+    cursor: pointer;
+  }
+  .used {
+    margin-left: auto;
+    font-size: 8px;
+    color: var(--auto);
   }
   .name {
     overflow: hidden;

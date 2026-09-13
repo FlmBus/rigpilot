@@ -243,6 +243,25 @@ export function barTicks(timeSignature: [number, number]): number {
   return Math.round(timeSignature[0] * (4 / timeSignature[1]) * PPQN);
 }
 
+/** A grid step is a plain bar/N, or that step made dotted (1.5x) or a triplet (2/3). */
+export type SnapFlavor = "straight" | "dotted" | "triplet";
+
+const SNAP_FACTOR: Record<SnapFlavor, number> = { straight: 1, dotted: 1.5, triplet: 2 / 3 };
+
+/** Ticks between grid lines for a bar/N grid of the given flavor, never below one tick. */
+export function snapGridTicks(
+  timeSignature: [number, number],
+  division: number,
+  flavor: SnapFlavor,
+): number {
+  return Math.max(1, Math.round((barTicks(timeSignature) / division) * SNAP_FACTOR[flavor]));
+}
+
+/** How a grid step reads in the toolbar: 1/4, 1/4. (dotted) or 1/4T (triplet). */
+export function snapLabel(division: number, flavor: SnapFlavor): string {
+  return `1/${division}${flavor === "dotted" ? "." : flavor === "triplet" ? "T" : ""}`;
+}
+
 export type EventRef = { ti: number; ei: number };
 
 /** Selected breakpoints: always within one curve of one track. */

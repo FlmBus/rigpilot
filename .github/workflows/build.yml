@@ -63,6 +63,7 @@ jobs:
       - run: npm ci
       - run: npx svelte-kit sync
       - run: npx svelte-check --tsconfig ./tsconfig.json
+      - run: npm test
       - run: cargo test --locked
         working-directory: app/src-tauri
 

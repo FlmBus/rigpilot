@@ -126,7 +126,7 @@ export type Project = {
   bpm: number;
   timeSignature: [number, number];
   tracks: Track[];
-  /** Named regions (Intro, Verse 1, …). Read-only display for now — no editor yet. */
+  /** Named regions (Intro, Verse 1, …), edited from the strip under the ruler. */
   sections?: Section[];
 };
 

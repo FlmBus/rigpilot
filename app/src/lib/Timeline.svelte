@@ -90,7 +90,7 @@
     bpSelection: BpSelection | null;
     valueClip: { value: number; space: ValueSpace } | null;
     coloredWaves: boolean;
-    /** Named regions, read-only for now — no add/resize/move yet. */
+    /** Named regions. Edited in place through `project.sections`; this is the render copy. */
     sections?: Section[];
     /** Keep the playhead in view while playing. */
     follow?: boolean;
@@ -157,11 +157,13 @@
 
   /** Each section's rendered span — from its own tick to the next one's, or to the song's end. */
   const sectionRects = $derived.by(() => {
-    const sorted = [...sections].sort((a, b) => a.tick - b.tick);
-    return sorted.map((s, i) => {
+    // Sorted for layout, but each rect keeps its index in `sections` — that is what the
+    // editing handlers mutate, and dragging one section past another reorders the list.
+    const sorted = sections.map((s, index) => ({ s, index })).sort((a, b) => a.s.tick - b.s.tick);
+    return sorted.map(({ s, index }, i) => {
       const x = xOf(s.tick);
-      const nextX = i + 1 < sorted.length ? xOf(sorted[i + 1].tick) : widthPx;
-      return { name: s.name, x, w: Math.max(1, nextX - x) };
+      const nextX = i + 1 < sorted.length ? xOf(sorted[i + 1].s.tick) : widthPx;
+      return { index, name: s.name, tick: s.tick, x, w: Math.max(1, nextX - x) };
     });
   });
   const snap = (tick: number) =>
@@ -416,6 +418,79 @@
     bps[index].value = convertValue(valueClip.value, valueClip.space, valueSpace(lane.cmd));
   }
 
+  // ---- sections ----
+  let renaming = $state<{ index: number; value: string } | null>(null);
+  const renameRect = $derived(
+    renaming ? (sectionRects.find((r) => r.index === renaming!.index) ?? null) : null,
+  );
+
+  const inSections = (y: number) => y >= RULER_H && y < RULER_H + SECTIONS_H;
+
+  /** Index into `sections` of the strip block under x, or null on an empty strip. */
+  function sectionAt(x: number, y: number): number | null {
+    if (!inSections(y)) return null;
+    for (const r of sectionRects) if (x >= r.x && x < r.x + r.w) return r.index;
+    return null;
+  }
+
+  /** The project's section list, created on first use — the field is optional in the file. */
+  function sectionList(): Section[] {
+    if (!project.sections) project.sections = [];
+    return project.sections;
+  }
+
+  function addSection(tick: number) {
+    oncommit();
+    const list = sectionList();
+    list.push({ tick, name: `Section ${list.length + 1}` });
+    startRename(list.length - 1);
+    onstatus("Section added — type a name, Enter to keep it");
+  }
+
+  function startRename(index: number) {
+    const s = sectionList()[index];
+    if (s) renaming = { index, value: s.name };
+  }
+
+  function commitRename() {
+    if (!renaming) return;
+    const { index, value } = renaming;
+    renaming = null;
+    const s = sectionList()[index];
+    const name = value.trim();
+    if (!s || !name || name === s.name) return;
+    oncommit();
+    s.name = name;
+  }
+
+  function onrenamekey(e: KeyboardEvent) {
+    e.stopPropagation();
+    if (e.key === "Enter") commitRename();
+    else if (e.key === "Escape") renaming = null;
+  }
+
+  function deleteSection(index: number) {
+    const list = sectionList();
+    const s = list[index];
+    if (!s) return;
+    oncommit();
+    list.splice(index, 1);
+    if (renaming) renaming = null;
+    onstatus(`Section "${s.name}" deleted`);
+  }
+
+  function sectionMenu(index: number | null, tick: number): MenuItem[] {
+    const items: MenuItem[] = [{ label: "Add Section Here", onselect: () => addSection(tick) }];
+    if (index !== null) {
+      items.push(
+        { separator: true },
+        { label: "Rename Section…", onselect: () => startRename(index) },
+        { label: "Delete Section", danger: true, onselect: () => deleteSection(index) },
+      );
+    }
+    return items;
+  }
+
   // ---- context menus ----
   let menu = $state<{ x: number; y: number; items: MenuItem[] } | null>(null);
 
@@ -491,6 +566,11 @@
 
   function oncontextmenu(e: MouseEvent) {
     const { x, y } = canvasPos(e);
+    if (inSections(y)) {
+      e.preventDefault();
+      menu = { x: e.clientX, y: e.clientY, items: sectionMenu(sectionAt(x, y), snap(tickAt(x))) };
+      return;
+    }
     const lane = laneAt(y);
     if (!lane) return;
     e.preventDefault();
@@ -511,6 +591,12 @@
 
   function ondblclick(e: MouseEvent) {
     const { x, y } = canvasPos(e);
+    if (inSections(y)) {
+      const si = sectionAt(x, y);
+      if (si !== null) startRename(si);
+      else addSection(snapAlt(tickAt(x), e.altKey));
+      return;
+    }
     const lane = laneAt(y);
     if (!lane) return;
     const node = nodeAt(x, y);
@@ -618,6 +704,7 @@
         startX: number;
         moved: boolean;
       }
+    | { mode: "section"; index: number; startX: number; origTick: number; moved: boolean }
     | { mode: "marquee"; x0: number; y0: number; x1: number; y1: number; base: EventRef[] }
     | {
         mode: "node";
@@ -680,6 +767,13 @@
     const { x, y } = canvasPos(e);
 
     if (y < RULER_H + SECTIONS_H) {
+      commitRename();
+      const si = sectionAt(x, y);
+      if (si !== null) {
+        // A click that never moves seeks to the section instead (handled on pointerup).
+        drag = { mode: "section", index: si, startX: x, origTick: sections[si].tick, moved: false };
+        return;
+      }
       drag = { mode: "seek" };
       onseek(tickToSeconds(snap(tickAt(x)), project.bpm));
       return;
@@ -810,9 +904,13 @@
       hoverSeg = null;
       const hit = hitTest(x, y);
       hoverCursor = !hit
-        ? y < RULER_H + SECTIONS_H
-          ? "text"
-          : "default"
+        ? inSections(y)
+          ? sectionAt(x, y) !== null
+            ? "ew-resize"
+            : "text"
+          : y < RULER_H
+            ? "text"
+            : "default"
         : hit.zone === "body"
           ? "move"
           : "ew-resize";
@@ -821,6 +919,19 @@
 
     if (drag.mode === "seek") {
       onseek(tickToSeconds(snap(tickAt(x)), project.bpm));
+      return;
+    }
+
+    if (drag.mode === "section") {
+      const s = sectionList()[drag.index];
+      if (!s) return;
+      const tick = snapAlt(drag.origTick + (tickAt(x) - tickAt(drag.startX)), e.altKey);
+      if (!drag.moved) {
+        if (tick === drag.origTick) return;
+        oncommit();
+        drag.moved = true;
+      }
+      s.tick = tick;
       return;
     }
 
@@ -977,6 +1088,10 @@
         // plain click on empty space: move the playhead
         onseek(tickToSeconds(snap(tickAt(drag.x0)), project.bpm));
       }
+    }
+    if (drag?.mode === "section" && !drag.moved) {
+      const s = sectionList()[drag.index];
+      if (s) onseek(tickToSeconds(s.tick, project.bpm));
     }
     drag = null;
     marquee = null;
@@ -1453,6 +1568,25 @@
         <div class="sec" style="left:{s.x}px;width:{s.w}px"><span>{s.name}</span></div>
       {/each}
     </div>
+    {#if renaming && renameRect}
+      <div
+        class="sec-edit"
+        style="left:{renameRect.x}px;top:{RULER_H}px;height:{SECTIONS_H}px;width:{Math.max(
+          90,
+          renameRect.w,
+        )}px"
+      >
+        <!-- svelte-ignore a11y_autofocus -->
+        <input
+          autofocus
+          aria-label="Section name"
+          value={renaming.value}
+          oninput={(e) => renaming && (renaming.value = e.currentTarget.value)}
+          onkeydown={onrenamekey}
+          onblur={commitRename}
+        />
+      </div>
+    {/if}
     <div class="playhead" style="left:{playhead * pxPerSecond}px"></div>
   </div>
 </div>
@@ -1485,7 +1619,8 @@
     height: 100%;
     pointer-events: none;
   }
-  /* Named sections. Read-only for now — no add/resize/move yet. */
+  /* Named sections. Pointer events go to the canvas, which owns all hit testing;
+     only the rename field below is interactive. */
   .sections {
     position: absolute;
     left: 0;
@@ -1513,6 +1648,26 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .sec-edit {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+    z-index: 3;
+  }
+  .sec-edit input {
+    width: 100%;
+    padding: 1px 4px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--fg);
+    background: var(--canvas);
+    border: 1px solid var(--accent);
+    border-radius: var(--r-sm);
+    outline: none;
   }
   .playhead {
     position: absolute;

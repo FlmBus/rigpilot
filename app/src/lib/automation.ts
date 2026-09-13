@@ -21,9 +21,10 @@ export const AUTO_PAD = 6;
 /**
  * Samples per `curve` segment when drawing. The chord error of a sampled function
  * scales with (vertical extent)/N², so it depends on the lane height, never on
- * horizontal zoom: 32 samples stay under a tenth of a pixel at the tallest lane.
+ * horizontal zoom: at the tallest lane (`AUTO_LANE_MAX_H`) and the sharpest
+ * tension, 64 samples keep the chords roughly a tenth of a pixel off the curve.
  */
-const CURVE_SAMPLES = 32;
+const CURVE_SAMPLES = 64;
 
 /** Power ease for shape "curve". Closed form in u, so a value can be read at any tick. */
 export function ease(u: number, k: number): number {
@@ -32,8 +33,16 @@ export function ease(u: number, k: number): number {
   return t >= 0 ? Math.pow(u, p) : 1 - Math.pow(1 - u, p);
 }
 
+/**
+ * Drawing value: continuous. Rounding here would stair-step every bent segment by
+ * one MIDI value — truer to the stream that gets exported, but it reads as a
+ * jagged line rather than a curve.
+ */
+const lerpExact = (v0: number, v1: number, u: number) => v0 + (v1 - v0) * u;
+
+/** Exported value: 7-bit and integral, all a CC message can carry. */
 const lerp = (v0: number, v1: number, u: number) =>
-  Math.min(127, Math.max(0, Math.round(v0 + (v1 - v0) * u)));
+  Math.min(127, Math.max(0, Math.round(lerpExact(v0, v1, u))));
 
 /**
  * Value of a curve at an absolute tick, or null when it has no breakpoints.
@@ -236,7 +245,7 @@ export function curvePaths(
       for (let s = 1; s <= CURVE_SAMPLES; s++) {
         const u = s / CURVE_SAMPLES;
         const tick = a.tick + (b.tick - a.tick) * u;
-        d.push(`L ${xOf(tick)},${yOf(lerp(a.value, b.value, ease(u, b.tension)))}`);
+        d.push(`L ${xOf(tick)},${yOf(lerpExact(a.value, b.value, ease(u, b.tension)))}`);
       }
     }
   }

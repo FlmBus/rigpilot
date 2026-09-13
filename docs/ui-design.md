@@ -74,8 +74,10 @@ classes, all global so every component draws from them.
 Colour per Command Type: **One-Shot = warn `#ffb02e`, Hold = accent `#ff2e88`, Automation =
 green `#2ee08a`** (`COMMAND_TYPE_COLORS` in `types.ts`).
 
-- **One-Shot:** a marker — vertical stem across the lane with a diamond; a flag (icon + name) on
-  tall lanes.
+- **One-Shot:** a marker — an instant is a point, so it is a dot centred on its dispatch tick
+  (the surrounding 19px box is grab slop only), with a flag (the command name) to its right. The
+  flag is capped at the gap to the next Event on the same Lane and dropped below ~18px, so flags
+  never print over their neighbours.
 - **Hold:** a liquid-glass block (backdrop-blur + subtle gradient + rim).
 - **Automation:** not a clip at all. Each MIDI track has one **Automation Lane** below its
   anonymous lanes — a recessed well (`--well-in`) rather than a glass block, because a curve is
@@ -122,7 +124,13 @@ green `#2ee08a`** (`COMMAND_TYPE_COLORS` in `types.ts`).
 5. **Automation geometry reserves the title bar.** When a clip is tall it has a title bar, so the
    curve/breakpoint vertical mapping (`autoBounds`) offsets by the title height — keeping canvas
    hit-testing aligned with the DOM-drawn graph.
-6. **The topbar drags the window itself.** The window is frameless, so the topbar *is* the
+6. **Curves are drawn at full precision, not at CC resolution.** Export rounds every sampled
+   value to a whole CC value, and sampling the drawn path the same way stair-steps each bent
+   segment by one MIDI value — accurate about what is sent, but it reads as a jagged line
+   instead of a curve. `curvePaths` therefore samples with `lerpExact` while `valueAt` keeps
+   the rounding that mirrors Rust. Genuine steps (`hold` segments, stepped targets) still draw
+   as steps — that is the shape, not an artefact.
+7. **The topbar drags the window itself.** The window is frameless, so the topbar *is* the
    titlebar — but `data-tauri-drag-region` only matches the exact element under the pointer, and
    the bar is packed edge-to-edge with controls, so it never fired. A `pointerdown` handler on the
    header instead calls `startDragging()` whenever the target is not interactive (`button`,

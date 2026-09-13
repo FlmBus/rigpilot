@@ -519,18 +519,42 @@
     addPoint(lane, x, y, e.altKey);
   }
 
+  /** Grab box of a one-shot: a dot is too small to hit, so the box is slop around it. */
+  const SHOT_W = 19;
+  /** Distance from the dispatch tick to the left edge of the flag (dot half-width + gap). */
+  const SHOT_LABEL_GAP = 9;
+  /** Below this the flag is unreadable anyway, so it is dropped instead of truncated. */
+  const SHOT_LABEL_MIN = 18;
+
   function eventRect(ti: number, ev: RpEvent) {
     let x = xOf(ev.tick);
     let w: number;
     if (ev.kind === "one-shot") {
-      // dot centered on the dispatch tick
-      w = 19;
+      // box centered on the dispatch tick, so the dot inside it lands on the grid line
+      w = SHOT_W;
       x -= w / 2;
     } else {
       w = Math.max(9, xOf(ev.tick + (ev.length ?? 0)) - x);
     }
     const y = tops[ti] + 2 + ev.lane * LANE_H;
     return { x, y, w, h: LANE_H - 3 };
+  }
+
+  /**
+   * Room a one-shot's flag has before it runs into the next event on the same Lane.
+   * The flag sits to the right of the dot, outside the grab box, so without this it
+   * would print straight over its neighbours. Events are unordered, hence the scan;
+   * ties on the same tick are broken by index so exactly one of them keeps its flag.
+   */
+  function shotLabelRoom(events: RpEvent[], ev: RpEvent, ei: number): number {
+    let next = Infinity;
+    events.forEach((o, i) => {
+      if (i === ei || o.lane !== ev.lane) return;
+      if (o.tick < ev.tick || (o.tick === ev.tick && i < ei)) return;
+      next = Math.min(next, o.tick);
+    });
+    const right = next === Infinity ? widthPx : xOf(next) - 5;
+    return right - (xOf(ev.tick) + SHOT_LABEL_GAP);
   }
 
   type Hit = { ref: EventRef; zone: "body" | "left" | "right" };
@@ -1339,9 +1363,12 @@
             {@const label = cmd ? eventLabel(cmd, ev) : ev.commandId}
             {@const sel = isSelected(ti, ei)}
             {#if ev.kind === "one-shot"}
+              {@const room = shotLabelRoom(track.events, ev, ei)}
               <div class="shot" class:sel style="left:{r.x}px;top:{r.y}px;width:{r.w}px;height:{r.h}px">
                 <b></b>
-                {#if label}<span class="shot-label">{label}</span>{/if}
+                {#if label && room >= SHOT_LABEL_MIN}
+                  <span class="shot-label" style="max-width:{room}px">{label}</span>
+                {/if}
               </div>
             {:else if ev.kind === "hold"}
               <div class="clip hold" class:sel style="left:{r.x}px;top:{r.y}px;width:{r.w}px;height:{r.h}px">
@@ -1534,6 +1561,8 @@
     position: absolute;
     display: flex;
     align-items: center;
+    /* the box is grab slop — the dot itself must sit on the dispatch tick */
+    justify-content: center;
     overflow: visible;
   }
   .shot b {
@@ -1546,11 +1575,14 @@
   .shot.sel b {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--shot) 35%, transparent);
   }
+  /* flag: anchored to the dot, never wider than the gap to the next event on the Lane */
   .shot-label {
     position: absolute;
-    left: 100%;
-    margin-left: 4px;
+    left: 50%;
+    margin-left: 9px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: 10px;
     color: var(--fg-2);
   }

@@ -6,6 +6,7 @@
     COMMAND_TYPE_COLORS,
     LANE_H,
     PPQN,
+    MIN_EVENT_TICKS,
     RULER_H,
     SECTIONS_H,
     SPARE_LANE_H,
@@ -537,7 +538,9 @@
       w = SHOT_W;
       x -= w / 2;
     } else {
-      w = Math.max(9, xOf(ev.tick + (ev.length ?? 0)) - x);
+      // A floor of 9px made every short hold look identical; 3px still reads and, with the
+      // ±2px slack in hitAt, stays clickable.
+      w = Math.max(3, xOf(ev.tick + (ev.length ?? 0)) - x);
     }
     const y = tops[ti] + 2 + ev.lane * LANE_H;
     return { x, y, w, h: LANE_H - 3 };
@@ -848,7 +851,8 @@
         drag.moved = true;
       }
       if (!drag.moved) return;
-      const minLen = PPQN / 8;
+      // Never block a resize the active grid can still express — a 1/64 grid gets 1/64 holds.
+      const minLen = Math.max(1, Math.min(MIN_EVENT_TICKS, snapTicks ?? MIN_EVENT_TICKS));
       if (drag.edge === "right") {
         const end = snap(drag.origTick + drag.origLen + dTicks);
         ev.length = Math.max(minLen, end - drag.origTick);

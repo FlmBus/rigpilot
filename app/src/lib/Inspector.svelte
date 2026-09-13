@@ -2,6 +2,7 @@
   import Num from "./Num.svelte";
   import {
     PPQN,
+    MIN_EVENT_TICKS,
     DEFAULT_AUTOMATION_RESOLUTION_MS,
     barTicks,
     stepLabel,
@@ -124,7 +125,7 @@
   function setLength(beats: number) {
     if (!event || event.kind === "one-shot") return;
     oncommit();
-    event.length = Math.max(PPQN / 8, Math.round(beats * PPQN));
+    event.length = Math.max(MIN_EVENT_TICKS, Math.round(beats * PPQN));
   }
 </script>
 
@@ -312,7 +313,12 @@
         <Num min={1} step={0.25} value={posBeat} onchange={(v) => setPos(posBar, v)} />
         {#if event.kind !== "one-shot"}
           <span class="microlabel">Length ♩</span>
-          <Num min={0.125} step={0.25} value={(event.length ?? 0) / PPQN} onchange={setLength} />
+          <Num
+            min={MIN_EVENT_TICKS / PPQN}
+            step={0.25}
+            value={(event.length ?? 0) / PPQN}
+            onchange={setLength}
+          />
         {/if}
         <span class="microlabel">Lane</span>
         <Num min={0} value={event.lane} onchange={(v) => { oncommit(); event!.lane = v; }} />

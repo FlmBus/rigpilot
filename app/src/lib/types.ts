@@ -2,6 +2,9 @@
 
 export const PPQN = 960;
 
+/** Shortest a hold event may be: a 1/64 note. Finer grids (triplets) may go below it. */
+export const MIN_EVENT_TICKS = PPQN / 16;
+
 /** Project file format. Older files are refused, never converted. */
 export const PROJECT_FORMAT_VERSION = 2;
 

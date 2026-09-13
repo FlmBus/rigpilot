@@ -74,8 +74,10 @@ classes, all global so every component draws from them.
 Colour per Command Type: **One-Shot = warn `#ffb02e`, Hold = accent `#ff2e88`, Automation =
 green `#2ee08a`** (`COMMAND_TYPE_COLORS` in `types.ts`).
 
-- **One-Shot:** a marker — vertical stem across the lane with a diamond; a flag (icon + name) on
-  tall lanes.
+- **One-Shot:** a marker — an instant is a point, so it is a dot centred on its dispatch tick
+  (the surrounding 19px box is grab slop only), with a flag (the command name) to its right. The
+  flag is capped at the gap to the next Event on the same Lane and dropped below ~18px, so flags
+  never print over their neighbours.
 - **Hold:** a liquid-glass block (backdrop-blur + subtle gradient + rim).
 - **Automation:** not a clip at all. Each MIDI track has one **Automation Lane** below its
   anonymous lanes — a recessed well (`--well-in`) rather than a glass block, because a curve is

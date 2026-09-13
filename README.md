@@ -49,7 +49,7 @@ Every command from a device definition has one of three behaviors, color-coded o
 
 | | Type | What it does | Looks like |
 |---|---|---|---|
-| 🟡 | **One-Shot** | Fires once at a point in time — preset changes, tap tempo, scene switches | Diamond marker, centered on its tick |
+| 🟡 | **One-Shot** | Fires once at a point in time — preset changes, tap tempo, scene switches | Dot marker, centered on its tick |
 | 🩷 | **Hold** | Engage messages at block start, disengage at block end — stomps, sustains | Resizable block |
 | 🟢 | **Automation** | A value curve over time targeting a MIDI CC — volume fades, wah sweeps | Breakpoint curve |
 

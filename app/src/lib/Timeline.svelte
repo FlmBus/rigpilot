@@ -7,7 +7,9 @@
     LANE_H,
     PPQN,
     RULER_H,
+    SPARE_LANE_H,
     barTicks,
+    laneAt,
     midiLanes,
     secondsPerBeat,
     secondsToTick,
@@ -21,6 +23,7 @@
     type DefinitionInfo,
     type EventRef,
     type LabelInfo,
+    type MidiTrack,
     type Project,
     type RpEvent,
   } from "./types";
@@ -460,10 +463,7 @@
       dropGhost = null;
       return;
     }
-    const lane = Math.min(
-      Math.max(0, Math.floor((y - tops[ti] - 2) / LANE_H)),
-      midiLanes(project.tracks[ti]) - 1,
-    );
+    const lane = laneAt(project.tracks[ti] as MidiTrack, y - tops[ti]);
     dropGhost = {
       ti,
       lane,
@@ -487,7 +487,7 @@
       onstatus("This command belongs to a different Device Definition.");
       return;
     }
-    const lane = Math.min(Math.max(0, Math.floor((y - tops[ti] - 2) / LANE_H)), midiLanes(track) - 1);
+    const lane = laneAt(track, y - tops[ti]);
     oncreate(ti, commandId, snap(tickAt(x)), lane);
   }
 
@@ -524,7 +524,8 @@
       ctx.stroke();
       if (t.type === "midi") {
         ctx.strokeStyle = "#1a1a1f";
-        for (let l = 1; l < midiLanes(t); l++) {
+        // one line per lane boundary; the last one is the top of the spare strip
+        for (let l = 1; l <= midiLanes(t); l++) {
           ctx.beginPath();
           ctx.moveTo(0, y + 2 + l * LANE_H - 0.5);
           ctx.lineTo(widthPx, y + 2 + l * LANE_H - 0.5);
@@ -544,7 +545,9 @@
     if (dropGhost) {
       const x = xOf(dropGhost.tick);
       const y = tops[dropGhost.ti] + 2 + dropGhost.lane * LANE_H;
-      const h = LANE_H - 3;
+      // on the spare strip the ghost is clipped to that strip; the lane grows on drop
+      const spare = dropGhost.lane >= midiLanes(project.tracks[dropGhost.ti] as MidiTrack);
+      const h = spare ? SPARE_LANE_H - 1 : LANE_H - 3;
       const color = COMMAND_TYPE_COLORS[dropGhost.kind];
       ctx.strokeStyle = color;
       ctx.setLineDash([4, 3]);

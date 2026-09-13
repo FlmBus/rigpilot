@@ -183,8 +183,9 @@ for the design language and the implementation decisions behind it.*
 - Each MIDI track is a grid of N horizontal lanes (FL-Studio-Playlist semantics).
 - **Y position carries no meaning.** Lanes exist only so events can overlap in time
   without drawing on top of each other. Any event can sit in any lane.
-- Tracks start with a small number of visible lanes (e.g. 3) and grow on demand
-  (drag below the last lane → new lane). Empty trailing lanes auto-collapse.
+- A track is exactly as tall as its used lanes plus a **slim spare strip** below the
+  last lane (`SPARE_LANE_H`): dropping on that strip grows the track by one lane.
+  Empty trailing lanes auto-collapse, so no full blank lane is left under the last clip.
 - Events render as colored blocks (color = Command Type), labeled with the command
   name (+ parameter value, e.g. "Rig #5").
 - One-Shot = narrow fixed-width marker. Hold = resizable block. Automation = resizable

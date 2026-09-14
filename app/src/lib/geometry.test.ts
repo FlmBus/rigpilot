@@ -7,6 +7,7 @@ import {
   SECTIONS_H,
   SPARE_LANE_H,
   laneAt,
+  resizeZoneWidth,
   midiLanes,
   trackLayout,
   type AudioTrack,
@@ -113,5 +114,30 @@ describe("trackLayout", () => {
       const next = i + 1 < rows.length ? rows[i + 1].top : row.top + row.height;
       expect(row.top + row.height).toBe(next);
     });
+  });
+});
+
+describe("resizeZoneWidth", () => {
+  it("gives roomy clips the full 5px edge", () => {
+    expect(resizeZoneWidth(20)).toBe(5);
+    expect(resizeZoneWidth(13)).toBe(5);
+  });
+
+  it("keeps short holds resizable instead of body-only", () => {
+    // The old 16px gate made all of these unresizable.
+    expect(resizeZoneWidth(11)).toBe(4);
+    expect(resizeZoneWidth(9)).toBe(3);
+    expect(resizeZoneWidth(5)).toBe(1);
+  });
+
+  it("always leaves a body zone to drag the clip by", () => {
+    for (let w = 3; w <= 40; w++) {
+      expect(w - 2 * resizeZoneWidth(w)).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it("falls back to body-only when the clip is down to the render floor", () => {
+    expect(resizeZoneWidth(3)).toBe(0);
+    expect(resizeZoneWidth(0)).toBe(0);
   });
 });

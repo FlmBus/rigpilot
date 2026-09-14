@@ -255,11 +255,6 @@
     const t = project.tracks[paletteTrack];
     return t?.type === "midi" ? defsById.get(t.definitionId) : undefined;
   });
-  const paletteInUse = $derived.by(() => {
-    const t = paletteTrack !== null ? project.tracks[paletteTrack] : null;
-    return new Set(t?.type === "midi" ? curvesInUse(t).map((c) => c.commandId) : []);
-  });
-
   const defsById = $derived(new Map(definitions.map((d) => [d.id, d])));
   /** Single source of truth for vertical geometry, shared with the Timeline. */
   const layout = $derived(trackLayout(project.tracks, defsById));
@@ -1132,11 +1127,7 @@
 
   <section class="main">
     {#if paletteOpen}
-      <Palette
-        definition={selectedMidiDef}
-        inUse={paletteInUse}
-        onshowautomation={(id) => paletteTrack !== null && showAutomation(paletteTrack, id)}
-      />
+      <Palette definition={selectedMidiDef} />
     {/if}
     <div class="center">
     <div class="tlbar">

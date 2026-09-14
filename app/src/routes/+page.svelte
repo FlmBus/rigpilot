@@ -10,6 +10,7 @@
   import Num from "$lib/Num.svelte";
   import { loadAudio, Player, type LoadedAudio, type TrackPlayback } from "$lib/audio";
   import { History } from "$lib/undo";
+  import { trackColor } from "$lib/trackcolor";
   import {
     PPQN,
     PROJECT_FORMAT_VERSION,
@@ -176,9 +177,6 @@
   }
 
   // per-track accent colour for the header bar (model has no colour field)
-  const TRACK_COLORS = ["#ff2e88", "#2ee08a", "#ffb02e", "#39d3e6", "#c084fc", "#fb7185", "#38bdf8"];
-  const trackColor = (ti: number, type: string) =>
-    type === "audio" ? "#6b6b78" : TRACK_COLORS[ti % TRACK_COLORS.length];
 
   const appWindow = IS_TAURI
     ? getCurrentWindow()
@@ -1187,7 +1185,7 @@
           <div
             class="track-block"
             class:drop-before={dropIndex === ti}
-            style="--tc:{trackColor(ti, track.type)}"
+            style="--tc:{trackColor(track.name, track.type)}"
             role="presentation"
             ondragover={(e) => {
               if (dragTrack === null) return;

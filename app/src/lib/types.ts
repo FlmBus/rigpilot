@@ -2,6 +2,9 @@
 
 export const PPQN = 960;
 
+/** Shortest a hold event may be: a 1/64 note. Finer grids (triplets) may go below it. */
+export const MIN_EVENT_TICKS = PPQN / 16;
+
 /** Project file format. Older files are refused, never converted. */
 export const PROJECT_FORMAT_VERSION = 2;
 
@@ -123,7 +126,7 @@ export type Project = {
   bpm: number;
   timeSignature: [number, number];
   tracks: Track[];
-  /** Named regions (Intro, Verse 1, …). Read-only display for now — no editor yet. */
+  /** Named regions (Intro, Verse 1, …), edited from the strip under the ruler. */
   sections?: Section[];
 };
 
@@ -270,3 +273,12 @@ export type BpSelection = { ti: number; commandId: string; idx: number[] };
 export const secondsPerBeat = (bpm: number) => 60 / bpm;
 export const tickToSeconds = (tick: number, bpm: number) => (tick / PPQN) * secondsPerBeat(bpm);
 export const secondsToTick = (sec: number, bpm: number) => Math.round((sec / secondsPerBeat(bpm)) * PPQN);
+
+/**
+ * Width of the edge grab zone on a hold, in px. Roomy clips get the full 5px; narrow
+ * ones give up zone width so a short hold stays resizable instead of acting as if it
+ * had a minimum width, while always leaving ~3px of body for the move drag.
+ */
+export function resizeZoneWidth(clipWidth: number): number {
+  return Math.max(0, Math.min(5, Math.floor((clipWidth - 3) / 2)));
+}

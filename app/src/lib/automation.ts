@@ -15,8 +15,12 @@ import {
   type Shape,
 } from "./types";
 
-/** Padding above and below the curve inside its lane. */
-export const AUTO_PAD = 6;
+/**
+ * Inset above and below the curve inside its lane. Only wide enough to keep the
+ * 1.5px stroke off the lane edges — the value scale otherwise spans the full lane,
+ * so a breakpoint at the top of the range sits at the top of the lane.
+ */
+export const AUTO_PAD = 1;
 
 /**
  * Samples per `curve` segment when drawing. The chord error of a sampled function

@@ -9,6 +9,7 @@
   import Modal from "$lib/Modal.svelte";
   import Num from "$lib/Num.svelte";
   import { loadAudio, Player, type LoadedAudio, type TrackPlayback } from "$lib/audio";
+  import { detectAccents, type Accent } from "$lib/accents";
   import { History } from "$lib/undo";
   import { trackColor } from "$lib/trackcolor";
   import {
@@ -63,6 +64,9 @@
   let gridMode = $state<"musical" | "time">("musical");
   let pxPerSecond = $state(40);
   let coloredWaves = $state(true);
+  let showAccents = $state(false);
+  /** 0..1; the issue asks for a bias towards too many markers rather than too few. */
+  let accentSensitivity = $state(0.7);
   let followPlayhead = $state(false);
   let timelineRef = $state<Timeline | undefined>();
 
@@ -588,6 +592,24 @@
     ).then((result) => (loadedAudio = result));
   });
 
+  // ---- accent detection ----
+  // Derived, never stored in the project: the markers are a reading of the
+  // audio, so they follow the file and the section grid instead of ageing into
+  // stale data the user has to re-run. Sections are passed in file-local
+  // seconds, since the detector budgets its markers per section.
+  const accents = $derived.by<(Accent[] | null)[]>(() => {
+    if (!showAccents) return project.tracks.map(() => null);
+    return project.tracks.map((t, i) => {
+      const a = loadedAudio[i];
+      if (t.type !== "audio" || !a) return null;
+      const start = tickToSeconds(t.offsetTicks, project.bpm);
+      const bounds = (project.sections ?? [])
+        .map((sec) => tickToSeconds(sec.tick, project.bpm) - start)
+        .filter((sec) => sec > 0 && sec < a.buffer.duration);
+      return detectAccents(a, bounds, { sensitivity: accentSensitivity });
+    });
+  });
+
   // ---- playback ----
   function playbackTracks(): TrackPlayback[] {
     const anySolo = project.tracks.some((t) => t.solo);
@@ -1095,6 +1117,13 @@
     <div class="tb-right">
       <button class="toggle" class:active={coloredWaves} title="Spectral waveform coloring"
         onclick={() => (coloredWaves = !coloredWaves)}>Color</button>
+      <button class="toggle" class:active={showAccents} title="Mark musically significant hits and accents"
+        onclick={() => (showAccents = !showAccents)}>Accents</button>
+      {#if showAccents}
+        <div class="lc"><span class="microlabel">SENS</span><Num min={0} max={100} flat
+          value={Math.round(accentSensitivity * 100)}
+          onchange={(v: number) => (accentSensitivity = v / 100)} /></div>
+      {/if}
       <span class="vsep"></span>
       <div class="midi-live">
         <button class="toggle" class:active={midiLive}
@@ -1329,6 +1358,7 @@
         {bpSelection}
         {valueClip}
         {coloredWaves}
+        {accents}
         sections={project.sections ?? []}
         follow={followPlayhead}
         playing={isPlaying}

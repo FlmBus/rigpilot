@@ -273,3 +273,12 @@ export type BpSelection = { ti: number; commandId: string; idx: number[] };
 export const secondsPerBeat = (bpm: number) => 60 / bpm;
 export const tickToSeconds = (tick: number, bpm: number) => (tick / PPQN) * secondsPerBeat(bpm);
 export const secondsToTick = (sec: number, bpm: number) => Math.round((sec / secondsPerBeat(bpm)) * PPQN);
+
+/**
+ * Width of the edge grab zone on a hold, in px. Roomy clips get the full 5px; narrow
+ * ones give up zone width so a short hold stays resizable instead of acting as if it
+ * had a minimum width, while always leaving ~3px of body for the move drag.
+ */
+export function resizeZoneWidth(clipWidth: number): number {
+  return Math.max(0, Math.min(5, Math.floor((clipWidth - 3) / 2)));
+}

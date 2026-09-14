@@ -7,6 +7,7 @@
     LANE_H,
     PPQN,
     MIN_EVENT_TICKS,
+    resizeZoneWidth,
     RULER_H,
     SECTIONS_H,
     SPARE_LANE_H,
@@ -663,9 +664,10 @@
         const r = eventRect(ti, ev);
         if (x < r.x - 2 || x > r.x + r.w + 2 || y < r.y || y > r.y + r.h) continue;
         let zone: Hit["zone"] = "body";
-        if (ev.kind !== "one-shot" && r.w > 16) {
-          if (x <= r.x + 5) zone = "left";
-          else if (x >= r.x + r.w - 5) zone = "right";
+        const grab = ev.kind === "one-shot" ? 0 : resizeZoneWidth(r.w);
+        if (grab > 0) {
+          if (x <= r.x + grab) zone = "left";
+          else if (x >= r.x + r.w - grab) zone = "right";
         }
         return { ref: { ti, ei }, zone };
       }
@@ -966,12 +968,18 @@
       }
       if (!drag.moved) return;
       // Never block a resize the active grid can still express — a 1/64 grid gets 1/64 holds.
-      const minLen = Math.max(1, Math.min(MIN_EVENT_TICKS, snapTicks ?? MIN_EVENT_TICKS));
+      // Alt drags off the grid entirely, so any length down to a single tick is reachable.
+      const minLen = e.altKey
+        ? 1
+        : Math.max(1, Math.min(MIN_EVENT_TICKS, snapTicks ?? MIN_EVENT_TICKS));
       if (drag.edge === "right") {
-        const end = snap(drag.origTick + drag.origLen + dTicks);
+        const end = snapAlt(drag.origTick + drag.origLen + dTicks, e.altKey);
         ev.length = Math.max(minLen, end - drag.origTick);
       } else {
-        const start = Math.min(snap(drag.origTick + dTicks), drag.origTick + drag.origLen - minLen);
+        const start = Math.min(
+          snapAlt(drag.origTick + dTicks, e.altKey),
+          drag.origTick + drag.origLen - minLen,
+        );
         ev.tick = Math.max(0, start);
         ev.length = drag.origTick + drag.origLen - ev.tick;
       }
